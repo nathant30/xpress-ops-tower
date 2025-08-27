@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MapPin, Users, Activity, Shield, Clock, TrendingUp, Navigation, Settings, RefreshCw } from 'lucide-react';
+import LiveMap from '@/components/LiveMap';
 
 interface HealthStatus {
   status: string;
@@ -19,6 +20,11 @@ interface DashboardData {
   bookings: any[];
   alerts: any[];
   analytics: any;
+  locations?: {
+    drivers: any[];
+    bookings: any[];
+    alerts: any[];
+  };
 }
 
 export default function InteractiveDashboard() {
@@ -39,25 +45,28 @@ export default function InteractiveDashboard() {
         setHealthStatus(healthData.data);
 
         // Fetch dashboard data
-        const [driversRes, bookingsRes, alertsRes, analyticsRes] = await Promise.all([
+        const [driversRes, bookingsRes, alertsRes, analyticsRes, locationsRes] = await Promise.all([
           fetch('/api/drivers'),
           fetch('/api/bookings'),
           fetch('/api/alerts'),
-          fetch('/api/analytics')
+          fetch('/api/analytics'),
+          fetch('/api/locations')
         ]);
 
-        const [drivers, bookings, alerts, analytics] = await Promise.all([
+        const [drivers, bookings, alerts, analytics, locations] = await Promise.all([
           driversRes.json(),
           bookingsRes.json(),
           alertsRes.json(),
-          analyticsRes.json()
+          analyticsRes.json(),
+          locationsRes.json()
         ]);
 
         setDashboardData({
           drivers: drivers.data || [],
           bookings: bookings.data || [],
           alerts: alerts.data || [],
-          analytics: analytics.data || {}
+          analytics: analytics.data || {},
+          locations: locations.data || { drivers: [], bookings: [], alerts: [] }
         });
 
         setLastRefresh(new Date());
@@ -132,6 +141,7 @@ export default function InteractiveDashboard() {
           <div className="flex space-x-8">
             {[
               { id: 'overview', name: 'Overview', icon: Activity },
+              { id: 'map', name: 'Live Map', icon: MapPin },
               { id: 'drivers', name: 'Drivers', icon: Users },
               { id: 'bookings', name: 'Bookings', icon: Navigation },
               { id: 'alerts', name: 'Alerts', icon: Shield },
@@ -229,6 +239,39 @@ export default function InteractiveDashboard() {
                 ))}
               </div>
             </div>
+            
+            {/* Mini Map Preview */}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900">Live Fleet Overview</h3>
+                  <button
+                    onClick={() => setActiveTab('map')}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span>View Full Map</span>
+                  </button>
+                </div>
+              </div>
+              <LiveMap 
+                drivers={dashboardData?.locations?.drivers || []}
+                alerts={dashboardData?.locations?.alerts || []}
+                bookings={dashboardData?.locations?.bookings || []}
+                className="h-64"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'map' && (
+          <div className="space-y-6">
+            <LiveMap 
+              drivers={dashboardData?.locations?.drivers || []}
+              alerts={dashboardData?.locations?.alerts || []}
+              bookings={dashboardData?.locations?.bookings || []}
+              className="h-[600px]"
+            />
           </div>
         )}
 
