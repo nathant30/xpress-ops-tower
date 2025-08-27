@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* XPRESS Design System CSS Custom Properties */
+:root {
+  /* Primary Brand Colors */
+  --xpress-50: 240 249 255;
+  --xpress-100: 224 242 254;
+  --xpress-200: 186 230 253;
+  --xpress-300: 125 211 252;
+  --xpress-400: 56 189 248;
+  --xpress-500: 14 165 233;
+  --xpress-600: 2 132 199;
+  --xpress-700: 3 105 161;
+  --xpress-800: 7 89 133;
+  --xpress-900: 12 74 110;
+  --xpress-950: 8 47 73;
+
+  /* Semantic Colors */
+  --color-success: 34 197 94;
+  --color-warning: 245 158 11;
+  --color-danger: 239 68 68;
+  --color-info: 14 165 233;
+
+  /* Neutral Colors */
+  --color-neutral-0: 255 255 255;
+  --color-neutral-50: 249 250 251;
+  --color-neutral-100: 243 244 246;
+  --color-neutral-200: 229 231 235;
+  --color-neutral-300: 209 213 219;
+  --color-neutral-400: 156 163 175;
+  --color-neutral-500: 107 114 128;
+  --color-neutral-600: 75 85 99;
+  --color-neutral-700: 55 65 81;
+  --color-neutral-800: 31 41 55;
+  --color-neutral-900: 17 24 39;
+  --color-neutral-950: 3 7 18;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Spacing Scale */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* Animation Durations */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+}
+
+/* Dark mode support for future implementation */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-neutral-0: 3 7 18;
+    --color-neutral-50: 17 24 39;
+    --color-neutral-100: 31 41 55;
+    --color-neutral-200: 55 65 81;
+    --color-neutral-300: 75 85 99;
+    --color-neutral-400: 107 114 128;
+    --color-neutral-500: 156 163 175;
+    --color-neutral-600: 209 213 219;
+    --color-neutral-700: 229 231 235;
+    --color-neutral-800: 243 244 246;
+    --color-neutral-900: 249 250 251;
+    --color-neutral-950: 255 255 255;
+  }
+}
+
+/* XPRESS Base Styles */
+@layer base {
+  * {
+    @apply border-neutral-200;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-neutral-0 text-neutral-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Typography Defaults */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-neutral-900;
+  }
+
+  h1 {
+    @apply text-4xl lg:text-5xl;
+  }
+
+  h2 {
+    @apply text-3xl lg:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl lg:text-3xl;
+  }
+
+  h4 {
+    @apply text-xl lg:text-2xl;
+  }
+
+  h5 {
+    @apply text-lg;
+  }
+
+  h6 {
+    @apply text-base;
+  }
+
+  p {
+    @apply text-neutral-600 leading-relaxed;
+  }
+
+  /* Focus Styles */
+  *:focus {
+    @apply outline-none ring-2 ring-xpress-500 ring-offset-2;
+  }
+
+  /* Selection Styles */
+  ::selection {
+    @apply bg-xpress-100 text-xpress-900;
+  }
+}
+
+/* XPRESS Component Layer */
+@layer components {
+  /* Button Base Styles */
+  .xpress-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-xpress transition-all duration-normal focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .xpress-btn-primary {
+    @apply bg-xpress-600 text-white hover:bg-xpress-700 focus:ring-xpress-500 active:bg-xpress-800;
+  }
+
+  .xpress-btn-secondary {
+    @apply bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus:ring-neutral-500 border border-neutral-300;
+  }
+
+  .xpress-btn-danger {
+    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 active:bg-danger-800;
+  }
+
+  /* Card Base Styles */
+  .xpress-card {
+    @apply bg-white rounded-xpress-lg shadow-xpress border border-neutral-200 p-6;
+  }
+
+  /* Badge Base Styles */
+  .xpress-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .xpress-badge-success {
+    @apply bg-success-100 text-success-800;
+  }
+
+  .xpress-badge-warning {
+    @apply bg-warning-100 text-warning-800;
+  }
+
+  .xpress-badge-danger {
+    @apply bg-danger-100 text-danger-800;
+  }
+
+  .xpress-badge-info {
+    @apply bg-info-100 text-info-800;
+  }
+
+  /* Input Base Styles */
+  .xpress-input {
+    @apply block w-full px-3 py-2 border border-neutral-300 rounded-xpress shadow-sm placeholder-neutral-400 focus:outline-none focus:ring-xpress-500 focus:border-xpress-500 sm:text-sm;
+  }
+
+  /* Utility Classes for Operations Dashboard */
+  .dashboard-grid {
+    @apply grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .metric-card {
+    @apply xpress-card hover:shadow-xpress-md transition-shadow duration-normal;
+  }
+
+  .status-indicator {
+    @apply w-3 h-3 rounded-full animate-pulse-soft;
+  }
+
+  .status-online {
+    @apply bg-success-500;
+  }
+
+  .status-warning {
+    @apply bg-warning-500;
+  }
+
+  .status-offline {
+    @apply bg-danger-500;
+  }
+
+  /* Real-time Animation Classes */
+  .pulse-data {
+    @apply animate-pulse-soft;
+  }
+
+  .slide-in-bottom {
+    @apply animate-slide-up;
+  }
+
+  .fade-in {
+    @apply animate-fade-in;
+  }
+}
+
+/* XPRESS Utilities Layer */
+@layer utilities {
+  /* Text Utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Layout Utilities */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 
+      [full-width-start] minmax(1rem, 1fr) 
+      [content-start] min(calc(100% - 2rem), 75rem) 
+      [content-end] minmax(1rem, 1fr) 
+      [full-width-end];
+  }
+
+  .content-grid > * {
+    grid-column: content;
+  }
+
+  .content-grid > .full-width {
+    grid-column: full-width;
+  }
+
+  /* Custom Scrollbars */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-neutral-400)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-neutral-400));
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-neutral-500));
+  }
+}

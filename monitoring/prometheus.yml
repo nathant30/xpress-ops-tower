@@ -1,0 +1,158 @@
+# Prometheus Configuration for Xpress Ops Tower
+# Production monitoring setup
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Rules files
+rule_files:
+  - "rules/*.yml"
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Main application
+  - job_name: 'xpress-ops-tower'
+    scrape_interval: 10s
+    metrics_path: /api/metrics
+    static_configs:
+      - targets: ['xpress-ops-tower:3000']
+    scrape_timeout: 5s
+
+  # Node exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # PostgreSQL metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # Emergency system specific monitoring
+  - job_name: 'emergency-system'
+    scrape_interval: 5s  # More frequent for emergency monitoring
+    metrics_path: /api/emergency/metrics
+    static_configs:
+      - targets: ['xpress-ops-tower:3000']
+    scrape_timeout: 3s
+
+  # WebSocket metrics
+  - job_name: 'websocket'
+    scrape_interval: 10s
+    metrics_path: /api/websocket/metrics
+    static_configs:
+      - targets: ['xpress-ops-tower:3000']
+
+# Recording rules for aggregations
+recording_rules:
+  - record: xpress:response_time_95th
+    expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+  
+  - record: xpress:error_rate
+    expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+  
+  - record: xpress:emergency_response_time
+    expr: histogram_quantile(0.95, rate(emergency_response_duration_seconds_bucket[1m]))
+
+# Alerting rules
+groups:
+  - name: emergency_system_alerts
+    rules:
+      - alert: EmergencySystemDown
+        expr: up{job="emergency-system"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: emergency
+        annotations:
+          summary: "Emergency system is down"
+          description: "The emergency response system has been down for more than 30 seconds"
+
+      - alert: EmergencyResponseTimeTooHigh
+        expr: xpress:emergency_response_time > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: emergency
+        annotations:
+          summary: "Emergency response time too high"
+          description: "Emergency response time is {{ $value }}s, exceeding 5s threshold"
+
+      - alert: HighErrorRate
+        expr: xpress:error_rate > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }}"
+
+      - alert: HighResponseTime
+        expr: xpress:response_time_95th > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is {{ $value }}s"
+
+  - name: infrastructure_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80%"
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85%"
+
+      - alert: DatabaseConnectionFailure
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failure"
+          description: "Cannot connect to PostgreSQL database"
+
+      - alert: RedisConnectionFailure
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection failure"
+          description: "Cannot connect to Redis cache"

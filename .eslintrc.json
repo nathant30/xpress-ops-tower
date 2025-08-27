@@ -1,0 +1,150 @@
+{
+  "root": true,
+  "extends": [
+    "next/core-web-vitals",
+    "@typescript-eslint/recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended",
+    "plugin:import/recommended",
+    "plugin:import/typescript"
+  ],
+  "plugins": [
+    "@typescript-eslint",
+    "react",
+    "react-hooks",
+    "jsx-a11y",
+    "import"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2023,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "project": "./tsconfig.json"
+  },
+  "env": {
+    "browser": true,
+    "es2023": true,
+    "node": true
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    },
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true
+      },
+      "node": {
+        "extensions": [".js", ".jsx", ".ts", ".tsx"]
+      }
+    }
+  },
+  "rules": {
+    // TypeScript Rules
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/prefer-const": "error",
+    "@typescript-eslint/no-var-requires": "error",
+    
+    // React Rules
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "react/jsx-uses-react": "off",
+    "react/jsx-uses-vars": "error",
+    "react/no-unescaped-entities": "error",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    
+    // Accessibility Rules
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/aria-props": "error",
+    "jsx-a11y/aria-proptypes": "error",
+    "jsx-a11y/aria-unsupported-elements": "error",
+    "jsx-a11y/role-has-required-aria-props": "error",
+    "jsx-a11y/role-supports-aria-props": "error",
+    
+    // Import Rules
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+          "object"
+        ],
+        "newlines-between": "always",
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        }
+      }
+    ],
+    "import/no-unresolved": "error",
+    "import/no-duplicates": "error",
+    
+    // XPRESS Design System Enforcement Rules
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Property[key.name='style']",
+        "message": "Inline styles are not allowed. Use XPRESS Design System classes or components."
+      }
+    ],
+    "no-restricted-properties": [
+      {
+        "object": "document",
+        "property": "createElement",
+        "message": "Use XPRESS components instead of creating raw elements."
+      }
+    ],
+    
+    // General Code Quality Rules
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "no-alert": "error",
+    "eqeqeq": "error",
+    "curly": "error",
+    "brace-style": ["error", "1tbs", { "allowSingleLine": true }],
+    "comma-dangle": ["error", "always-multiline"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "semi": ["error", "always"],
+    "indent": ["error", 2, { "SwitchCase": 1 }],
+    "max-len": ["error", { "code": 100, "ignoreUrls": true, "ignoreStrings": true }],
+    "object-curly-spacing": ["error", "always"],
+    "array-bracket-spacing": ["error", "never"],
+    
+    // Performance Rules for Real-time Dashboard
+    "react/jsx-no-bind": ["error", { "allowArrowFunctions": true }],
+    "react/jsx-no-leaked-render": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"],
+      "env": {
+        "jest": true
+      },
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["src/components/xpress/**/*.tsx"],
+      "rules": {
+        "no-restricted-syntax": "off"
+      }
+    }
+  ]
+}
