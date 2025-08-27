@@ -107,28 +107,10 @@ export const GET = asyncHandler(async (request: NextRequest) => {
   const avgResponseTime = resolvedWithTimes.length > 0 ? 
     resolvedWithTimes.reduce((sum, i) => sum + (i.firstResponseTime || 0), 0) / resolvedWithTimes.length : 0;
   
-  return createApiResponse({
-    alerts: enrichedIncidents,
-    pagination: paginatedResult.pagination,
-    summary: {
-      total: totalIncidents,
-      critical: criticalIncidents,
-      open: openIncidents,
-      resolved: resolvedIncidents,
-      escalated: escalatedIncidents,
-      averageResponseTime: Math.round(avgResponseTime),
-      resolutionRate: totalIncidents > 0 ? (resolvedIncidents / totalIncidents) * 100 : 0,
-    },
-    filters: {
-      priority: queryParams.priority,
-      status: queryParams.status,
-      regionId: queryParams.regionId,
-      driverId: queryParams.driverId,
-      incidentType: queryParams.incidentType,
-      createdFrom: queryParams.createdFrom,
-      createdTo: queryParams.createdTo,
-    }
-  }, 'Alerts retrieved successfully');
+  return createApiResponse(
+    enrichedIncidents,
+    'Alerts retrieved successfully'
+  );
 });
 
 // POST /api/alerts - Create a new alert/incident

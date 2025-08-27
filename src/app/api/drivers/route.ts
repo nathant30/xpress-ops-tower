@@ -47,16 +47,10 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     paginationParams.limit
   );
   
-  return createApiResponse({
-    drivers: paginatedResult.data,
-    pagination: paginatedResult.pagination,
-    filters: {
-      status: queryParams.status,
-      region: queryParams.region,
-      search: queryParams.search,
-      services: queryParams.services,
-    }
-  }, 'Drivers retrieved successfully');
+  return createApiResponse(
+    paginatedResult.data,
+    'Drivers retrieved successfully'
+  );
 });
 
 // POST /api/drivers - Create a new driver

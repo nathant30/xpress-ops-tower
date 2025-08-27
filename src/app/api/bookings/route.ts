@@ -58,26 +58,10 @@ export const GET = asyncHandler(async (request: NextRequest) => {
   ).length;
   const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
   
-  return createApiResponse({
-    bookings: paginatedResult.data,
-    pagination: paginatedResult.pagination,
-    summary: {
-      total: totalBookings,
-      completed: completedBookings,
-      active: activeBookings,
-      cancelled: cancelledBookings,
-      completionRate: totalBookings > 0 ? (completedBookings / totalBookings) * 100 : 0,
-    },
-    filters: {
-      status: queryParams.status,
-      serviceType: queryParams.serviceType,
-      driverId: queryParams.driverId,
-      customerId: queryParams.customerId,
-      regionId: queryParams.regionId,
-      createdFrom: queryParams.createdFrom,
-      createdTo: queryParams.createdTo,
-    }
-  }, 'Bookings retrieved successfully');
+  return createApiResponse(
+    paginatedResult.data,
+    'Bookings retrieved successfully'
+  );
 });
 
 // POST /api/bookings - Create a new booking
