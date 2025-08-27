@@ -5,7 +5,7 @@
 export { Button } from './button';
 export type { ButtonProps, ButtonVariant, ButtonSize } from './button';
 
-export { Card } from './card';
+export { Card as XpressCard } from './card';
 export type { CardProps } from './card';
 
 export { Badge } from './badge';
