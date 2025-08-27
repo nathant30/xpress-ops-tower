@@ -7,10 +7,12 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { 
   Search, Filter, Download, Plus, MoreVertical, Edit, Trash2, 
   Phone, Mail, MapPin, Star, TrendingUp, TrendingDown, Clock, 
-  CheckCircle, XCircle, AlertCircle, User, Car, Shield, Activity
+  CheckCircle, XCircle, AlertCircle, User, Car, Shield, Activity,
+  RefreshCw, Loader
 } from 'lucide-react';
 
 import { Button, XpressCard as Card, Badge } from '@/components/xpress';
+import { useDriversData, useDriverMutations } from '@/hooks/useApiData';
 
 interface Driver {
   id: string;
@@ -63,120 +65,40 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
   regionId,
   userRole = 'operator'
 }) => {
-  // Mock driver data - would come from API
-  const [drivers] = useState<Driver[]>([
-    {
-      id: 'DR001',
-      name: 'Juan Carlos Cruz',
-      email: 'juan.cruz@email.com',
-      phone: '+63 917 123 4567',
-      status: 'active',
-      rating: 4.8,
-      totalTrips: 1247,
-      completionRate: 98.5,
-      revenue: 125430,
-      vehicle: {
-        make: 'Toyota',
-        model: 'Vios',
-        plate: 'ABC 1234',
-        year: 2020
-      },
-      location: {
-        lat: 14.5995,
-        lng: 120.9842,
-        address: 'Makati CBD, Metro Manila'
-      },
-      onlineHours: 8.5,
-      lastActive: new Date(Date.now() - 300000),
-      joinDate: new Date('2023-03-15'),
-      documents: {
-        license: true,
-        insurance: true,
-        registration: true,
-        backgroundCheck: true
-      },
-      performance: {
-        avgRating: 4.8,
-        avgResponseTime: 2.3,
-        cancelationRate: 0.8,
-        complaintCount: 2
-      }
-    },
-    {
-      id: 'DR002',
-      name: 'Ana Maria Garcia',
-      email: 'ana.garcia@email.com',
-      phone: '+63 917 987 6543',
-      status: 'busy',
-      rating: 4.9,
-      totalTrips: 2103,
-      completionRate: 99.2,
-      revenue: 186750,
-      vehicle: {
-        make: 'Honda',
-        model: 'City',
-        plate: 'XYZ 5678',
-        year: 2021
-      },
-      location: {
-        lat: 14.6760,
-        lng: 121.0437,
-        address: 'Ortigas Center, Pasig'
-      },
-      onlineHours: 9.2,
-      lastActive: new Date(),
-      joinDate: new Date('2022-11-08'),
-      documents: {
-        license: true,
-        insurance: true,
-        registration: true,
-        backgroundCheck: true
-      },
-      performance: {
-        avgRating: 4.9,
-        avgResponseTime: 1.8,
-        cancelationRate: 0.3,
-        complaintCount: 0
-      }
-    },
-    {
-      id: 'DR003',
-      name: 'Roberto Santos',
-      email: 'roberto.santos@email.com',
-      phone: '+63 917 555 0123',
-      status: 'offline',
-      rating: 4.2,
-      totalTrips: 856,
-      completionRate: 94.7,
-      revenue: 89250,
-      vehicle: {
-        make: 'Mitsubishi',
-        model: 'Mirage',
-        plate: 'DEF 9012',
-        year: 2019
-      },
-      location: {
-        lat: 14.5764,
-        lng: 121.0851,
-        address: 'BGC, Taguig'
-      },
-      onlineHours: 0,
-      lastActive: new Date(Date.now() - 7200000),
-      joinDate: new Date('2023-07-22'),
-      documents: {
-        license: true,
-        insurance: false,
-        registration: true,
-        backgroundCheck: true
-      },
-      performance: {
-        avgRating: 4.2,
-        avgResponseTime: 3.1,
-        cancelationRate: 2.1,
-        complaintCount: 8
-      }
-    }
-  ]);
+  // API data integration
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(50);
+
+  // Fetch drivers data with real-time updates
+  const {
+    data: driversResponse,
+    loading: driversLoading,
+    error: driversError,
+    lastUpdated,
+    refresh: refreshDrivers
+  } = useDriversData({
+    region: regionId,
+    page: currentPage,
+    limit,
+    sortBy: 'name',
+    sortOrder: 'asc'
+  }, {
+    autoRefresh: true,
+    refreshInterval: 15000 // Refresh every 15 seconds
+  });
+
+  // Driver mutations for CRUD operations
+  const {
+    createDriver,
+    updateDriver,
+    deleteDriver,
+    loading: mutationLoading,
+    error: mutationError
+  } = useDriverMutations();
+
+  // Extract drivers from API response
+  const drivers = driversResponse?.data || [];
+  const totalDrivers = driversResponse?.total || 0;
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
@@ -345,16 +267,38 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-neutral-900">Driver Management</h2>
             <p className="text-neutral-600">
-              Manage your fleet of {drivers.length} drivers
+              Manage your fleet of {totalDrivers} drivers
+              {lastUpdated && (
+                <span className="text-neutral-400 text-sm ml-2">
+                  • Updated {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex items-center space-x-3">
+            <Button 
+              variant="tertiary" 
+              size="sm"
+              leftIcon={driversLoading ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              onClick={() => refreshDrivers()}
+              disabled={driversLoading}
+            >
+              Refresh
+            </Button>
             {userRole === 'admin' && (
-              <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+              <Button 
+                variant="primary" 
+                leftIcon={<Plus className="h-4 w-4" />}
+                disabled={driversLoading}
+              >
                 Add Driver
               </Button>
             )}
-            <Button variant="secondary" leftIcon={<Download className="h-4 w-4" />}>
+            <Button 
+              variant="secondary" 
+              leftIcon={<Download className="h-4 w-4" />}
+              disabled={driversLoading}
+            >
               Export
             </Button>
           </div>
@@ -476,14 +420,38 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
           </div>
         )}
 
+        {/* Error Display */}
+        {(driversError || mutationError) && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <XCircle className="h-5 w-5 text-red-600" />
+              <div>
+                <h4 className="font-medium text-red-900">Error Loading Data</h4>
+                <p className="text-sm text-red-700">
+                  {driversError || mutationError}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Results Summary */}
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-neutral-600">
-            Showing {filteredAndSortedDrivers.length} of {drivers.length} drivers
-            {selectedDrivers.size > 0 && (
-              <span className="ml-2 font-medium">
-                ({selectedDrivers.size} selected)
+            {driversLoading ? (
+              <span className="flex items-center space-x-2">
+                <Loader className="h-4 w-4 animate-spin" />
+                <span>Loading drivers...</span>
               </span>
+            ) : (
+              <>
+                Showing {filteredAndSortedDrivers.length} of {totalDrivers} drivers
+                {selectedDrivers.size > 0 && (
+                  <span className="ml-2 font-medium">
+                    ({selectedDrivers.size} selected)
+                  </span>
+                )}
+              </>
             )}
           </p>
 
@@ -504,7 +472,34 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {viewMode === 'table' ? (
+        {driversLoading && drivers.length === 0 ? (
+          /* Loading State */
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader className="h-8 w-8 animate-spin mx-auto text-xpress-600 mb-4" />
+              <p className="text-neutral-600">Loading drivers...</p>
+            </div>
+          </div>
+        ) : drivers.length === 0 && !driversLoading ? (
+          /* Empty State */
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Users className="h-12 w-12 mx-auto text-neutral-400 mb-4" />
+              <h3 className="text-lg font-medium text-neutral-900 mb-2">No drivers found</h3>
+              <p className="text-neutral-600 mb-4">
+                {searchQuery || statusFilter !== 'all' ? 
+                  'No drivers match your current filters.' : 
+                  'Get started by adding your first driver.'
+                }
+              </p>
+              {userRole === 'admin' && !searchQuery && statusFilter === 'all' && (
+                <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+                  Add Driver
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : viewMode === 'table' ? (
           /* Table View */
           <div className="overflow-x-auto">
             <table className="w-full">

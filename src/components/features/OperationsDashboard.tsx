@@ -3,7 +3,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Menu, X, ChevronLeft, ChevronRight, Settings, User, MapPin, Users, 
   Truck, FileText, AlertTriangle, Activity, Clock, TrendingUp, Shield, 
@@ -13,6 +13,7 @@ import {
 import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 import { RealTimeMap } from './RealTimeMap';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
+import { useAlertsData, useAlertMutations } from '@/hooks/useApiData';
 
 // Import management components
 import DriverManagement from './DriverManagement';
@@ -73,11 +74,9 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
     connected,
     connecting,
     drivers,
-    emergencyAlerts,
     analytics,
     totalDrivers,
     activeDrivers,
-    emergencyCount,
     isHealthy
   } = useWebSocketMap({
     autoConnect: true,
@@ -86,6 +85,94 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
       regionIds: regionId ? [regionId] : undefined
     }
   });
+
+  // API integration for alerts/emergencies
+  const {
+    data: alertsResponse,
+    loading: alertsLoading,
+    error: alertsError,
+    refresh: refreshAlerts
+  } = useAlertsData({
+    regionId,
+    status: 'open', // Only get active/open alerts
+    priority: 'critical', // Focus on critical alerts for the emergency panel
+    limit: 10
+  }, {
+    autoRefresh: true,
+    refreshInterval: 3000 // Refresh every 3 seconds for emergencies
+  });
+
+  // Alert mutations
+  const {
+    updateAlert,
+    createAlert,
+    loading: alertMutationLoading,
+    error: alertMutationError
+  } = useAlertMutations();
+
+  // Extract alerts from API response
+  const emergencyAlerts = alertsResponse?.data || [];
+  const emergencyCount = emergencyAlerts.length;
+
+  // Alert handling functions
+  const handleAcknowledgeAlert = useCallback(async (alertId: string) => {
+    try {
+      await updateAlert(alertId, { status: 'acknowledged' });
+      refreshAlerts();
+    } catch (error) {
+      console.error('Failed to acknowledge alert:', error);
+    }
+  }, [updateAlert, refreshAlerts]);
+
+  const handleDispatchAlert = useCallback(async (alertId: string) => {
+    try {
+      await updateAlert(alertId, { 
+        status: 'in_progress',
+        assignedTo: userProfile.id,
+        escalatedTo: 'emergency_services'
+      });
+      refreshAlerts();
+    } catch (error) {
+      console.error('Failed to dispatch alert:', error);
+    }
+  }, [updateAlert, refreshAlerts, userProfile.id]);
+
+  // Unified refresh system for all dashboard data
+  const refreshAllData = useCallback(async () => {
+    try {
+      await Promise.all([
+        refreshAlerts()
+        // Note: drivers, bookings, analytics refreshes are handled by their respective components
+        // when they detect focus changes or user interactions
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh dashboard data:', error);
+    }
+  }, [refreshAlerts]);
+
+  // Auto-refresh system for critical data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only auto-refresh if the tab is visible and user is active
+      if (document.visibilityState === 'visible') {
+        refreshAllData();
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [refreshAllData]);
+
+  // Handle visibility change to refresh when tab becomes active
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAllData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refreshAllData]);
 
   // Side drawer tabs configuration
   const sideDrawerTabs: SideDrawerTab[] = useMemo(() => [
@@ -474,13 +561,27 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="font-medium text-neutral-900">Emergency Alerts ({emergencyCount})</h4>
-                      <Button variant="danger" size="sm">
+                      <Button variant="danger" size="sm" disabled={alertsLoading}>
                         <Shield className="h-3 w-3" />
                         SOS
                       </Button>
                     </div>
+
+                    {/* Alert error display */}
+                    {(alertsError || alertMutationError) && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-xs text-red-700">
+                          {alertsError || alertMutationError}
+                        </p>
+                      </div>
+                    )}
                     
-                    {emergencyAlerts.length === 0 ? (
+                    {alertsLoading ? (
+                      <div className="text-center py-4">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                        <p className="text-xs text-neutral-500 mt-2">Loading alerts...</p>
+                      </div>
+                    ) : emergencyAlerts.length === 0 ? (
                       <div className="text-center py-8">
                         <Shield className="h-12 w-12 text-green-500 mx-auto mb-2" />
                         <p className="text-sm text-neutral-600">No active emergencies</p>
@@ -488,14 +589,14 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
                       </div>
                     ) : (
                       emergencyAlerts.map(alert => (
-                        <Card key={alert.incidentId} variant="outlined" padding="sm" className="border-red-200 bg-red-50">
+                        <Card key={alert.id} variant="outlined" padding="sm" className="border-red-200 bg-red-50">
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <Badge variant="danger" size="sm">
                                 {alert.priority} - {alert.incidentType}
                               </Badge>
                               <span className="text-xs text-neutral-500">
-                                {alert.createdAt.toLocaleTimeString()}
+                                {new Date(alert.createdAt).toLocaleTimeString()}
                               </span>
                             </div>
                             
@@ -510,13 +611,28 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
                               {alert.address && (
                                 <p>Location: {alert.address}</p>
                               )}
+                              {alert.reporterType && (
+                                <p>Reporter: {alert.reporterType}</p>
+                              )}
                             </div>
                             
                             <div className="flex space-x-2 pt-2 border-t border-red-200">
-                              <Button variant="secondary" size="xs" fullWidth>
+                              <Button 
+                                variant="secondary" 
+                                size="xs" 
+                                fullWidth
+                                disabled={alertMutationLoading}
+                                onClick={() => handleAcknowledgeAlert(alert.id)}
+                              >
                                 Acknowledge
                               </Button>
-                              <Button variant="danger" size="xs" fullWidth>
+                              <Button 
+                                variant="danger" 
+                                size="xs" 
+                                fullWidth
+                                disabled={alertMutationLoading}
+                                onClick={() => handleDispatchAlert(alert.id)}
+                              >
                                 Dispatch
                               </Button>
                             </div>
@@ -705,7 +821,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
               <RealTimeMap
                 googleMapsApiKey={googleMapsApiKey}
                 regionId={regionId}
-                height={window.innerHeight - 200}
+                height={typeof window !== 'undefined' ? window.innerHeight - 200 : 800}
                 autoRefresh={true}
                 refreshInterval={5000}
                 showControls={true}

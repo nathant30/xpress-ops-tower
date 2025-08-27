@@ -8,10 +8,11 @@ import {
   TrendingUp, TrendingDown, DollarSign, Users, Car, Clock, 
   Star, Target, BarChart3, PieChart, Activity, MapPin,
   Calendar, Download, Filter, RefreshCw, Info, ArrowUpRight,
-  ArrowDownRight, Minus, CheckCircle, AlertTriangle
+  ArrowDownRight, Minus, CheckCircle, AlertTriangle, Loader
 } from 'lucide-react';
 
 import { Button, XpressCard as Card, Badge } from '@/components/xpress';
+import { useAnalyticsData } from '@/hooks/useApiData';
 
 interface AnalyticsDashboardProps {
   regionId?: string;
@@ -42,134 +43,118 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   userRole = 'operator',
   dateRange = 'today'
 }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'quarter'>('today');
+  const [selectedPeriod, setSelectedPeriod] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
   const [selectedView, setSelectedView] = useState<'overview' | 'revenue' | 'operations' | 'drivers'>('overview');
-  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock analytics data - would come from API
-  const metricsData = useMemo<MetricCard[]>(() => [
-    {
-      id: 'total_revenue',
-      title: 'Total Revenue',
-      value: 1245830,
-      change: 12.5,
-      trend: 'up',
-      format: 'currency',
-      icon: DollarSign,
-      color: 'text-green-600',
-      description: 'Total earnings today'
-    },
-    {
-      id: 'total_trips',
-      title: 'Total Trips',
-      value: 2847,
-      change: 8.2,
-      trend: 'up',
-      format: 'number',
-      icon: Car,
-      color: 'text-blue-600',
-      description: 'Completed rides today'
-    },
-    {
-      id: 'active_drivers',
-      title: 'Active Drivers',
-      value: 1456,
-      change: -3.1,
-      trend: 'down',
-      format: 'number',
-      icon: Users,
-      color: 'text-orange-600',
-      description: 'Currently online drivers'
-    },
-    {
-      id: 'avg_rating',
-      title: 'Average Rating',
-      value: 4.7,
-      change: 0.2,
-      trend: 'up',
-      format: 'rating',
-      icon: Star,
-      color: 'text-yellow-600',
-      description: 'Customer satisfaction'
-    },
-    {
-      id: 'avg_response_time',
-      title: 'Avg Response Time',
-      value: 2.3,
-      change: -0.4,
-      trend: 'up',
-      format: 'time',
-      icon: Clock,
-      color: 'text-purple-600',
-      description: 'Driver pickup time in minutes'
-    },
-    {
-      id: 'completion_rate',
-      title: 'Completion Rate',
-      value: 98.5,
-      change: 1.2,
-      trend: 'up',
-      format: 'percentage',
-      icon: Target,
-      color: 'text-emerald-600',
-      description: 'Successfully completed trips'
-    },
-    {
-      id: 'cancellation_rate',
-      title: 'Cancellation Rate',
-      value: 1.8,
-      change: -0.5,
-      trend: 'up',
-      format: 'percentage',
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      description: 'Cancelled bookings'
-    },
-    {
-      id: 'avg_trip_value',
-      title: 'Avg Trip Value',
-      value: 437.50,
-      change: 5.8,
-      trend: 'up',
-      format: 'currency',
-      icon: BarChart3,
-      color: 'text-indigo-600',
-      description: 'Average fare per trip'
+  // API data integration
+  const {
+    data: analyticsResponse,
+    loading: analyticsLoading,
+    error: analyticsError,
+    lastUpdated,
+    refresh: refreshAnalytics
+  } = useAnalyticsData({
+    timeRange: selectedPeriod,
+    regionId
+  }, {
+    autoRefresh: true,
+    refreshInterval: 60000 // Refresh every minute
+  });
+
+  // Extract analytics data from API response
+  const analyticsData = analyticsResponse?.data || {};
+
+  // Process API data into metric cards
+  const metricsData = useMemo<MetricCard[]>(() => {
+    if (!analyticsData || Object.keys(analyticsData).length === 0) {
+      return [];
     }
-  ], []);
 
-  // Chart data
-  const revenueData: ChartData[] = [
-    { label: '00:00', value: 12450 },
-    { label: '04:00', value: 8320 },
-    { label: '08:00', value: 24680 },
-    { label: '12:00', value: 35920 },
-    { label: '16:00', value: 42350 },
-    { label: '20:00', value: 38470 },
-    { label: '24:00', value: 28590 }
-  ];
+    return [
+      {
+        id: 'total_revenue',
+        title: 'Total Revenue',
+        value: analyticsData.totalRevenue || 0,
+        change: analyticsData.revenueGrowth || 0,
+        trend: (analyticsData.revenueGrowth || 0) >= 0 ? 'up' : 'down',
+        format: 'currency',
+        icon: DollarSign,
+        color: 'text-green-600',
+        description: `Total earnings for ${selectedPeriod}`
+      },
+      {
+        id: 'total_trips',
+        title: 'Total Trips',
+        value: analyticsData.totalTrips || 0,
+        change: analyticsData.tripsGrowth || 0,
+        trend: (analyticsData.tripsGrowth || 0) >= 0 ? 'up' : 'down',
+        format: 'number',
+        icon: Car,
+        color: 'text-blue-600',
+        description: `Completed rides for ${selectedPeriod}`
+      },
+      {
+        id: 'active_drivers',
+        title: 'Active Drivers',
+        value: analyticsData.activeDrivers || 0,
+        change: analyticsData.driversGrowth || 0,
+        trend: (analyticsData.driversGrowth || 0) >= 0 ? 'up' : 'down',
+        format: 'number',
+        icon: Users,
+        color: 'text-orange-600',
+        description: 'Currently online drivers'
+      },
+      {
+        id: 'avg_rating',
+        title: 'Average Rating',
+        value: analyticsData.averageRating || 0,
+        change: analyticsData.ratingChange || 0,
+        trend: (analyticsData.ratingChange || 0) >= 0 ? 'up' : 'down',
+        format: 'rating',
+        icon: Star,
+        color: 'text-yellow-600',
+        description: 'Customer satisfaction'
+      },
+      {
+        id: 'avg_response_time',
+        title: 'Avg Response Time',
+        value: analyticsData.averageResponseTime || 0,
+        change: analyticsData.responseTimeChange || 0,
+        trend: (analyticsData.responseTimeChange || 0) <= 0 ? 'up' : 'down', // Lower response time is better
+        format: 'time',
+        icon: Clock,
+        color: 'text-purple-600',
+        description: 'Driver pickup time in minutes'
+      }
+    ];
+  }, [analyticsData, selectedPeriod]);
 
-  const driverStatusData: ChartData[] = [
-    { label: 'Active', value: 1456, color: 'bg-green-500' },
-    { label: 'Busy', value: 892, color: 'bg-orange-500' },
-    { label: 'Break', value: 324, color: 'bg-blue-500' },
-    { label: 'Offline', value: 1128, color: 'bg-gray-400' }
-  ];
+  // Process chart data from API
+  const revenueData: ChartData[] = useMemo(() => {
+    return analyticsData?.revenueByHour || [];
+  }, [analyticsData]);
 
-  const topRoutesData: ChartData[] = [
-    { label: 'Makati to NAIA', value: 347 },
-    { label: 'BGC to Ortigas', value: 289 },
-    { label: 'Quezon City to Makati', value: 234 },
-    { label: 'Pasig to MOA', value: 198 },
-    { label: 'Alabang to BGC', value: 156 }
-  ];
+  const driverStatusData: ChartData[] = useMemo(() => {
+    return analyticsData?.driversByStatus || [
+      { label: 'Active', value: 0, color: 'bg-green-500' },
+      { label: 'Busy', value: 0, color: 'bg-orange-500' },
+      { label: 'Break', value: 0, color: 'bg-blue-500' },
+      { label: 'Offline', value: 0, color: 'bg-gray-400' }
+    ];
+  }, [analyticsData]);
 
-  const vehicleTypeData: ChartData[] = [
-    { label: 'Standard', value: 68.5, color: 'bg-blue-500' },
-    { label: 'Premium', value: 18.2, color: 'bg-purple-500' },
-    { label: 'SUV', value: 8.7, color: 'bg-green-500' },
-    { label: 'Motorcycle', value: 4.6, color: 'bg-yellow-500' }
-  ];
+  const topRoutesData: ChartData[] = useMemo(() => {
+    return analyticsData?.topRoutes || [];
+  }, [analyticsData]);
+
+  const vehicleTypeData: ChartData[] = useMemo(() => {
+    return analyticsData?.vehicleTypeDistribution || [
+      { label: 'Standard', value: 0, color: 'bg-blue-500' },
+      { label: 'Premium', value: 0, color: 'bg-purple-500' },
+      { label: 'SUV', value: 0, color: 'bg-green-500' },
+      { label: 'Motorcycle', value: 0, color: 'bg-yellow-500' }
+    ];
+  }, [analyticsData]);
 
   // Format value based on type
   const formatValue = (value: number | string, format: MetricCard['format']) => {
@@ -211,10 +196,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   // Handle refresh
   const handleRefresh = async () => {
-    setRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setRefreshing(false);
+    await refreshAnalytics();
   };
 
   return (
@@ -231,26 +213,29 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           
           <div className="flex items-center space-x-3 mt-4 sm:mt-0">
             <div className="flex border border-neutral-300 rounded-lg">
-              {(['today', 'week', 'month', 'quarter'] as const).map((period) => (
+              {(['1h', '24h', '7d', '30d'] as const).map((period, index) => (
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-3 py-2 text-sm capitalize ${
+                  disabled={analyticsLoading}
+                  className={`px-3 py-2 text-sm ${
                     selectedPeriod === period
                       ? 'bg-xpress-600 text-white'
                       : 'text-neutral-600 hover:bg-neutral-50'
-                  } ${period === 'today' ? 'rounded-l-md' : ''} ${period === 'quarter' ? 'rounded-r-md' : ''}`}
+                  } ${index === 0 ? 'rounded-l-md' : ''} ${index === 3 ? 'rounded-r-md' : ''} disabled:opacity-50`}
                 >
-                  {period === 'today' ? 'Today' : `This ${period}`}
+                  {period === '1h' ? 'Hour' : 
+                   period === '24h' ? 'Day' : 
+                   period === '7d' ? 'Week' : 'Month'}
                 </button>
               ))}
             </div>
             
             <Button 
               variant="secondary" 
-              leftIcon={<RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              leftIcon={analyticsLoading ? <Loader className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               onClick={handleRefresh}
-              disabled={refreshing}
+              disabled={analyticsLoading}
             >
               Refresh
             </Button>
@@ -283,8 +268,31 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           ))}
         </div>
 
+        {/* Error Display */}
+        {analyticsError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div>
+                <h4 className="font-medium text-red-900">Error Loading Analytics</h4>
+                <p className="text-sm text-red-700">{analyticsError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {analyticsLoading && metricsData.length === 0 && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <Loader className="h-8 w-8 animate-spin mx-auto text-xpress-600 mb-4" />
+              <p className="text-neutral-600">Loading analytics data...</p>
+            </div>
+          </div>
+        )}
+
         {/* Overview Tab */}
-        {selectedView === 'overview' && (
+        {selectedView === 'overview' && !analyticsLoading && (
           <div className="space-y-6">
             {/* Key Metrics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

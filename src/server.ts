@@ -6,6 +6,9 @@ import next from 'next';
 import { initializeDatabase, closeDatabaseConnection } from './lib/database';
 import { initializeRedis, closeRedisConnection } from './lib/redis';
 import { initializeWebSocketServer } from './lib/websocket';
+import { locationScheduler } from './lib/locationScheduler';
+import { connectionHealthMonitor } from './lib/connectionHealthMonitor';
+import { metricsCollector } from './lib/metricsCollector';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -106,10 +109,25 @@ class XpressOpsServer {
       const wsManager = initializeWebSocketServer(this.httpServer);
       console.log('✅ WebSocket server ready for real-time communications');
 
-      // 6. Setup server monitoring
+      // 6. Start location broadcasting scheduler
+      console.log('📍 Starting location broadcast scheduler...');
+      locationScheduler.start();
+      console.log('✅ Location scheduler ready for 30-second broadcasts');
+
+      // 7. Start health monitoring
+      console.log('🔍 Starting connection health monitoring...');
+      connectionHealthMonitor.start();
+      console.log('✅ Health monitoring active');
+
+      // 8. Start metrics collection
+      console.log('📊 Starting real-time metrics collection...');
+      metricsCollector.start();
+      console.log('✅ Metrics collection active');
+
+      // 9. Setup server monitoring
       this.setupMonitoring();
 
-      // 7. Setup graceful shutdown
+      // 10. Setup graceful shutdown
       this.setupGracefulShutdown();
 
       console.log('🎯 All systems initialized successfully!');
@@ -202,18 +220,30 @@ class XpressOpsServer {
         console.log('🚫 Stopping HTTP server...');
         this.httpServer.close();
 
-        // 2. Close WebSocket connections
+        // 2. Stop health monitoring
+        console.log('🔍 Stopping health monitoring...');
+        connectionHealthMonitor.stop();
+
+        // 3. Stop metrics collection
+        console.log('📊 Stopping metrics collection...');
+        metricsCollector.stop();
+
+        // 4. Stop location scheduler
+        console.log('📍 Stopping location scheduler...');
+        locationScheduler.stop();
+
+        // 5. Close WebSocket connections
         console.log('🔌 Closing WebSocket connections...');
         const wsManager = require('./lib/websocket').getWebSocketManager();
         if (wsManager) {
           await wsManager.close();
         }
 
-        // 3. Close database connections
+        // 6. Close database connections
         console.log('📊 Closing database connections...');
         await closeDatabaseConnection();
 
-        // 4. Close Redis connections
+        // 7. Close Redis connections
         console.log('🔄 Closing Redis connections...');
         await closeRedisConnection();
 

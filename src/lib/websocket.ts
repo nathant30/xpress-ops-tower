@@ -33,6 +33,26 @@ export interface WebSocketEvents {
     timestamp: string;
   };
   
+  'driver:batch_locations': {
+    updates: {
+      driverId: string;
+      location: {
+        latitude: number;
+        longitude: number;
+        accuracy?: number;
+        bearing?: number;
+        speed?: number;
+      };
+      status: string;
+      isAvailable: boolean;
+      regionId: string;
+      timestamp: string;
+    }[];
+    batchId: string;
+    regionId?: string;
+    timestamp: string;
+  };
+  
   // Booking events
   'booking:new_request': {
     bookingId: string;
@@ -82,6 +102,22 @@ export interface WebSocketEvents {
     timestamp: string;
   };
   
+  'incident:escalated': {
+    incidentId: string;
+    incidentCode: string;
+    escalatedBy: string;
+    escalationLevel: number;
+    timestamp: string;
+  };
+  
+  'incident:resolved': {
+    incidentId: string;
+    incidentCode: string;
+    resolvedBy: string;
+    resolutionTime: number;
+    timestamp: string;
+  };
+  
   // System events
   'system:metrics_updated': {
     regionId?: string;
@@ -89,7 +125,46 @@ export interface WebSocketEvents {
       activeDrivers: number;
       activeBookings: number;
       emergencyIncidents: number;
+      completedTrips: number;
+      averageResponseTime: number;
+      systemLoad: number;
+      healthScore: number;
     };
+    timestamp: string;
+  };
+  
+  'system:health_check': {
+    services: {
+      database: { status: 'healthy' | 'degraded' | 'down'; responseTime: number };
+      redis: { status: 'healthy' | 'degraded' | 'down'; responseTime: number };
+      websocket: { status: 'healthy' | 'degraded' | 'down'; connections: number };
+      locationBatching: { status: 'healthy' | 'degraded' | 'down'; queueLength: number };
+      emergencyAlerts: { status: 'healthy' | 'degraded' | 'down'; activeAlerts: number };
+    };
+    overallHealth: 'healthy' | 'degraded' | 'down';
+    timestamp: string;
+  };
+  
+  'system:announcement': {
+    message: string;
+    priority: 'info' | 'warning' | 'critical';
+    targetRoles?: string[];
+    targetRegions?: string[];
+    timestamp: string;
+  };
+  
+  // KPI and Analytics events
+  'kpi:updated': {
+    regionId?: string;
+    kpis: {
+      totalTrips: number;
+      totalRevenue: number;
+      averageRating: number;
+      driverUtilization: number;
+      customerSatisfaction: number;
+      emergencyResponseTime: number;
+    };
+    periodType: 'realtime' | 'hourly' | 'daily' | 'weekly';
     timestamp: string;
   };
 }
@@ -533,6 +608,115 @@ export class WebSocketManager {
     // Remove from driver sockets if it's a driver
     if (authSocket.user.userType === 'driver') {
       this.driverSockets.delete(authSocket.user.userId);
+    }
+  }
+
+  // Enhanced broadcasting methods for new event types
+  
+  // Broadcast batch location updates
+  broadcastBatchLocationUpdates(updates: WebSocketEvents['driver:batch_locations']['updates'], regionId?: string): void {
+    const event: WebSocketEvents['driver:batch_locations'] = {
+      updates,
+      batchId: `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      regionId,
+      timestamp: new Date().toISOString()
+    };
+
+    if (regionId) {
+      this.broadcastToRegion(regionId, 'driver:batch_locations', event);
+    } else {
+      // Broadcast to all regions with drivers
+      const regionIds = new Set(updates.map(update => update.regionId));
+      regionIds.forEach(rid => {
+        if (rid) this.broadcastToRegion(rid, 'driver:batch_locations', event);
+      });
+    }
+  }
+
+  // Broadcast system health updates
+  broadcastSystemHealth(healthData: Omit<WebSocketEvents['system:health_check'], 'timestamp'>): void {
+    const event: WebSocketEvents['system:health_check'] = {
+      ...healthData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to admin and operator roles
+    this.broadcastToRole('admin', 'system:health_check', event);
+    this.broadcastToRole('operator', 'system:health_check', event);
+    this.broadcastToRole('analyst', 'system:health_check', event);
+  }
+
+  // Broadcast KPI updates
+  broadcastKPIUpdate(kpis: WebSocketEvents['kpi:updated']['kpis'], regionId?: string, periodType: 'realtime' | 'hourly' | 'daily' | 'weekly' = 'realtime'): void {
+    const event: WebSocketEvents['kpi:updated'] = {
+      regionId,
+      kpis,
+      periodType,
+      timestamp: new Date().toISOString()
+    };
+
+    if (regionId) {
+      this.broadcastToRegion(regionId, 'kpi:updated', event);
+    } else {
+      // Broadcast globally to analysts and admins
+      this.broadcastToRole('admin', 'kpi:updated', event);
+      this.broadcastToRole('analyst', 'kpi:updated', event);
+      this.broadcastToRole('manager', 'kpi:updated', event);
+    }
+  }
+
+  // Broadcast enhanced metrics
+  broadcastMetricsUpdate(metrics: WebSocketEvents['system:metrics_updated']['metrics'], regionId?: string): void {
+    const event: WebSocketEvents['system:metrics_updated'] = {
+      regionId,
+      metrics,
+      timestamp: new Date().toISOString()
+    };
+
+    if (regionId) {
+      this.broadcastToRegion(regionId, 'system:metrics_updated', event);
+    } else {
+      // Broadcast to all regions and admin roles
+      this.broadcastToRole('admin', 'system:metrics_updated', event);
+      this.broadcastToRole('analyst', 'system:metrics_updated', event);
+      for (const [rId] of this.regionSockets) {
+        this.broadcastToRegion(rId, 'system:metrics_updated', event);
+      }
+    }
+  }
+
+  // Broadcast targeted announcements
+  broadcastTargetedAnnouncement(
+    message: string, 
+    priority: 'info' | 'warning' | 'critical' = 'info',
+    targetRoles?: string[],
+    targetRegions?: string[]
+  ): void {
+    const event: WebSocketEvents['system:announcement'] = {
+      message,
+      priority,
+      targetRoles,
+      targetRegions,
+      timestamp: new Date().toISOString()
+    };
+
+    // Broadcast to specific roles if specified
+    if (targetRoles && targetRoles.length > 0) {
+      targetRoles.forEach(role => {
+        this.broadcastToRole(role, 'system:announcement', event);
+      });
+    }
+
+    // Broadcast to specific regions if specified
+    if (targetRegions && targetRegions.length > 0) {
+      targetRegions.forEach(regionId => {
+        this.broadcastToRegion(regionId, 'system:announcement', event);
+      });
+    }
+
+    // If no specific targets, broadcast to all
+    if ((!targetRoles || targetRoles.length === 0) && (!targetRegions || targetRegions.length === 0)) {
+      this.io.emit('system:announcement', event);
     }
   }
 

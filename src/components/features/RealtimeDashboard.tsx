@@ -11,7 +11,8 @@ import {
 
 import { XpressCard as Card, Button, Badge } from '@/components/xpress';
 import { RealTimeMap } from './RealTimeMap';
-import { useWebSocketMap } from '@/hooks/useWebSocketMap';
+import { SystemStatusMonitor } from './SystemStatusMonitor';
+import { useRealtimeDashboard } from '@/hooks/useRealtimeDashboard';
 import { locationBatchingService } from '@/lib/locationBatching';
 import { trafficService } from '@/lib/traffic';
 import { emergencyAlertService } from '@/lib/emergencyAlerts';
@@ -67,26 +68,28 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  // WebSocket connection for real-time data
+  // Enhanced real-time dashboard integration
   const {
     connected,
     connecting,
-    error: wsError,
-    drivers,
-    emergencyAlerts,
-    analytics,
+    connectionError: wsError,
+    metrics,
+    systemHealth,
+    alerts,
+    lastUpdate: realtimeLastUpdate,
+    isLoading,
+    driverLocations,
+    acknowledgeAlert,
+    clearAlerts,
+    forceReconnect,
+    dashboardHealth,
     connectionStats,
-    totalDrivers,
-    activeDrivers,
-    emergencyCount,
-    isHealthy,
-    acknowledgeEmergency
-  } = useWebSocketMap({
-    autoConnect: true,
-    batchUpdates: true,
-    filters: {
-      regionIds: regionId ? [regionId] : undefined
-    }
+    isHealthy
+  } = useRealtimeDashboard({
+    regionId,
+    autoRefresh,
+    refreshInterval,
+    enableNotifications: true
   });
 
   // Real-time metrics update
@@ -152,21 +155,18 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
     return () => clearInterval(interval);
   }, [refreshInterval, isHealthy, connectionStats]);
 
-  // Driver status breakdown
+  // Driver status breakdown using real-time metrics
   const driverStatusBreakdown = useMemo(() => {
-    const breakdown = drivers.reduce((acc, driver) => {
-      acc[driver.status] = (acc[driver.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const breakdown = metrics.drivers.breakdown;
 
     return [
-      { status: 'Active', count: breakdown.active || 0, color: 'bg-green-500', textColor: 'text-green-700' },
-      { status: 'Busy', count: breakdown.busy || 0, color: 'bg-orange-500', textColor: 'text-orange-700' },
+      { status: 'Active', count: metrics.drivers.active, color: 'bg-green-500', textColor: 'text-green-700' },
+      { status: 'Busy', count: metrics.drivers.busy, color: 'bg-orange-500', textColor: 'text-orange-700' },
       { status: 'Break', count: breakdown.break || 0, color: 'bg-blue-500', textColor: 'text-blue-700' },
-      { status: 'Offline', count: breakdown.offline || 0, color: 'bg-gray-500', textColor: 'text-gray-700' },
-      { status: 'Emergency', count: breakdown.emergency || 0, color: 'bg-red-500', textColor: 'text-red-700' }
+      { status: 'Offline', count: metrics.drivers.offline, color: 'bg-gray-500', textColor: 'text-gray-700' },
+      { status: 'Emergency', count: metrics.drivers.emergency, color: 'bg-red-500', textColor: 'text-red-700' }
     ];
-  }, [drivers]);
+  }, [metrics.drivers]);
 
   // System status indicator
   const getSystemStatus = () => {
@@ -191,8 +191,9 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'map', label: 'Live Map', icon: MapPin },
-    { id: 'alerts', label: 'Alerts', icon: AlertTriangle, badge: emergencyCount > 0 ? emergencyCount : undefined },
-    { id: 'performance', label: 'Performance', icon: TrendingUp }
+    { id: 'alerts', label: 'Alerts', icon: AlertTriangle, badge: alerts.length > 0 ? alerts.length : undefined },
+    { id: 'performance', label: 'Performance', icon: TrendingUp },
+    { id: 'system', label: 'System Status', icon: Shield }
   ];
 
   return (
@@ -226,7 +227,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
 
             {/* Last Update */}
             <div className="text-xs text-gray-500">
-              Updated: {lastUpdate.toLocaleTimeString()}
+              Updated: {realtimeLastUpdate.toLocaleTimeString()}
             </div>
           </div>
         </div>
@@ -250,9 +251,9 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                 <Icon className="h-4 w-4" />
                 <span>{tab.label}</span>
                 {tab.badge && (
-                  <XpressBadge variant="destructive" className="ml-1">
+                  <Badge variant="destructive" className="ml-1">
                     {tab.badge}
-                  </XpressBadge>
+                  </Badge>
                 )}
               </button>
             );
@@ -269,48 +270,48 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
               <div className="lg:col-span-2 space-y-6">
                 {/* Driver Metrics */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <XpressCard className="p-4">
+                  <Card className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-blue-100 rounded-lg">
                         <Users className="h-6 w-6 text-blue-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Drivers</p>
-                        <p className="text-2xl font-bold text-gray-900">{totalDrivers.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-gray-900">{metrics.drivers.total.toLocaleString()}</p>
                       </div>
                     </div>
-                  </XpressCard>
+                  </Card>
 
-                  <XpressCard className="p-4">
+                  <Card className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-green-100 rounded-lg">
                         <Activity className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Active</p>
-                        <p className="text-2xl font-bold text-green-600">{activeDrivers.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-green-600">{metrics.drivers.active.toLocaleString()}</p>
                         <p className="text-xs text-gray-500">
-                          {totalDrivers > 0 ? ((activeDrivers / totalDrivers) * 100).toFixed(1) : 0}% online
+                          {metrics.drivers.total > 0 ? ((metrics.drivers.active / metrics.drivers.total) * 100).toFixed(1) : 0}% online
                         </p>
                       </div>
                     </div>
-                  </XpressCard>
+                  </Card>
 
-                  <XpressCard className="p-4">
+                  <Card className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-red-100 rounded-lg">
                         <AlertTriangle className="h-6 w-6 text-red-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Emergencies</p>
-                        <p className={`text-2xl font-bold ${emergencyCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
-                          {emergencyCount}
+                        <p className={`text-2xl font-bold ${metrics.emergencies.critical > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                          {metrics.emergencies.critical}
                         </p>
                       </div>
                     </div>
-                  </XpressCard>
+                  </Card>
 
-                  <XpressCard className="p-4">
+                  <Card className="p-4">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-purple-100 rounded-lg">
                         <Zap className="h-6 w-6 text-purple-600" />
@@ -318,18 +319,18 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       <div>
                         <p className="text-sm font-medium text-gray-600">Avg Response</p>
                         <p className="text-2xl font-bold text-gray-900">
-                          {systemHealth?.emergencyAlerts.averageResponseTime
-                            ? `${(systemHealth.emergencyAlerts.averageResponseTime / 1000).toFixed(1)}s`
+                          {metrics.emergencies.averageResponseTime > 0
+                            ? `${(metrics.emergencies.averageResponseTime / 1000).toFixed(1)}s`
                             : '0s'
                           }
                         </p>
                       </div>
                     </div>
-                  </XpressCard>
+                  </Card>
                 </div>
 
                 {/* Driver Status Breakdown */}
-                <XpressCard className="p-6">
+                <Card className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Driver Status Distribution</h3>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     {driverStatusBreakdown.map(item => (
@@ -339,16 +340,16 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </div>
                         <p className={`font-medium ${item.textColor}`}>{item.status}</p>
                         <p className="text-xs text-gray-500">
-                          {totalDrivers > 0 ? ((item.count / totalDrivers) * 100).toFixed(1) : 0}%
+                          {metrics.drivers.total > 0 ? ((item.count / metrics.drivers.total) * 100).toFixed(1) : 0}%
                         </p>
                       </div>
                     ))}
                   </div>
-                </XpressCard>
+                </Card>
 
                 {/* System Performance */}
                 {systemHealth && (
-                  <XpressCard className="p-6">
+                  <Card className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">System Performance</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {Object.entries(systemHealth).map(([service, data]) => (
@@ -362,27 +363,27 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                               {service.replace(/([A-Z])/g, ' $1').trim()}
                             </span>
                           </div>
-                          <XpressBadge 
+                          <Badge 
                             variant={data.status === 'healthy' ? 'default' : data.status === 'degraded' ? 'secondary' : 'destructive'}
                           >
                             {data.status}
-                          </XpressBadge>
+                          </Badge>
                         </div>
                       ))}
                     </div>
-                  </XpressCard>
+                  </Card>
                 )}
               </div>
 
               {/* Emergency Alerts Sidebar */}
               <div className="space-y-6">
-                <XpressCard className="p-6">
+                <Card className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Emergency Alerts</h3>
                     <Shield className="h-5 w-5 text-red-500" />
                   </div>
                   
-                  {emergencyAlerts.length === 0 ? (
+                  {alerts.filter(a => a.type === 'emergency').length === 0 ? (
                     <div className="text-center py-8">
                       <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
                       <p className="text-gray-600">No active emergencies</p>
@@ -390,43 +391,43 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {emergencyAlerts.slice(0, 10).map(alert => (
-                        <div key={alert.incidentId} className="border border-red-200 rounded-lg p-3 bg-red-50">
+                      {alerts.filter(a => a.type === 'emergency').slice(0, 10).map(alert => (
+                        <div key={alert.id} className="border border-red-200 rounded-lg p-3 bg-red-50">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center space-x-2 mb-1">
-                                <XpressBadge 
+                                <Badge 
                                   variant={alert.priority === 'critical' ? 'destructive' : 'secondary'}
                                   size="sm"
                                 >
                                   {alert.priority}
-                                </XpressBadge>
-                                <span className="text-sm font-medium text-gray-900">{alert.incidentType}</span>
+                                </Badge>
+                                <span className="text-sm font-medium text-gray-900">{alert.type}</span>
                               </div>
                               <p className="text-sm text-gray-600 mb-2">{alert.title}</p>
                               <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                <span>{alert.createdAt.toLocaleTimeString()}</span>
-                                {alert.driverId && <span>Driver: {alert.driverId}</span>}
+                                <span>{alert.timestamp.toLocaleTimeString()}</span>
+                                {alert.source && <span>Source: {alert.source}</span>}
                               </div>
                             </div>
-                            {alert.status === 'open' && (
-                              <XpressButton
+                            {!alert.acknowledged && (
+                              <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => acknowledgeEmergency(alert.incidentId)}
+                                onClick={() => acknowledgeAlert(alert.id)}
                               >
                                 ACK
-                              </XpressButton>
+                              </Button>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </XpressCard>
+                </Card>
 
                 {/* Recent Activity */}
-                <XpressCard className="p-6">
+                <Card className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3 text-sm">
@@ -445,7 +446,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       <span className="text-gray-400 ml-auto">8m ago</span>
                     </div>
                   </div>
-                </XpressCard>
+                </Card>
               </div>
             </div>
           </div>
@@ -477,60 +478,61 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
               <p className="text-gray-600">Monitor and respond to emergency situations</p>
             </div>
 
-            {emergencyAlerts.length === 0 ? (
-              <XpressCard className="p-12 text-center">
+            {alerts.length === 0 ? (
+              <Card className="p-12 text-center">
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Emergencies</h3>
                 <p className="text-gray-600">All systems are operating normally</p>
-              </XpressCard>
+              </Card>
             ) : (
               <div className="space-y-4">
-                {emergencyAlerts.map(alert => (
-                  <XpressCard key={alert.incidentId} className="p-6">
+                {alerts.map(alert => (
+                  <Card key={alert.id} className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
-                          <XpressBadge 
+                          <Badge 
                             variant={alert.priority === 'critical' ? 'destructive' : 'secondary'}
                           >
                             {alert.priority}
-                          </XpressBadge>
-                          <span className="font-semibold text-gray-900">{alert.incidentType}</span>
-                          <span className="text-sm text-gray-500">#{alert.incidentId}</span>
+                          </Badge>
+                          <span className="font-semibold text-gray-900">{alert.type}</span>
+                          <span className="text-sm text-gray-500">#{alert.id}</span>
                         </div>
                         
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{alert.title}</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{alert.title}</h3>
+                        <p className="text-gray-600 mb-3">{alert.message}</p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                           <div>
-                            <span className="font-medium text-gray-700">Reporter:</span>
-                            <p className="text-gray-600">{alert.driverId || 'Unknown'}</p>
+                            <span className="font-medium text-gray-700">Source:</span>
+                            <p className="text-gray-600">{alert.source || 'System'}</p>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-700">Location:</span>
-                            <p className="text-gray-600">{alert.address || 'Coordinates provided'}</p>
+                            <span className="font-medium text-gray-700">Region:</span>
+                            <p className="text-gray-600">{alert.regionId || 'Global'}</p>
                           </div>
                           <div>
                             <span className="font-medium text-gray-700">Time:</span>
-                            <p className="text-gray-600">{alert.createdAt.toLocaleString()}</p>
+                            <p className="text-gray-600">{alert.timestamp.toLocaleString()}</p>
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex flex-col space-y-2 ml-4">
-                        {alert.status === 'open' && (
-                          <XpressButton
-                            onClick={() => acknowledgeEmergency(alert.incidentId)}
+                        {!alert.acknowledged && (
+                          <Button
+                            onClick={() => acknowledgeAlert(alert.id)}
                           >
                             Acknowledge
-                          </XpressButton>
+                          </Button>
                         )}
-                        <XpressButton variant="outline" size="sm">
+                        <Button variant="outline" size="sm">
                           View Details
-                        </XpressButton>
+                        </Button>
                       </div>
                     </div>
-                  </XpressCard>
+                  </Card>
                 ))}
               </div>
             )}
@@ -551,9 +553,9 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
-                    <XpressBadge variant={systemHealth.websocket.status === 'healthy' ? 'default' : 'destructive'}>
+                    <Badge variant={systemHealth.websocket.status === 'healthy' ? 'default' : 'destructive'}>
                       {systemHealth.websocket.status}
-                    </XpressBadge>
+                    </Badge>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Messages Received:</span>
@@ -564,7 +566,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{systemHealth.websocket.latency}ms</span>
                   </div>
                 </div>
-              </XpressCard>
+              </Card>
 
               {/* Location Batching Performance */}
               <XpressCard className="p-6">
@@ -583,7 +585,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.batchingMetrics.averageProcessingTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </XpressCard>
+              </Card>
 
               {/* Traffic Service Performance */}
               <XpressCard className="p-6">
@@ -602,7 +604,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.trafficMetrics.averageResponseTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </XpressCard>
+              </Card>
 
               {/* Emergency Alerts Performance */}
               <XpressCard className="p-6">
@@ -621,8 +623,22 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.emergencyMetrics.averagePropagationTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </XpressCard>
+              </Card>
             </div>
+          </div>
+        )}
+
+        {selectedTab === 'system' && (
+          <div className="h-full p-6 overflow-y-auto">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">System Status & Health Monitoring</h2>
+              <p className="text-gray-600">Real-time monitoring of system services and connection health</p>
+            </div>
+
+            <SystemStatusMonitor 
+              showDetails={true}
+              refreshInterval={30000}
+            />
           </div>
         )}
       </main>
