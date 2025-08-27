@@ -9,7 +9,7 @@ import {
   Wifi, WifiOff, Zap, Shield, Navigation, AlertCircle, CheckCircle
 } from 'lucide-react';
 
-import { XpressCard, XpressButton, XpressBadge } from '@/components/xpress';
+import { XpressCard as Card, Button, Badge } from '@/components/xpress';
 import { RealTimeMap } from './RealTimeMap';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
 import { locationBatchingService } from '@/lib/locationBatching';

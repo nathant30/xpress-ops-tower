@@ -11,7 +11,7 @@ import {
   ArrowDownRight, Minus, CheckCircle, AlertTriangle
 } from 'lucide-react';
 
-import { Button, Card, Badge } from '@/components/xpress';
+import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 
 interface AnalyticsDashboardProps {
   regionId?: string;

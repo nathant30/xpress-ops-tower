@@ -8,7 +8,7 @@ import { MapPin, Zap, AlertTriangle, Users, Activity, Settings, Filter, RefreshC
 
 import { RealTimeMapController, createMapConfig } from '@/lib/maps';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
-import { XpressCard, XpressButton, XpressSwitch } from '@/components/xpress';
+import { XpressCard as Card, Button, Badge } from '@/components/xpress';
 import { DriverMarker, MapViewState, HeatmapData } from '@/types/maps';
 
 interface RealTimeMapProps {

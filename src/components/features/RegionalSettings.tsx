@@ -11,7 +11,7 @@ import {
   Flag, Globe, Car, CreditCard, Bell
 } from 'lucide-react';
 
-import { Button, Card, Badge } from '@/components/xpress';
+import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 
 interface RegionalSettingsProps {
   regionId: string;

@@ -10,7 +10,7 @@ import {
   CheckCircle, XCircle, AlertTriangle, Eye, Edit, Star
 } from 'lucide-react';
 
-import { Button, Card, Badge } from '@/components/xpress';
+import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 
 interface Booking {
   id: string;

@@ -10,7 +10,7 @@ import {
   CheckCircle, XCircle, AlertCircle, User, Car, Shield, Activity
 } from 'lucide-react';
 
-import { Button, Card, Badge } from '@/components/xpress';
+import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 
 interface Driver {
   id: string;

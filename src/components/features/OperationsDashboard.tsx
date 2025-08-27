@@ -10,7 +10,7 @@ import {
   Navigation, Search, Filter, Calendar, Bell, MoreVertical
 } from 'lucide-react';
 
-import { Button, Card, Badge } from '@/components/xpress';
+import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 import { RealTimeMap } from './RealTimeMap';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
 
