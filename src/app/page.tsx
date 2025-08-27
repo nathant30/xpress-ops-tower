@@ -145,7 +145,8 @@ export default function InteractiveDashboard() {
               { id: 'drivers', name: 'Drivers', icon: Users },
               { id: 'bookings', name: 'Bookings', icon: Navigation },
               { id: 'alerts', name: 'Alerts', icon: Shield },
-              { id: 'analytics', name: 'Analytics', icon: TrendingUp }
+              { id: 'analytics', name: 'Analytics', icon: TrendingUp },
+              { id: 'settings', name: 'Settings', icon: Settings }
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -295,23 +296,52 @@ export default function InteractiveDashboard() {
                   </thead>
                   <tbody>
                     {dashboardData?.drivers?.map((driver, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="py-3">{driver.first_name} {driver.last_name}</td>
+                      <tr key={driver.id || index} className="border-b hover:bg-gray-50">
+                        <td className="py-3">
+                          <div>
+                            <div className="font-medium">
+                              {driver.firstName || driver.first_name || 'Unknown'} {driver.lastName || driver.last_name || ''}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {driver.driverCode || driver.driver_code || 'No Code'}
+                            </div>
+                          </div>
+                        </td>
                         <td className="py-3">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             driver.status === 'active' 
                               ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {driver.status}
+                            {driver.status || 'Unknown'}
                           </span>
                         </td>
-                        <td className="py-3 capitalize">{driver.primary_service?.replace('_', ' ')}</td>
-                        <td className="py-3">⭐ {driver.rating}</td>
                         <td className="py-3">
-                          <button className="text-blue-600 hover:text-blue-800 text-sm">
-                            View Details
-                          </button>
+                          <div className="text-sm">
+                            <div className="capitalize">{driver.primaryService?.replace('_', ' ') || driver.primary_service?.replace('_', ' ') || 'Unknown'}</div>
+                            <div className="text-xs text-gray-500">
+                              {driver.vehicleInfo?.make || 'Unknown'} {driver.vehicleInfo?.model || ''}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center space-x-1">
+                            <span className="text-yellow-400">⭐</span>
+                            <span className="font-medium">{driver.rating || '0.0'}</span>
+                            <span className="text-xs text-gray-500">
+                              ({driver.totalTrips || 0} trips)
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3">
+                          <div className="space-y-1">
+                            <button className="text-blue-600 hover:text-blue-800 text-sm block">
+                              View Details
+                            </button>
+                            <div className="text-xs text-gray-500">
+                              {driver.phone || 'No phone'}
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -331,12 +361,12 @@ export default function InteractiveDashboard() {
             <div className="p-6">
               <div className="space-y-4">
                 {dashboardData?.bookings?.map((booking, index) => (
-                  <div key={index} className="border rounded-lg p-4 hover:bg-gray-50">
+                  <div key={booking.id || index} className="border rounded-lg p-4 hover:bg-gray-50">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-medium">Booking #{booking.booking_reference}</h4>
-                        <p className="text-sm text-gray-600">{booking.pickup_address}</p>
-                        <p className="text-sm text-gray-600">→ {booking.dropoff_address}</p>
+                        <h4 className="font-medium">Booking #{booking.bookingReference || booking.booking_reference || 'N/A'}</h4>
+                        <p className="text-sm text-gray-600">{booking.pickupAddress || booking.pickup_address || 'Pickup location not specified'}</p>
+                        <p className="text-sm text-gray-600">→ {booking.dropoffAddress || booking.dropoff_address || 'Dropoff location not specified'}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         booking.status === 'in_progress'
@@ -345,12 +375,16 @@ export default function InteractiveDashboard() {
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {booking.status.replace('_', ' ')}
+                        {booking.status ? booking.status.replace('_', ' ') : 'Unknown'}
                       </span>
                     </div>
                     <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                      <span>Service: {booking.service_type.replace('_', ' ')}</span>
-                      <span>Driver: {booking.driver_name || 'Unassigned'}</span>
+                      <span>Service: {booking.serviceType?.replace('_', ' ') || booking.service_type?.replace('_', ' ') || 'Unknown'}</span>
+                      <span>Customer: {booking.customerInfo?.name || booking.customer_name || 'Unknown'}</span>
+                      <span>Total: ₱{booking.totalFare || booking.total_fare || '0.00'}</span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleString() : 'No timestamp'}
                     </div>
                   </div>
                 ))}
@@ -425,6 +459,222 @@ export default function InteractiveDashboard() {
                     {dashboardData?.analytics?.response_time || '0s'}
                   </div>
                   <p className="text-gray-600">Avg Response Time</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* System Configuration */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="p-6 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">System Configuration</h3>
+                <p className="text-gray-600">Internal tool configuration and management</p>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Environment Settings */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900">Environment Settings</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium text-sm">Environment</div>
+                          <div className="text-xs text-gray-600">Current deployment environment</div>
+                        </div>
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          {process.env.NODE_ENV || 'development'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium text-sm">Timezone</div>
+                          <div className="text-xs text-gray-600">Default system timezone</div>
+                        </div>
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                          Asia/Manila
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <div className="font-medium text-sm">Real-time Updates</div>
+                          <div className="text-xs text-gray-600">Auto-refresh interval</div>
+                        </div>
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                          30 seconds
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* API Status */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900">API Status Monitor</h4>
+                    <div className="space-y-3">
+                      {[
+                        { name: 'Health API', endpoint: '/api/health', status: 'healthy' },
+                        { name: 'Drivers API', endpoint: '/api/drivers', status: 'healthy' },
+                        { name: 'Bookings API', endpoint: '/api/bookings', status: 'healthy' },
+                        { name: 'Alerts API', endpoint: '/api/alerts', status: 'healthy' },
+                        { name: 'Analytics API', endpoint: '/api/analytics', status: 'healthy' },
+                        { name: 'Locations API', endpoint: '/api/locations', status: 'healthy' }
+                      ].map((api) => (
+                        <div key={api.endpoint} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                          <div>
+                            <div className="font-medium text-sm">{api.name}</div>
+                            <div className="text-xs text-gray-600">{api.endpoint}</div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              api.status === 'healthy' ? 'bg-green-400' : 'bg-red-400'
+                            }`}></div>
+                            <span className={`text-xs ${
+                              api.status === 'healthy' ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {api.status}
+                            </span>
+                            <button 
+                              onClick={() => window.open(api.endpoint, '_blank')}
+                              className="text-blue-600 hover:text-blue-800 text-xs"
+                            >
+                              Test
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* API Management */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="p-6 border-b">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">API Management</h3>
+                    <p className="text-gray-600">Manage API endpoints and configurations</p>
+                  </div>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Add New API
+                  </button>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 font-medium text-gray-900">Endpoint</th>
+                        <th className="text-left py-3 font-medium text-gray-900">Method</th>
+                        <th className="text-left py-3 font-medium text-gray-900">Status</th>
+                        <th className="text-left py-3 font-medium text-gray-900">Last Updated</th>
+                        <th className="text-left py-3 font-medium text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { endpoint: '/api/drivers', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:30:00' },
+                        { endpoint: '/api/drivers', method: 'POST', status: 'Active', lastUpdated: '2024-08-27 14:30:00' },
+                        { endpoint: '/api/bookings', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:25:00' },
+                        { endpoint: '/api/bookings', method: 'POST', status: 'Active', lastUpdated: '2024-08-27 14:25:00' },
+                        { endpoint: '/api/alerts', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:20:00' },
+                        { endpoint: '/api/alerts', method: 'POST', status: 'Active', lastUpdated: '2024-08-27 14:20:00' },
+                        { endpoint: '/api/locations', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:15:00' },
+                        { endpoint: '/api/locations', method: 'POST', status: 'Active', lastUpdated: '2024-08-27 14:15:00' },
+                        { endpoint: '/api/analytics', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:10:00' },
+                        { endpoint: '/api/health', method: 'GET', status: 'Active', lastUpdated: '2024-08-27 14:35:00' },
+                      ].map((api, index) => (
+                        <tr key={index} className="border-b hover:bg-gray-50">
+                          <td className="py-3 font-mono text-sm">{api.endpoint}</td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              api.method === 'GET' ? 'bg-green-100 text-green-800' : 
+                              api.method === 'POST' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {api.method}
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                              <span className="text-sm text-green-600">{api.status}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 text-sm text-gray-600">{api.lastUpdated}</td>
+                          <td className="py-3">
+                            <div className="flex space-x-2">
+                              <button className="text-blue-600 hover:text-blue-800 text-sm">
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => window.open(api.endpoint, '_blank')}
+                                className="text-green-600 hover:text-green-800 text-sm"
+                              >
+                                Test
+                              </button>
+                              <button className="text-red-600 hover:text-red-800 text-sm">
+                                Disable
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Data Management */}
+            <div className="bg-white rounded-lg shadow-sm">
+              <div className="p-6 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">Data Management</h3>
+                <p className="text-gray-600">Manage system data and configurations</p>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <div className="text-center">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                        </svg>
+                      </div>
+                      <div className="font-medium text-gray-900">Export Data</div>
+                      <div className="text-xs text-gray-600">Download system data as JSON/CSV</div>
+                    </div>
+                  </button>
+                  
+                  <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-colors">
+                    <div className="text-center">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                      </div>
+                      <div className="font-medium text-gray-900">Refresh Data</div>
+                      <div className="text-xs text-gray-600">Force refresh all cached data</div>
+                    </div>
+                  </button>
+                  
+                  <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-colors">
+                    <div className="text-center">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H9z"></path>
+                        </svg>
+                      </div>
+                      <div className="font-medium text-gray-900">System Logs</div>
+                      <div className="text-xs text-gray-600">View application logs and errors</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
