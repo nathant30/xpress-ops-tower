@@ -712,10 +712,10 @@ class SecurityScanner {
   async scanForSecrets() {
     const secretPatterns = [
       { name: 'AWS Secret Key', pattern: /AKIA[0-9A-Z]{16}/ },
-      { name: 'Private Key', pattern: /-----BEGIN.*PRIVATE KEY-----/ },
+      { name: 'Private Key', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*-----END [A-Z ]*PRIVATE KEY-----/ },
       { name: 'JWT Secret', pattern: /jwt.*[=:]\s*['""][^'""\s]{20,}['""]/i },
       { name: 'API Key', pattern: /api[_-]?key[=:]\s*['""][^'""\s]{10,}['""]/i },
-      { name: 'Database URL', pattern: /mongodb:\/\/|postgres:\/\/|mysql:\/\//i }
+      { name: 'Database URL', pattern: /(?:mongodb|postgres|mysql):\/\/[^\/\s'"]+:[^@\s'"]+@/ }
     ];
     
     try {

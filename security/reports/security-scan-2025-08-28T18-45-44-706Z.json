@@ -1,0 +1,64 @@
+{
+  "scan_info": {
+    "timestamp": "2025-08-28T18:45:42.020Z",
+    "duration_ms": 2683,
+    "base_url": "http://localhost:3000",
+    "scanner_version": "1.0.0"
+  },
+  "summary": {
+    "timestamp": "2025-08-28T18:45:42.020Z",
+    "overall_risk": "high",
+    "total_vulnerabilities": 2,
+    "critical_count": 0,
+    "high_count": 1,
+    "medium_count": 1,
+    "low_count": 0,
+    "tests_run": 24,
+    "tests_passed": 22,
+    "tests_failed": 2,
+    "duration_ms": 2683
+  },
+  "vulnerabilities": [
+    {
+      "category": "infrastructure",
+      "test": "bound testHTTPSConfiguration",
+      "severity": "high",
+      "description": "HTTPS not enforced",
+      "recommendation": "Use HTTPS for all communications, especially for emergency systems",
+      "technical_details": "Application running on HTTP instead of HTTPS",
+      "timestamp": "2025-08-28T18:45:42.023Z"
+    },
+    {
+      "category": "infrastructure",
+      "test": "bound testSecurityHeaders",
+      "severity": "medium",
+      "description": "Missing security header: strict-transport-security",
+      "recommendation": "Implement all recommended security headers",
+      "technical_details": "Security header strict-transport-security not present",
+      "timestamp": "2025-08-28T18:45:42.023Z"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Fix high-severity vulnerabilities within 24 hours",
+      "description": "High-severity issues should be addressed as soon as possible"
+    },
+    {
+      "priority": "medium",
+      "action": "Implement comprehensive security testing in CI/CD pipeline",
+      "description": "Regular automated security testing helps catch vulnerabilities early"
+    },
+    {
+      "priority": "low",
+      "action": "Schedule regular security reviews and penetration testing",
+      "description": "Professional security assessments provide comprehensive coverage"
+    }
+  ],
+  "compliance": {
+    "gdpr_compliance": "partial",
+    "pci_dss_compliance": "not_assessed",
+    "iso27001_alignment": "partial",
+    "emergency_services_compliance": "needs_review"
+  }
+}
