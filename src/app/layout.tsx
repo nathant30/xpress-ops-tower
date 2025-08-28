@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 
 import '@/styles/globals.css';
+import AppLayout from '@/components/AppLayout';
+import { ServiceTypeProvider } from '@/contexts/ServiceTypeContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -17,14 +19,14 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Xpress Ops Tower',
-    template: '%s | Xpress Ops Tower',
+    default: 'Xpress Ridesharing Operations',
+    template: '%s | Xpress Ridesharing Operations',
   },
-  description: 'Real-time operations command center with XPRESS Design System integration',
-  keywords: ['operations', 'dashboard', 'real-time', 'monitoring', 'Philippines'],
-  authors: [{ name: 'Xpress Ops Team' }],
-  creator: 'Xpress Ops Team',
-  publisher: 'Xpress Ops',
+  description: 'Professional ridesharing operations dashboard - Real-time command center for dispatch, driver management, and passenger analytics',
+  keywords: ['ridesharing', 'operations', 'dashboard', 'dispatch', 'driver management', 'passenger analytics', 'real-time', 'Philippines', 'transportation', 'mobility'],
+  authors: [{ name: 'Xpress Operations Team' }],
+  creator: 'Xpress Operations Team',
+  publisher: 'Xpress Ridesharing',
   formatDetection: {
     email: false,
     address: false,
@@ -44,15 +46,15 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    siteName: 'Xpress Ops Tower',
-    title: 'Xpress Ops Tower - Real-time Operations Dashboard',
-    description: 'Real-time operations command center with XPRESS Design System integration',
+    siteName: 'Xpress Ridesharing Operations',
+    title: 'Professional Ridesharing Operations Dashboard',
+    description: 'Real-time command center for dispatch, driver management, and passenger analytics in the Philippines',
     locale: 'en_PH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Xpress Ops Tower',
-    description: 'Real-time operations command center with XPRESS Design System integration',
+    title: 'Xpress Ridesharing Operations',
+    description: 'Professional ridesharing operations dashboard - Real-time command center for dispatch and analytics',
   },
   icons: {
     icon: '/favicon.ico',
@@ -70,7 +72,11 @@ export default function RootLayout({
   return (
     <html lang='en-PH' className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body className='font-sans antialiased'>
-        {children}
+        <ServiceTypeProvider>
+          <AppLayout>
+            {children}
+          </AppLayout>
+        </ServiceTypeProvider>
       </body>
     </html>
   );

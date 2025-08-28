@@ -35,10 +35,31 @@ interface Booking {
   booking_reference: string;
 }
 
+interface SurgeZone {
+  id: string;
+  center: { lat: number; lng: number };
+  radius: number; // in meters
+  multiplier: number;
+  intensity: 'low' | 'medium' | 'high';
+  active: boolean;
+}
+
+interface DemandHeatPoint {
+  lat: number;
+  lng: number;
+  weight: number; // 0-1 intensity
+  requestCount: number;
+}
+
 interface LiveMapProps {
   drivers?: Driver[];
   alerts?: Alert[];
   bookings?: Booking[];
+  surgeZones?: SurgeZone[];
+  demandHeatmap?: DemandHeatPoint[];
+  showSurgeZones?: boolean;
+  showDemandHeatmap?: boolean;
+  showDriverUtilization?: boolean;
   className?: string;
 }
 

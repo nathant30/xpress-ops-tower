@@ -280,7 +280,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         <p className="text-2xl font-bold text-gray-900">{metrics.drivers.total.toLocaleString()}</p>
                       </div>
                     </div>
-                  </Card>
+                  </XpressCard>
 
                   <Card className="p-4">
                     <div className="flex items-center space-x-3">
@@ -295,7 +295,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </p>
                       </div>
                     </div>
-                  </Card>
+                  </XpressCard>
 
                   <Card className="p-4">
                     <div className="flex items-center space-x-3">
@@ -309,7 +309,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </p>
                       </div>
                     </div>
-                  </Card>
+                  </XpressCard>
 
                   <Card className="p-4">
                     <div className="flex items-center space-x-3">
@@ -326,7 +326,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </p>
                       </div>
                     </div>
-                  </Card>
+                  </XpressCard>
                 </div>
 
                 {/* Driver Status Breakdown */}
@@ -345,7 +345,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       </div>
                     ))}
                   </div>
-                </Card>
+                </XpressCard>
 
                 {/* System Performance */}
                 {systemHealth && (
@@ -371,7 +371,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </div>
                       ))}
                     </div>
-                  </Card>
+                  </XpressCard>
                 )}
               </div>
 
@@ -424,7 +424,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       ))}
                     </div>
                   )}
-                </Card>
+                </XpressCard>
 
                 {/* Recent Activity */}
                 <Card className="p-6">
@@ -446,7 +446,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       <span className="text-gray-400 ml-auto">8m ago</span>
                     </div>
                   </div>
-                </Card>
+                </XpressCard>
               </div>
             </div>
           </div>
@@ -483,7 +483,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                 <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Emergencies</h3>
                 <p className="text-gray-600">All systems are operating normally</p>
-              </Card>
+              </XpressCard>
             ) : (
               <div className="space-y-4">
                 {alerts.map(alert => (
@@ -532,7 +532,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                         </Button>
                       </div>
                     </div>
-                  </Card>
+                  </XpressCard>
                 ))}
               </div>
             )}
@@ -566,7 +566,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{systemHealth.websocket.latency}ms</span>
                   </div>
                 </div>
-              </Card>
+              </XpressCard>
 
               {/* Location Batching Performance */}
               <XpressCard className="p-6">
@@ -585,7 +585,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.batchingMetrics.averageProcessingTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </Card>
+              </XpressCard>
 
               {/* Traffic Service Performance */}
               <XpressCard className="p-6">
@@ -604,7 +604,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.trafficMetrics.averageResponseTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </Card>
+              </XpressCard>
 
               {/* Emergency Alerts Performance */}
               <XpressCard className="p-6">
@@ -623,7 +623,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                     <span className="font-semibold">{performanceMetrics.emergencyMetrics.averagePropagationTime.toFixed(0)}ms</span>
                   </div>
                 </div>
-              </Card>
+              </XpressCard>
             </div>
           </div>
         )}

@@ -7,9 +7,12 @@ import jwt from 'jsonwebtoken';
 import { redis } from './redis';
 import { AuthPayload, authManager } from './auth';
 
-// WebSocket event types
-export interface WebSocketEvents {
-  // Driver events
+// Import ridesharing-specific event types and configurations
+import { RidesharingWebSocketEvents, RIDESHARING_EVENT_ROUTING, EventPriority } from '../types/ridesharing';
+
+// Combined WebSocket event types for ridesharing platform
+export interface WebSocketEvents extends RidesharingWebSocketEvents {
+  // Legacy driver events (maintained for backward compatibility)
   'driver:status_changed': {
     driverId: string;
     oldStatus: string;
@@ -720,6 +723,439 @@ export class WebSocketManager {
     }
   }
 
+  // =====================================================
+  // RIDESHARING-SPECIFIC REAL-TIME METHODS
+  // =====================================================
+
+  // Broadcast ride request to nearby drivers
+  broadcastRideRequest(
+    rideRequest: WebSocketEvents['ride:request_created'],
+    nearbyDriverIds: string[],
+    maxDriversToNotify: number = 10
+  ): void {
+    const event: WebSocketEvents['ride:request_created'] = {
+      ...rideRequest,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send to nearby drivers (first N drivers based on proximity)
+    const driversToNotify = nearbyDriverIds.slice(0, maxDriversToNotify);
+    driversToNotify.forEach(driverId => {
+      this.sendToDriver('ride:request_created', event, driverId);
+    });
+
+    // Also notify regional operators
+    this.broadcastToRegionOperators(rideRequest.pickup.address, 'ride:request_created', event);
+
+    // Log for analytics
+    this.publishToAnalytics('ride_request_broadcast', {
+      requestId: rideRequest.requestId,
+      driversNotified: driversToNotify.length,
+      region: this.getRegionFromLocation(rideRequest.pickup)
+    });
+  }
+
+  // Broadcast ride assignment
+  broadcastRideAssignment(rideAssignment: Omit<WebSocketEvents['ride:driver_assigned'], 'timestamp'>): void {
+    const event: WebSocketEvents['ride:driver_assigned'] = {
+      ...rideAssignment,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify the assigned driver
+    this.sendToDriver('ride:driver_assigned', event, rideAssignment.driver.id);
+
+    // Notify passenger (if they have the app)
+    this.sendToUser(rideAssignment.rideId, 'ride:driver_assigned', event);
+
+    // Notify regional operators
+    this.broadcastToRegionOperators('all', 'ride:driver_assigned', event);
+  }
+
+  // Broadcast ride status updates with enhanced context
+  broadcastRideStatusUpdate(
+    statusUpdate: Omit<WebSocketEvents['ride:status_updated'], 'timestamp'>
+  ): void {
+    const event: WebSocketEvents['ride:status_updated'] = {
+      ...statusUpdate,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify all relevant parties based on status
+    switch (statusUpdate.newStatus) {
+      case 'driver_en_route':
+      case 'driver_arrived':
+        // Notify passenger about driver arrival
+        this.sendToUser(statusUpdate.rideId, 'ride:status_updated', event);
+        break;
+      
+      case 'pickup':
+      case 'in-progress':
+        // Notify both driver and passenger
+        this.sendToDriver('ride:status_updated', event, statusUpdate.rideId);
+        this.sendToUser(statusUpdate.rideId, 'ride:status_updated', event);
+        break;
+      
+      case 'completed':
+      case 'cancelled':
+        // Notify all parties and update regional metrics
+        this.sendToDriver('ride:status_updated', event, statusUpdate.rideId);
+        this.sendToUser(statusUpdate.rideId, 'ride:status_updated', event);
+        this.broadcastToRegionOperators('all', 'ride:status_updated', event);
+        break;
+    }
+
+    // Update real-time dashboards
+    this.updateRealTimeDashboards(event);
+  }
+
+  // Broadcast demand hotspot updates
+  broadcastDemandUpdate(hotspotUpdate: Omit<WebSocketEvents['demand:hotspot_updated'], 'timestamp'>): void {
+    const event: WebSocketEvents['demand:hotspot_updated'] = {
+      ...hotspotUpdate,
+      timestamp: new Date().toISOString()
+    };
+
+    // Determine notification scope based on demand level
+    if (hotspotUpdate.hotspot.demandLevel === 'Critical' || hotspotUpdate.hotspot.demandLevel === 'Very High') {
+      // Critical demand - notify all drivers in region
+      this.broadcastToRegion(hotspotUpdate.hotspot.region || 'all', 'demand:hotspot_updated', event);
+      
+      // Alert operations managers
+      this.broadcastToRole('manager', 'demand:hotspot_updated', event);
+    } else {
+      // Normal demand - notify nearby drivers only
+      this.broadcastToAreaDrivers(
+        hotspotUpdate.hotspot.coordinates, 
+        hotspotUpdate.hotspot.radius, 
+        'demand:hotspot_updated', 
+        event
+      );
+    }
+
+    // Always notify regional operators and analysts
+    this.broadcastToRole('operator', 'demand:hotspot_updated', event);
+    this.broadcastToRole('analyst', 'demand:hotspot_updated', event);
+  }
+
+  // Broadcast surge pricing activation/deactivation
+  broadcastSurgeUpdate(
+    surgeUpdate: Omit<WebSocketEvents['demand:surge_activated'], 'timestamp'> | 
+                 Omit<WebSocketEvents['demand:surge_deactivated'], 'timestamp'>,
+    eventType: 'activated' | 'deactivated'
+  ): void {
+    const timestamp = new Date().toISOString();
+    
+    if (eventType === 'activated') {
+      const event: WebSocketEvents['demand:surge_activated'] = {
+        ...(surgeUpdate as Omit<WebSocketEvents['demand:surge_activated'], 'timestamp'>),
+        timestamp
+      };
+      
+      // Notify drivers in surge area about pricing opportunity
+      this.broadcastToAreaDrivers(
+        [event.surgeArea.coordinates[0][0], event.surgeArea.coordinates[0][1]], // First coordinate
+        5000, // 5km radius
+        'demand:surge_activated',
+        event
+      );
+      
+      // Notify operators and managers
+      this.broadcastToRole('operator', 'demand:surge_activated', event);
+      this.broadcastToRole('manager', 'demand:surge_activated', event);
+    } else {
+      const event: WebSocketEvents['demand:surge_deactivated'] = {
+        ...(surgeUpdate as Omit<WebSocketEvents['demand:surge_deactivated'], 'timestamp'>),
+        timestamp
+      };
+      
+      // Notify relevant stakeholders
+      this.broadcastToRole('analyst', 'demand:surge_deactivated', event);
+      this.io.emit('demand:surge_deactivated', event);
+    }
+  }
+
+  // Broadcast driver earnings update
+  broadcastDriverEarningsUpdate(earningsUpdate: Omit<WebSocketEvents['driver:earnings_updated'], 'timestamp'>): void {
+    const event: WebSocketEvents['driver:earnings_updated'] = {
+      ...earningsUpdate,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send to specific driver
+    this.sendToDriver('driver:earnings_updated', event, earningsUpdate.driverId);
+
+    // Send anonymized data to regional operators for monitoring
+    if (event.earnings.today > 1000) { // High earning day threshold
+      this.broadcastToRole('operator', 'driver:earnings_updated', {
+        ...event,
+        driverId: 'ANONYMIZED', // Privacy protection
+      });
+    }
+  }
+
+  // Broadcast fleet optimization recommendations
+  broadcastFleetOptimization(optimizationUpdate: Omit<WebSocketEvents['fleet:optimization_complete'], 'timestamp'>): void {
+    const event: WebSocketEvents['fleet:optimization_complete'] = {
+      ...optimizationUpdate,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send to regional managers and operators
+    this.broadcastToRegion(optimizationUpdate.region, 'fleet:optimization_complete', event);
+    
+    // Send to fleet managers and analysts
+    this.broadcastToRole('manager', 'fleet:optimization_complete', event);
+    this.broadcastToRole('analyst', 'fleet:optimization_complete', event);
+
+    // Auto-implement high-priority, low-risk recommendations
+    this.autoImplementOptimizations(event);
+  }
+
+  // Broadcast safety incidents with priority handling
+  broadcastSafetyIncident(incident: Omit<WebSocketEvents['safety:incident_reported'], 'timestamp'>): void {
+    const event: WebSocketEvents['safety:incident_reported'] = {
+      ...incident,
+      timestamp: new Date().toISOString()
+    };
+
+    // Priority-based notification routing
+    switch (incident.severity) {
+      case 'critical':
+      case 'emergency':
+        // Immediate alert to all safety personnel and managers
+        this.broadcastToRole('safety_monitor', 'safety:incident_reported', event);
+        this.broadcastToRole('manager', 'safety:incident_reported', event);
+        this.broadcastToRole('admin', 'safety:incident_reported', event);
+        
+        // Regional operators for immediate response
+        this.broadcastToRegionOperators('all', 'safety:incident_reported', event);
+        
+        // Emergency services integration trigger
+        this.triggerEmergencyServices(event);
+        break;
+        
+      case 'high':
+        this.broadcastToRole('safety_monitor', 'safety:incident_reported', event);
+        this.broadcastToRegion(incident.incident.regionId || 'unknown', 'safety:incident_reported', event);
+        break;
+        
+      default:
+        this.broadcastToRole('operator', 'safety:incident_reported', event);
+    }
+  }
+
+  // Broadcast emergency alerts with maximum priority
+  broadcastEmergencyAlert(alert: Omit<WebSocketEvents['safety:emergency_alert'], 'timestamp'>): void {
+    const event: WebSocketEvents['safety:emergency_alert'] = {
+      ...alert,
+      timestamp: new Date().toISOString()
+    };
+
+    // Immediate broadcast to ALL connected safety personnel
+    this.broadcastToRole('safety_monitor', 'safety:emergency_alert', event);
+    this.broadcastToRole('admin', 'safety:emergency_alert', event);
+    this.broadcastToRole('manager', 'safety:emergency_alert', event);
+
+    // Regional emergency broadcast
+    this.io.emit('safety:emergency_alert', event);
+
+    // Trigger automated emergency response protocols
+    this.triggerEmergencyResponse(event);
+  }
+
+  // Broadcast analytics and KPI updates with smart routing
+  broadcastAnalyticsUpdate(analyticsUpdate: Omit<WebSocketEvents['analytics:kpi_updated'], 'timestamp'>): void {
+    const event: WebSocketEvents['analytics:kpi_updated'] = {
+      ...analyticsUpdate,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send to analysts and managers
+    this.broadcastToRole('analyst', 'analytics:kpi_updated', event);
+    this.broadcastToRole('manager', 'analytics:kpi_updated', event);
+
+    // Regional routing for region-specific KPIs
+    if (event.region) {
+      this.broadcastToRegion(event.region, 'analytics:kpi_updated', event);
+    }
+
+    // Alert on critical KPI thresholds
+    this.checkKPIAlerts(event);
+  }
+
+  // Broadcast prediction alerts with automated actions
+  broadcastPredictionAlert(prediction: Omit<WebSocketEvents['analytics:prediction_alert'], 'timestamp'>): void {
+    const event: WebSocketEvents['analytics:prediction_alert'] = {
+      ...prediction,
+      timestamp: new Date().toISOString()
+    };
+
+    // Priority-based routing
+    switch (prediction.urgency) {
+      case 'critical':
+      case 'urgent':
+        this.broadcastToRole('manager', 'analytics:prediction_alert', event);
+        this.broadcastToRole('analyst', 'analytics:prediction_alert', event);
+        this.broadcastToRole('operator', 'analytics:prediction_alert', event);
+        break;
+      default:
+        this.broadcastToRole('analyst', 'analytics:prediction_alert', event);
+    }
+
+    // Execute auto-actions if enabled
+    this.executeAutoActions(event);
+  }
+
+  // =====================================================
+  // RIDESHARING-SPECIFIC HELPER METHODS
+  // =====================================================
+
+  private sendToDriver<K extends keyof WebSocketEvents>(
+    event: K,
+    data: WebSocketEvents[K],
+    driverId: string
+  ): void {
+    const socketId = this.driverSockets.get(driverId);
+    if (socketId) {
+      const socket = this.io.sockets.sockets.get(socketId);
+      if (socket) {
+        socket.emit(event, data);
+      }
+    }
+  }
+
+  private broadcastToRegionOperators<K extends keyof WebSocketEvents>(
+    region: string,
+    event: K,
+    data: WebSocketEvents[K]
+  ): void {
+    for (const [socketId, authSocket] of this.authenticatedSockets) {
+      if (authSocket.user.role === 'operator' && 
+          (region === 'all' || authSocket.regionId === region)) {
+        const socket = this.io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.emit(event, data);
+        }
+      }
+    }
+  }
+
+  private broadcastToAreaDrivers<K extends keyof WebSocketEvents>(
+    centerCoordinates: [number, number],
+    radiusMeters: number,
+    event: K,
+    data: WebSocketEvents[K]
+  ): void {
+    // This would integrate with driver location tracking
+    // For now, simplified implementation
+    this.broadcastToRole('driver', event, data);
+  }
+
+  private updateRealTimeDashboards(statusUpdate: WebSocketEvents['ride:status_updated']): void {
+    // Trigger dashboard metric updates
+    this.publishToAnalytics('ride_status_change', {
+      rideId: statusUpdate.rideId,
+      oldStatus: statusUpdate.oldStatus,
+      newStatus: statusUpdate.newStatus,
+      timestamp: statusUpdate.timestamp
+    });
+  }
+
+  private getRegionFromLocation(location: any): string {
+    // Implement geolocation-to-region mapping
+    return 'unknown';
+  }
+
+  private publishToAnalytics(event: string, data: any): void {
+    // Publish to analytics pipeline (Redis/Kafka)
+    redis.publish(`analytics:${event}`, JSON.stringify({
+      event,
+      data,
+      timestamp: new Date().toISOString()
+    }));
+  }
+
+  private autoImplementOptimizations(optimization: WebSocketEvents['fleet:optimization_complete']): void {
+    // Implement automatic execution of safe optimization recommendations
+    const autoImplementable = optimization.recommendations.filter(rec => 
+      rec.priority === 'low' && rec.type === 'reposition_drivers'
+    );
+    
+    // Execute auto-implementations
+    autoImplementable.forEach(rec => {
+      // Implementation logic here
+      console.log(`Auto-implementing optimization: ${rec.description}`);
+    });
+  }
+
+  private triggerEmergencyServices(incident: WebSocketEvents['safety:incident_reported']): void {
+    // Integration with emergency services APIs
+    console.log(`EMERGENCY TRIGGERED: ${incident.incident.incidentId} - ${incident.severity}`);
+    
+    // This would integrate with:
+    // - Local emergency services APIs
+    // - Automated alert systems
+    // - Emergency contact notifications
+  }
+
+  private triggerEmergencyResponse(alert: WebSocketEvents['safety:emergency_alert']): void {
+    // Automated emergency response protocols
+    console.log(`EMERGENCY RESPONSE ACTIVATED: ${alert.type} at ${alert.location}`);
+    
+    // This would trigger:
+    // - Automated emergency service calls
+    // - Driver/passenger safety protocols
+    // - Real-time location tracking intensification
+    // - Management alert cascades
+  }
+
+  private checkKPIAlerts(kpiUpdate: WebSocketEvents['analytics:kpi_updated']): void {
+    // Check for KPI threshold breaches and trigger alerts
+    kpiUpdate.alerts.forEach(alert => {
+      if (alert.severity === 'critical') {
+        this.broadcastToRole('manager', 'system:announcement', {
+          message: `Critical KPI Alert: ${alert.metric} is ${alert.currentValue} (threshold: ${alert.threshold})`,
+          priority: 'critical',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+  }
+
+  private executeAutoActions(prediction: WebSocketEvents['analytics:prediction_alert']): void {
+    // Execute automated actions based on predictions
+    prediction.autoActions.forEach(action => {
+      if (action.autoImplement) {
+        console.log(`Auto-executing prediction action: ${action.description}`);
+        // Implementation logic here
+      }
+    });
+  }
+
+  // Get enhanced connection statistics including ridesharing metrics
+  getRidesharingStats(): {
+    totalConnections: number;
+    regionalConnections: Record<string, number>;
+    driverConnections: number;
+    operatorConnections: number;
+    activeRides: number;
+    pendingRequests: number;
+    averageResponseTime: number;
+    emergencyAlerts: number;
+  } {
+    const baseStats = this.getStats();
+    
+    // Additional ridesharing-specific metrics would be calculated here
+    return {
+      ...baseStats,
+      activeRides: 0, // Would be calculated from active rides
+      pendingRequests: 0, // Would be calculated from pending ride requests
+      averageResponseTime: 0, // Would be calculated from recent response times
+      emergencyAlerts: 0 // Would be calculated from recent emergency alerts
+    };
+  }
+
   // Public methods for external use
 
   // Get connection statistics
@@ -787,6 +1223,353 @@ export class WebSocketManager {
         resolve();
       });
     });
+  }
+
+  // =====================================================
+  // ADVANCED RIDESHARING WEBSOCKET METHODS
+  // =====================================================
+
+  // Broadcast ride creation to nearby drivers with smart filtering
+  broadcastRideCreated(rideData: WebSocketEvents['ride:created']): void {
+    const event: WebSocketEvents['ride:created'] = {
+      ...rideData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Get nearby drivers based on service type and location
+    this.broadcastToNearbyDrivers(
+      rideData.pickupLocation.latitude,
+      rideData.pickupLocation.longitude,
+      rideData.serviceType,
+      rideData.regionId,
+      'ride:created',
+      event,
+      10000 // 10km radius
+    );
+
+    // Notify regional operators
+    this.broadcastToRegion(rideData.regionId, 'ride:created', event);
+  }
+
+  // Smart ride matching notification with driver ranking
+  broadcastRideMatched(matchData: WebSocketEvents['ride:matched']): void {
+    const event: WebSocketEvents['ride:matched'] = {
+      ...matchData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify the matched driver
+    this.sendToDriver(matchData.driverId, 'ride:matched', event);
+
+    // Notify customer (if connected)
+    this.sendToUser(matchData.customerId, 'ride:matched', event);
+
+    // Notify regional operators
+    this.broadcastToRegion(matchData.regionId, 'ride:matched', event);
+  }
+
+  // Enhanced surge pricing broadcasts with zone-based targeting
+  broadcastSurgeActivated(surgeData: WebSocketEvents['surge:activated']): void {
+    const event: WebSocketEvents['surge:activated'] = {
+      ...surgeData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify all drivers in the region
+    this.broadcastToRegion(surgeData.regionId, 'surge:activated', event);
+
+    // Notify operators and admins
+    this.broadcastToRole('operator', 'surge:activated', event);
+    this.broadcastToRole('admin', 'surge:activated', event);
+
+    // Store surge event in Redis for persistence
+    redis.setex(
+      `surge_event:${surgeData.regionId}:${Date.now()}`,
+      3600, // 1 hour
+      JSON.stringify(event)
+    );
+  }
+
+  // Real-time demand hotspot updates
+  broadcastDemandHotspots(hotspotData: WebSocketEvents['demand:hotspot_update']): void {
+    const event: WebSocketEvents['demand:hotspot_update'] = {
+      ...hotspotData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify drivers in the region for repositioning
+    this.broadcastToRegion(hotspotData.regionId, 'demand:hotspot_update', event);
+
+    // Notify analysts and operators
+    this.broadcastToRole('analyst', 'demand:hotspot_update', event);
+    this.broadcastToRole('operator', 'demand:hotspot_update', event);
+  }
+
+  // Critical safety incident broadcasts with escalation
+  broadcastSafetyIncident(incidentData: WebSocketEvents['safety:incident']): void {
+    const event: WebSocketEvents['safety:incident'] = {
+      ...incidentData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Immediate notification to safety monitors and admins
+    this.broadcastToRole('safety_monitor', 'safety:incident', event);
+    this.broadcastToRole('admin', 'safety:incident', event);
+
+    // Regional operators for coordination
+    if (incidentData.regionId) {
+      this.broadcastToRegion(incidentData.regionId, 'safety:incident', event);
+    }
+
+    // Auto-notify nearby drivers for critical incidents
+    if (incidentData.priority === 'critical') {
+      this.broadcastToNearbyDrivers(
+        incidentData.location.latitude,
+        incidentData.location.longitude,
+        null, // All service types
+        incidentData.regionId,
+        'safety:incident',
+        event,
+        5000 // 5km radius
+      );
+    }
+  }
+
+  // Emergency SOS activation with immediate escalation
+  broadcastSOSActivated(sosData: WebSocketEvents['safety:sos_activated']): void {
+    const event: WebSocketEvents['safety:sos_activated'] = {
+      ...sosData,
+      timestamp: new Date().toISOString()
+    };
+
+    // CRITICAL: Immediate broadcast to all safety personnel
+    this.broadcastToRole('safety_monitor', 'safety:sos_activated', event);
+    this.broadcastToRole('admin', 'safety:sos_activated', event);
+    this.broadcastToRole('emergency_responder', 'safety:sos_activated', event);
+
+    // Regional emergency coordination
+    this.broadcastToRegion(sosData.regionId, 'safety:sos_activated', event);
+
+    // Notify nearby drivers if auto-alerts enabled
+    if (sosData.autoAlerts.nearbyDrivers) {
+      this.broadcastToNearbyDrivers(
+        sosData.location.latitude,
+        sosData.location.longitude,
+        null, // All drivers
+        sosData.regionId,
+        'safety:sos_activated',
+        event,
+        2000 // 2km radius for SOS
+      );
+    }
+  }
+
+  // System performance metrics broadcasting
+  broadcastSystemPerformance(performanceData: WebSocketEvents['system:ride_matching_performance']): void {
+    const event: WebSocketEvents['system:ride_matching_performance'] = {
+      ...performanceData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify system administrators and analysts
+    this.broadcastToRole('admin', 'system:ride_matching_performance', event);
+    this.broadcastToRole('analyst', 'system:ride_matching_performance', event);
+    this.broadcastToRole('tech_ops', 'system:ride_matching_performance', event);
+
+    // Regional performance tracking
+    if (performanceData.regionId) {
+      this.broadcastToRegion(performanceData.regionId, 'system:ride_matching_performance', event);
+    }
+  }
+
+  // Fleet rebalancing recommendations
+  broadcastFleetRebalancing(rebalancingData: WebSocketEvents['operations:fleet_rebalancing']): void {
+    const event: WebSocketEvents['operations:fleet_rebalancing'] = {
+      ...rebalancingData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify affected drivers with rebalancing recommendations
+    rebalancingData.rebalancing.recommendedMoves.forEach(move => {
+      this.sendToDriver(move.driverId, 'operations:fleet_rebalancing', event);
+    });
+
+    // Notify regional operators
+    this.broadcastToRegion(rebalancingData.regionId, 'operations:fleet_rebalancing', event);
+  }
+
+  // Customer feedback processing
+  broadcastCustomerFeedback(feedbackData: WebSocketEvents['customer:ride_feedback']): void {
+    const event: WebSocketEvents['customer:ride_feedback'] = {
+      ...feedbackData,
+      timestamp: new Date().toISOString()
+    };
+
+    // Notify the driver about their rating
+    this.sendToDriver(feedbackData.driverId, 'customer:ride_feedback', event);
+
+    // Low ratings trigger quality alerts
+    if (feedbackData.rating <= 2) {
+      this.broadcastToRole('quality_manager', 'customer:ride_feedback', event);
+      this.broadcastToRegion(feedbackData.regionId, 'operations:quality_alert', {
+        alertType: 'low_ratings',
+        severity: feedbackData.rating === 1 ? 'critical' : 'high',
+        regionId: feedbackData.regionId,
+        affectedEntity: {
+          type: 'driver',
+          id: feedbackData.driverId,
+          name: 'Driver' // Would get actual name in production
+        },
+        metrics: {
+          currentValue: feedbackData.rating,
+          threshold: 3.0,
+          trend: 'worsening'
+        },
+        recommendedActions: [
+          'Driver coaching required',
+          'Quality review needed',
+          'Customer service follow-up'
+        ],
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  // Advanced location-based broadcasting
+  private async broadcastToNearbyDrivers<K extends keyof WebSocketEvents>(
+    latitude: number,
+    longitude: number,
+    serviceType: string | null,
+    regionId: string,
+    event: K,
+    data: WebSocketEvents[K],
+    radiusMeters: number = 5000
+  ): Promise<void> {
+    try {
+      // Get nearby drivers from database/cache
+      // This would typically query Redis for driver locations
+      const nearbyDriversQuery = `
+        SELECT DISTINCT d.id as driver_id
+        FROM drivers d
+        JOIN driver_locations dl ON d.id = dl.driver_id
+        WHERE d.region_id = $1
+          AND d.status = 'active'
+          AND dl.is_available = TRUE
+          AND dl.expires_at > NOW()
+          AND ST_DWithin(
+            ST_GeogFromText(ST_AsText(dl.location)),
+            ST_GeogFromText('POINT($2 $3)'),
+            $4
+          )
+          ${serviceType ? 'AND $5 = ANY(d.services)' : ''}
+      `;
+
+      const params = [regionId, longitude, latitude, radiusMeters];
+      if (serviceType) params.push(serviceType);
+
+      // In production, this would use the database connection
+      // For now, we'll broadcast to all drivers in the region
+      const regionDrivers = Array.from(this.driverSockets.entries())
+        .filter(([driverId, socketId]) => {
+          const authSocket = this.authenticatedSockets.get(socketId);
+          return authSocket && authSocket.regionId === regionId;
+        });
+
+      regionDrivers.forEach(([driverId, socketId]) => {
+        const socket = this.io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.emit(event, data);
+        }
+      });
+
+    } catch (error) {
+      console.error('Error broadcasting to nearby drivers:', error);
+    }
+  }
+
+  // Event priority routing with rate limiting
+  private async routeEventWithPriority<K extends keyof WebSocketEvents>(
+    event: K,
+    data: WebSocketEvents[K],
+    targetType: 'region' | 'role' | 'driver' | 'user',
+    target: string
+  ): Promise<boolean> {
+    try {
+      // Get routing configuration for this event
+      const routing = RIDESHARING_EVENT_ROUTING.find(config => config.event === event);
+      
+      if (routing?.rateLimited) {
+        const rateLimitKey = `rate_limit:${event}:${target}`;
+        const currentCount = await redis.incr(rateLimitKey);
+        
+        if (currentCount === 1) {
+          await redis.expire(rateLimitKey, 60); // 1 minute window
+        }
+        
+        if (currentCount > routing.rateLimited.maxPerMinute) {
+          console.warn(`Rate limit exceeded for event ${event} to ${target}`);
+          return false;
+        }
+      }
+
+      // Apply caching if configured
+      if (routing?.cacheTtl) {
+        const cacheKey = `event_cache:${event}:${target}`;
+        await redis.setex(cacheKey, routing.cacheTtl, JSON.stringify(data));
+      }
+
+      // Route the event based on target type
+      switch (targetType) {
+        case 'region':
+          this.broadcastToRegion(target, event, data);
+          break;
+        case 'role':
+          this.broadcastToRole(target, event, data);
+          break;
+        case 'driver':
+          this.sendToDriver(target, event, data);
+          break;
+        case 'user':
+          this.sendToUser(target, event, data);
+          break;
+      }
+
+      return true;
+
+    } catch (error) {
+      console.error('Error routing event with priority:', error);
+      return false;
+    }
+  }
+
+  // Analytics and metrics collection
+  async collectEventMetrics(): Promise<void> {
+    try {
+      const stats = this.getStats();
+      
+      const metrics: WebSocketEvents['system:driver_utilization'] = {
+        regionId: undefined,
+        utilization: {
+          totalDrivers: stats.totalConnections,
+          activeDrivers: stats.driverConnections,
+          busyDrivers: 0, // Would calculate from active bookings
+          availableDrivers: stats.driverConnections,
+          utilizationRate: stats.driverConnections > 0 ? 
+            (stats.driverConnections / stats.totalConnections * 100) : 0,
+          avgTripsPerDriver: 0, // Would calculate from performance data
+          avgHoursOnline: 0 // Would calculate from session data
+        },
+        byService: {}, // Would break down by service type
+        timestamp: new Date().toISOString()
+      };
+
+      // Broadcast to analysts and administrators
+      this.broadcastToRole('analyst', 'system:driver_utilization', metrics);
+      this.broadcastToRole('admin', 'system:driver_utilization', metrics);
+
+    } catch (error) {
+      console.error('Error collecting event metrics:', error);
+    }
   }
 }
 

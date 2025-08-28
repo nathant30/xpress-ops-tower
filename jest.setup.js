@@ -69,6 +69,7 @@ global.fetch = jest.fn(() =>
 );
 
 // Add missing Node.js globals for browser-only APIs
+const { TextEncoder, TextDecoder } = require('util');
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
