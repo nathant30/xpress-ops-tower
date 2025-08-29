@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star } from 'lucide-react';
+import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star, Shield, ShieldAlert, ShieldCheck, Eye, Brain, Users, Flag } from 'lucide-react';
+import { fraudMockData, getFraudRiskColor, getFraudRiskBadge, getInvestigationStatusBadge } from '@/lib/fraudMockData';
 
 const EnhancedDriverTable = () => {
   const router = useRouter();
@@ -17,13 +18,16 @@ const EnhancedDriverTable = () => {
   const defaultColumnWidths = {
     driver: 180,
     status: 120,
+    fraudRisk: 110,
+    crossSystem: 120,
     activity: 130,
     today: 80,
     total: 100,
     rate: 100,
     service: 80,
-    risk: 100,
-    actions: 120
+    alerts: 70,
+    investigation: 90,
+    actions: 140
   };
 
   const [columnWidths, setColumnWidths] = useState(defaultColumnWidths);

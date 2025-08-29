@@ -37,6 +37,19 @@
 
 ---
 
+## 🔴 UI/UX FIXES NEEDED
+
+### **Passenger Profile View Fix**
+- [ ] **CRITICAL**: Passenger profile view layout does not match the driver profile view layout
+  - Current passenger profile has different structure/styling than driver profile
+  - Need to duplicate the exact driver profile layout and adapt for passenger-specific data
+  - Driver profile shows proper full-width layout with correct header, summary card, and tab content
+  - Passenger profile currently shows different layout structure
+  - Both profiles should have identical UI structure (only data should differ)
+  - Layout, styling, spacing, and visual structure must be identical
+
+---
+
 ## 🔴 CRITICAL - Hardening Gaps (Before Launch)
 
 ### **1. Authentication & Authorization**

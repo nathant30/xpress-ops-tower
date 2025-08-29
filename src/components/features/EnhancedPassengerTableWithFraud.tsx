@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, Shield, Eye, Ban, Clock, DollarSign, Activity } from 'lucide-react';
 
-const EnhancedPassengerTable = () => {
+const EnhancedPassengerTableWithFraud = () => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('Active');
@@ -22,7 +22,11 @@ const EnhancedPassengerTable = () => {
     rate: 100,
     payment: 100,
     risk: 100,
-    actions: 120
+    fraudScore: 90,
+    paymentRisk: 90,
+    alerts: 80,
+    investigation: 100,
+    actions: 140
   };
 
   const [columnWidths, setColumnWidths] = useState(defaultColumnWidths);
@@ -32,7 +36,7 @@ const EnhancedPassengerTable = () => {
 
   // Load saved column widths from localStorage
   useEffect(() => {
-    const savedWidths = localStorage.getItem('passengerTable_columnWidths');
+    const savedWidths = localStorage.getItem('passengerTableFraud_columnWidths');
     if (savedWidths) {
       try {
         const parsedWidths = JSON.parse(savedWidths);
@@ -45,7 +49,7 @@ const EnhancedPassengerTable = () => {
 
   // Save column widths to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('passengerTable_columnWidths', JSON.stringify(columnWidths));
+    localStorage.setItem('passengerTableFraud_columnWidths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
   // Auto-refresh every 30 seconds
@@ -82,7 +86,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Excellent customer with verified identity',
       bookingsToday: 3,
       currentActivity: 'Recently booked',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 12.5,
+      paymentRiskScore: 8.2,
+      behavioralRiskScore: 15.3,
+      identityRiskScore: 5.8,
+      crossSystemRisk: 10.1,
+      operationalRisk: 18.7,
+      mlConfidence: 0.96,
+      deviceRiskScore: 7.4,
+      locationRiskScore: 9.2,
+      socialNetworkRisk: 6.1,
+      timePatternRisk: 11.8,
+      paymentPatternRisk: 4.3,
+      underInvestigation: false,
+      investigationStatus: 'cleared',
+      activeAlerts: 0,
+      totalAlerts: 2,
+      lastAlertTime: '3 weeks ago',
+      accountAge: 638,
+      verificationStatus: 'verified',
+      documentsVerified: true,
+      biometricVerified: true,
+      paymentMethodsCount: 2,
+      deviceCount: 1,
+      suspiciousActivityCount: 0,
+      chargebackCount: 0,
+      refundRate: 0.8,
+      accountSharingRisk: 2.1,
+      collusionSuspected: false,
+      velocityAlerts: 0,
+      geoVelocityAlerts: 0,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: [],
+      riskFactors: ['Long-term customer', 'Verified identity', 'Consistent patterns'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'decreasing'
     },
     {
       id: 2,
@@ -104,7 +146,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Good payment history',
       bookingsToday: 1,
       currentActivity: 'Active',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 23.8,
+      paymentRiskScore: 19.5,
+      behavioralRiskScore: 28.2,
+      identityRiskScore: 15.7,
+      crossSystemRisk: 21.4,
+      operationalRisk: 32.1,
+      mlConfidence: 0.89,
+      deviceRiskScore: 25.3,
+      locationRiskScore: 18.6,
+      socialNetworkRisk: 12.4,
+      timePatternRisk: 31.7,
+      paymentPatternRisk: 16.8,
+      underInvestigation: false,
+      investigationStatus: 'clean',
+      activeAlerts: 1,
+      totalAlerts: 4,
+      lastAlertTime: '2 days ago',
+      accountAge: 81,
+      verificationStatus: 'verified',
+      documentsVerified: true,
+      biometricVerified: false,
+      paymentMethodsCount: 1,
+      deviceCount: 2,
+      suspiciousActivityCount: 1,
+      chargebackCount: 0,
+      refundRate: 3.2,
+      accountSharingRisk: 18.7,
+      collusionSuspected: false,
+      velocityAlerts: 1,
+      geoVelocityAlerts: 0,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: ['Multiple devices'],
+      riskFactors: ['New customer', 'Multiple devices', 'Account sharing risk'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'stable'
     },
     {
       id: 3,
@@ -122,11 +202,49 @@ const EnhancedPassengerTable = () => {
       joinDate: 'Mar 22, 2024',
       region: 'Bicol',
       paymentMethod: 'Cash',
-      fraudRisk: 'High',
-      fraudDetails: 'Multiple payment failures',
+      fraudRisk: 'Critical',
+      fraudDetails: 'Multiple payment failures and suspicious activity',
       bookingsToday: 0,
       currentActivity: 'Suspended',
-      issues: ['Payment Failed']
+      issues: ['Payment Failed', 'Suspicious Activity'],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 89.3,
+      paymentRiskScore: 92.8,
+      behavioralRiskScore: 87.5,
+      identityRiskScore: 76.2,
+      crossSystemRisk: 91.4,
+      operationalRisk: 85.7,
+      mlConfidence: 0.94,
+      deviceRiskScore: 88.1,
+      locationRiskScore: 82.4,
+      socialNetworkRisk: 79.6,
+      timePatternRisk: 86.3,
+      paymentPatternRisk: 94.7,
+      underInvestigation: true,
+      investigationStatus: 'investigating',
+      activeAlerts: 12,
+      totalAlerts: 28,
+      lastAlertTime: '1 hour ago',
+      accountAge: 159,
+      verificationStatus: 'flagged',
+      documentsVerified: false,
+      biometricVerified: false,
+      paymentMethodsCount: 4,
+      deviceCount: 7,
+      suspiciousActivityCount: 15,
+      chargebackCount: 6,
+      refundRate: 28.4,
+      accountSharingRisk: 91.2,
+      collusionSuspected: true,
+      velocityAlerts: 8,
+      geoVelocityAlerts: 5,
+      unusualPatternAlerts: 7,
+      paymentAnomalies: 12,
+      identityFlags: ['Document fraud suspected', 'Multiple identities', 'Fake verification'],
+      riskFactors: ['Payment fraud', 'Identity fraud', 'Device fraud', 'Velocity abuse', 'Collusion'],
+      fraudHistory: ['Chargeback fraud', 'Identity theft', 'Payment manipulation'],
+      investigationHistory: ['2024-08-15: Payment fraud investigation opened', '2024-08-20: Identity verification failed'],
+      riskTrend: 'increasing'
     },
     {
       id: 4,
@@ -148,7 +266,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Excellent customer',
       bookingsToday: 2,
       currentActivity: 'Active',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 16.7,
+      paymentRiskScore: 12.4,
+      behavioralRiskScore: 20.1,
+      identityRiskScore: 8.9,
+      crossSystemRisk: 14.2,
+      operationalRisk: 22.3,
+      mlConfidence: 0.93,
+      deviceRiskScore: 11.8,
+      locationRiskScore: 13.7,
+      socialNetworkRisk: 9.4,
+      timePatternRisk: 18.6,
+      paymentPatternRisk: 7.2,
+      underInvestigation: false,
+      investigationStatus: 'clean',
+      activeAlerts: 0,
+      totalAlerts: 1,
+      lastAlertTime: '2 months ago',
+      accountAge: 356,
+      verificationStatus: 'verified',
+      documentsVerified: true,
+      biometricVerified: true,
+      paymentMethodsCount: 2,
+      deviceCount: 1,
+      suspiciousActivityCount: 0,
+      chargebackCount: 0,
+      refundRate: 1.2,
+      accountSharingRisk: 3.7,
+      collusionSuspected: false,
+      velocityAlerts: 0,
+      geoVelocityAlerts: 0,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: [],
+      riskFactors: ['Premium customer', 'Verified identity', 'Stable patterns'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'stable'
     },
     {
       id: 5,
@@ -170,7 +326,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'New user monitoring',
       bookingsToday: 1,
       currentActivity: 'First week',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 45.2,
+      paymentRiskScore: 38.7,
+      behavioralRiskScore: 52.1,
+      identityRiskScore: 41.8,
+      crossSystemRisk: 46.3,
+      operationalRisk: 48.9,
+      mlConfidence: 0.72,
+      deviceRiskScore: 39.4,
+      locationRiskScore: 44.2,
+      socialNetworkRisk: 47.8,
+      timePatternRisk: 51.6,
+      paymentPatternRisk: 35.9,
+      underInvestigation: false,
+      investigationStatus: 'monitoring',
+      activeAlerts: 2,
+      totalAlerts: 3,
+      lastAlertTime: '6 hours ago',
+      accountAge: 4,
+      verificationStatus: 'pending',
+      documentsVerified: true,
+      biometricVerified: false,
+      paymentMethodsCount: 1,
+      deviceCount: 1,
+      suspiciousActivityCount: 0,
+      chargebackCount: 0,
+      refundRate: 5.6,
+      accountSharingRisk: 12.4,
+      collusionSuspected: false,
+      velocityAlerts: 2,
+      geoVelocityAlerts: 1,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: ['New account', 'Incomplete verification'],
+      riskFactors: ['New user', 'Velocity patterns', 'Incomplete verification'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'monitoring'
     },
     {
       id: 6,
@@ -192,7 +386,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Clean record',
       bookingsToday: 2,
       currentActivity: 'Active',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 19.4,
+      paymentRiskScore: 15.8,
+      behavioralRiskScore: 23.2,
+      identityRiskScore: 12.7,
+      crossSystemRisk: 17.5,
+      operationalRisk: 25.1,
+      mlConfidence: 0.91,
+      deviceRiskScore: 14.9,
+      locationRiskScore: 16.3,
+      socialNetworkRisk: 11.2,
+      timePatternRisk: 21.8,
+      paymentPatternRisk: 10.6,
+      underInvestigation: false,
+      investigationStatus: 'clean',
+      activeAlerts: 0,
+      totalAlerts: 2,
+      lastAlertTime: '3 weeks ago',
+      accountAge: 133,
+      verificationStatus: 'verified',
+      documentsVerified: true,
+      biometricVerified: true,
+      paymentMethodsCount: 1,
+      deviceCount: 1,
+      suspiciousActivityCount: 0,
+      chargebackCount: 0,
+      refundRate: 2.1,
+      accountSharingRisk: 4.8,
+      collusionSuspected: false,
+      velocityAlerts: 0,
+      geoVelocityAlerts: 0,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: [],
+      riskFactors: ['Clean history', 'Verified identity', 'Consistent behavior'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'stable'
     },
     {
       id: 7,
@@ -214,7 +446,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Under investigation for violations',
       bookingsToday: 0,
       currentActivity: 'Suspended',
-      issues: ['Violation Report']
+      issues: ['Violation Report'],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 78.6,
+      paymentRiskScore: 72.3,
+      behavioralRiskScore: 84.1,
+      identityRiskScore: 69.7,
+      crossSystemRisk: 81.2,
+      operationalRisk: 76.8,
+      mlConfidence: 0.89,
+      deviceRiskScore: 75.4,
+      locationRiskScore: 73.9,
+      socialNetworkRisk: 70.6,
+      timePatternRisk: 82.7,
+      paymentPatternRisk: 77.3,
+      underInvestigation: true,
+      investigationStatus: 'investigating',
+      activeAlerts: 9,
+      totalAlerts: 18,
+      lastAlertTime: '30 minutes ago',
+      accountAge: 55,
+      verificationStatus: 'flagged',
+      documentsVerified: false,
+      biometricVerified: false,
+      paymentMethodsCount: 3,
+      deviceCount: 5,
+      suspiciousActivityCount: 8,
+      chargebackCount: 3,
+      refundRate: 15.7,
+      accountSharingRisk: 86.4,
+      collusionSuspected: true,
+      velocityAlerts: 5,
+      geoVelocityAlerts: 3,
+      unusualPatternAlerts: 4,
+      paymentAnomalies: 6,
+      identityFlags: ['Document inconsistencies', 'Multiple accounts suspected'],
+      riskFactors: ['High cancellation rate', 'Account sharing', 'Payment issues', 'Identity concerns'],
+      fraudHistory: ['Account manipulation', 'Payment disputes'],
+      investigationHistory: ['2024-08-27: Violation investigation opened'],
+      riskTrend: 'increasing'
     },
     {
       id: 8,
@@ -236,184 +506,45 @@ const EnhancedPassengerTable = () => {
       fraudDetails: 'Top tier customer',
       bookingsToday: 4,
       currentActivity: 'Active',
-      issues: []
-    },
-    {
-      id: 9,
-      status: 'new',
-      statusText: 'New User',
-      statusTime: '1d ago',
-      role: 'New Customer',
-      name: 'Roberto Dela Cruz 987',
-      passengerId: 'PSG-200987',
-      completedBookings: 3,
-      completionRate: 100,
-      completionTrend: 'stable',
-      cancellationRate: 0,
-      totalSpent: 350.00,
-      joinDate: 'Aug 28, 2024',
-      region: 'NCR',
-      paymentMethod: 'Digital Wallet',
-      fraudRisk: 'Medium',
-      fraudDetails: 'New customer verification',
-      bookingsToday: 1,
-      currentActivity: 'New user',
-      issues: []
-    },
-    {
-      id: 10,
-      status: 'premium',
-      statusText: 'Premium',
-      statusTime: null,
-      role: 'Premium Customer',
-      name: 'Ana Marie Tan 456',
-      passengerId: 'PSG-201456',
-      completedBookings: 1134,
-      completionRate: 94,
-      completionTrend: 'up',
-      cancellationRate: 6,
-      totalSpent: 78650.25,
-      joinDate: 'Feb 15, 2023',
-      region: 'Cebu',
-      paymentMethod: 'Credit Card',
-      fraudRisk: 'Low',
-      fraudDetails: 'Premium customer',
-      bookingsToday: 2,
-      currentActivity: 'Active',
-      issues: []
-    },
-    {
-      id: 11,
-      status: 'suspended',
-      statusText: 'Suspended',
-      statusTime: '5d ago',
-      role: 'High Cancellation',
-      name: 'Mark Anthony Lee 789',
-      passengerId: 'PSG-201789',
-      completedBookings: 234,
-      completionRate: 58,
-      completionTrend: 'down',
-      cancellationRate: 42,
-      totalSpent: 8900.00,
-      joinDate: 'Dec 20, 2023',
-      region: 'Davao',
-      paymentMethod: 'Cash',
-      fraudRisk: 'Critical',
-      fraudDetails: 'High cancellation rate',
-      bookingsToday: 0,
-      currentActivity: 'Suspended',
-      issues: ['High Cancellation', 'Customer Complaints']
-    },
-    {
-      id: 12,
-      status: 'regular',
-      statusText: 'Regular',
-      statusTime: null,
-      role: 'Regular Customer',
-      name: 'Jenny Rose Garcia 234',
-      passengerId: 'PSG-201234',
-      completedBookings: 678,
-      completionRate: 91,
-      completionTrend: 'up',
-      cancellationRate: 9,
-      totalSpent: 32450.50,
-      joinDate: 'Jan 10, 2024',
-      region: 'NCR',
-      paymentMethod: 'Digital Wallet',
-      fraudRisk: 'Low',
-      fraudDetails: 'Good customer',
-      bookingsToday: 1,
-      currentActivity: 'Active',
-      issues: []
-    },
-    {
-      id: 13,
-      status: 'inactive',
-      statusText: 'Inactive',
-      statusTime: '14d ago',
-      role: 'Inactive Customer',
-      name: 'Carlos Miguel Santos 567',
-      passengerId: 'PSG-200567',
-      completedBookings: 445,
-      completionRate: 84,
-      completionTrend: 'stable',
-      cancellationRate: 16,
-      totalSpent: 23450.00,
-      joinDate: 'Nov 05, 2023',
-      region: 'Baguio',
-      paymentMethod: 'Credit Card',
-      fraudRisk: 'Medium',
-      fraudDetails: 'Long inactive period',
-      bookingsToday: 0,
-      currentActivity: 'Inactive 14d',
-      issues: ['Long Inactive']
-    },
-    {
-      id: 14,
-      status: 'regular',
-      statusText: 'Regular',
-      statusTime: null,
-      role: 'Regular Customer',
-      name: 'Lisa Mae Rodriguez 890',
-      passengerId: 'PSG-201890',
-      completedBookings: 556,
-      completionRate: 89,
-      completionTrend: 'up',
-      cancellationRate: 11,
-      totalSpent: 28750.75,
-      joinDate: 'Jun 18, 2024',
-      region: 'Cebu',
-      paymentMethod: 'Bank Transfer',
-      fraudRisk: 'Low',
-      fraudDetails: 'Good performance',
-      bookingsToday: 1,
-      currentActivity: 'Active',
-      issues: []
-    },
-    {
-      id: 15,
-      status: 'banned',
-      statusText: 'Banned',
-      statusTime: '30d ago',
-      role: 'Banned Customer',
-      name: 'David John Cruz 123',
-      passengerId: 'PSG-200123',
-      completedBookings: 89,
-      completionRate: 42,
-      completionTrend: 'down',
-      cancellationRate: 58,
-      totalSpent: 3450.00,
-      joinDate: 'Mar 15, 2024',
-      region: 'NCR',
-      paymentMethod: 'Cash',
-      fraudRisk: 'Critical',
-      fraudDetails: 'Fraudulent activities detected',
-      bookingsToday: 0,
-      currentActivity: 'Banned',
-      issues: ['Fraud', 'Fake Account']
-    },
-    // Additional passengers...
-    {
-      id: 16,
-      status: 'vip',
-      statusText: 'VIP Active',
-      statusTime: null,
-      role: 'VIP Customer',
-      name: 'Michael Angelo Perez 445',
-      passengerId: 'PSG-201445',
-      completedBookings: 2156,
-      completionRate: 98,
-      completionTrend: 'up',
-      cancellationRate: 2,
-      totalSpent: 189750.00,
-      joinDate: 'Aug 01, 2022',
-      region: 'Davao',
-      paymentMethod: 'Credit Card',
-      fraudRisk: 'Low',
-      fraudDetails: 'Outstanding customer',
-      bookingsToday: 5,
-      currentActivity: 'Active',
-      issues: []
+      issues: [],
+      // Enhanced fraud detection fields
+      fraudRiskScore: 8.9,
+      paymentRiskScore: 5.4,
+      behavioralRiskScore: 12.7,
+      identityRiskScore: 3.2,
+      crossSystemRisk: 6.8,
+      operationalRisk: 15.3,
+      mlConfidence: 0.98,
+      deviceRiskScore: 4.7,
+      locationRiskScore: 7.1,
+      socialNetworkRisk: 2.9,
+      timePatternRisk: 9.8,
+      paymentPatternRisk: 2.1,
+      underInvestigation: false,
+      investigationStatus: 'cleared',
+      activeAlerts: 0,
+      totalAlerts: 0,
+      lastAlertTime: 'Never',
+      accountAge: 838,
+      verificationStatus: 'verified',
+      documentsVerified: true,
+      biometricVerified: true,
+      paymentMethodsCount: 2,
+      deviceCount: 1,
+      suspiciousActivityCount: 0,
+      chargebackCount: 0,
+      refundRate: 0.3,
+      accountSharingRisk: 1.2,
+      collusionSuspected: false,
+      velocityAlerts: 0,
+      geoVelocityAlerts: 0,
+      unusualPatternAlerts: 0,
+      paymentAnomalies: 0,
+      identityFlags: [],
+      riskFactors: ['VIP customer', 'Long history', 'Perfect record'],
+      fraudHistory: [],
+      investigationHistory: [],
+      riskTrend: 'decreasing'
     }
   ];
 
@@ -438,6 +569,21 @@ const EnhancedPassengerTable = () => {
     if (risk === 'Critical') return 'bg-red-100 text-red-800 border border-red-300';
     if (risk === 'High') return 'bg-orange-100 text-orange-800 border border-orange-300';
     if (risk === 'Medium') return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+    return 'bg-green-100 text-green-800 border border-green-300';
+  };
+
+  const getFraudScoreColor = (score: number) => {
+    if (score >= 80) return 'bg-red-100 text-red-800 border border-red-300';
+    if (score >= 60) return 'bg-orange-100 text-orange-800 border border-orange-300';
+    if (score >= 40) return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+    return 'bg-green-100 text-green-800 border border-green-300';
+  };
+
+  const getInvestigationStatusColor = (status: string) => {
+    if (status === 'investigating') return 'bg-red-100 text-red-800 border border-red-300';
+    if (status === 'monitoring') return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+    if (status === 'flagged') return 'bg-orange-100 text-orange-800 border border-orange-300';
+    if (status === 'cleared') return 'bg-blue-100 text-blue-800 border border-blue-300';
     return 'bg-green-100 text-green-800 border border-green-300';
   };
 
@@ -534,6 +680,26 @@ const EnhancedPassengerTable = () => {
               p.status !== 'banned'
             ).length,
             tooltip: 'Active customers with minor issues'
+          },
+          { 
+            id: 'High Risk', 
+            label: 'High Risk', 
+            count: passengersData.filter(p => 
+              p.fraudRiskScore >= 60 && 
+              p.status !== 'suspended' && p.status !== 'inactive' && 
+              p.status !== 'banned'
+            ).length,
+            tooltip: 'Active customers with high fraud risk scores'
+          },
+          { 
+            id: 'Under Investigation', 
+            label: 'Investigating', 
+            count: passengersData.filter(p => 
+              p.underInvestigation && 
+              p.status !== 'suspended' && p.status !== 'inactive' && 
+              p.status !== 'banned'
+            ).length,
+            tooltip: 'Active customers currently under fraud investigation'
           }
         ];
       
@@ -571,6 +737,15 @@ const EnhancedPassengerTable = () => {
               p.issues.some(issue => issue.includes('Violation'))
             ).length,
             tooltip: 'Customers suspended for policy violations'
+          },
+          { 
+            id: 'Fraud Investigation', 
+            label: 'Fraud', 
+            count: passengersData.filter(p => 
+              p.status === 'suspended' && 
+              p.underInvestigation
+            ).length,
+            tooltip: 'Customers suspended due to fraud investigations'
           }
         ];
       
@@ -754,6 +929,10 @@ const EnhancedPassengerTable = () => {
               matchesStatus = passenger.status === 'new';
             } else if (selectedStatus === 'Issues') {
               matchesStatus = passenger.issues.length > 0;
+            } else if (selectedStatus === 'High Risk') {
+              matchesStatus = passenger.fraudRiskScore >= 60;
+            } else if (selectedStatus === 'Under Investigation') {
+              matchesStatus = passenger.underInvestigation;
             }
             break;
           
@@ -770,6 +949,8 @@ const EnhancedPassengerTable = () => {
               matchesStatus = passenger.issues.some(issue => 
                 issue.includes('Violation')
               );
+            } else if (selectedStatus === 'Fraud Investigation') {
+              matchesStatus = passenger.underInvestigation;
             }
             break;
           
@@ -911,7 +1092,7 @@ const EnhancedPassengerTable = () => {
 
         {/* Status Filter Pills */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 flex-wrap">
             <span className="text-sm font-medium text-gray-700">Status:</span>
             {getContextualStatusOptions(selectedType).map(status => (
               <button
@@ -958,15 +1139,15 @@ const EnhancedPassengerTable = () => {
               onClick={() => {
                 // Export functionality
                 const csvContent = "data:text/csv;charset=utf-8," + 
-                  "Name,Passenger ID,Status,Activity,Bookings Today,Total Bookings,Completion Rate,Payment,Risk\n" +
+                  "Name,Passenger ID,Status,Activity,Bookings Today,Total Bookings,Completion Rate,Payment,Risk,Fraud Score,Payment Risk,Alerts,Investigation\n" +
                   filteredPassengers.map(p => 
-                    `"${p.name}","${p.passengerId}","${p.statusText}","${p.currentActivity}","${p.bookingsToday}","${p.completedBookings}","${p.completionRate}%","${p.paymentMethod}","${p.fraudRisk}"`
+                    `"${p.name}","${p.passengerId}","${p.statusText}","${p.currentActivity}","${p.bookingsToday}","${p.completedBookings}","${p.completionRate}%","${p.paymentMethod}","${p.fraudRisk}","${p.fraudRiskScore}","${p.paymentRiskScore}","${p.activeAlerts}","${p.investigationStatus}"`
                   ).join("\n");
                 
                 const encodedUri = encodeURI(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "enhanced_passenger_data.csv");
+                link.setAttribute("download", "enhanced_passenger_fraud_data.csv");
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -979,7 +1160,7 @@ const EnhancedPassengerTable = () => {
         </div>
       </div>
 
-      {/* Enhanced Table with Fixed Headers */}
+      {/* Enhanced Table with Fixed Headers and Fraud Columns */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 420px)' }}>
           <table className="w-full text-sm">
@@ -994,6 +1175,10 @@ const EnhancedPassengerTable = () => {
                   { key: 'rate', label: 'Rate %', tooltip: 'Booking completion rate percentage with trend' },
                   { key: 'payment', label: 'Payment', tooltip: 'Primary payment method used' },
                   { key: 'risk', label: 'Risk', tooltip: 'Fraud risk assessment level' },
+                  { key: 'fraudScore', label: 'Fraud Score', tooltip: 'Overall fraud risk score (0-100)' },
+                  { key: 'paymentRisk', label: 'Pay Risk', tooltip: 'Payment-specific fraud risk score' },
+                  { key: 'alerts', label: 'Alerts', tooltip: 'Number of active fraud alerts' },
+                  { key: 'investigation', label: 'Investigation', tooltip: 'Current investigation status' },
                   { key: 'actions', label: 'Actions', tooltip: 'Quick actions available for this customer' }
                 ].map((column) => (
                   <th
@@ -1020,7 +1205,7 @@ const EnhancedPassengerTable = () => {
                   key={passenger.id} 
                   className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${
                     isRecentlyChanged(passenger.id) ? 'bg-yellow-50' : ''
-                  }`}
+                  } ${passenger.underInvestigation ? 'bg-red-25' : ''} ${passenger.fraudRiskScore >= 80 ? 'bg-red-25' : ''}`}
                   onClick={() => handleRowClick(passenger)}
                 >
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.passenger }}>
@@ -1069,7 +1254,12 @@ const EnhancedPassengerTable = () => {
                     </span>
                   </td>
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-xs" style={{ width: columnWidths.payment }}>
-                    {passenger.paymentMethod}
+                    <div className="flex items-center space-x-1">
+                      <span>{passenger.paymentMethod}</span>
+                      {passenger.chargebackCount > 0 && (
+                        <AlertTriangle className="w-3 h-3 text-red-500" title={`${passenger.chargebackCount} chargebacks`} />
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.risk }}>
                     <span 
@@ -1078,6 +1268,63 @@ const EnhancedPassengerTable = () => {
                     >
                       {passenger.fraudRisk}
                     </span>
+                  </td>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.fraudScore }}>
+                    <div className="text-center">
+                      <span 
+                        className={`px-2 py-1 rounded text-xs font-bold cursor-help ${getFraudScoreColor(passenger.fraudRiskScore)}`}
+                        title={`Overall fraud risk: ${passenger.fraudRiskScore.toFixed(1)}% | ML Confidence: ${(passenger.mlConfidence * 100).toFixed(1)}%`}
+                      >
+                        {passenger.fraudRiskScore.toFixed(1)}
+                      </span>
+                      <div className="text-xs text-gray-400 mt-1">
+                        ML: {(passenger.mlConfidence * 100).toFixed(0)}%
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.paymentRisk }}>
+                    <div className="text-center">
+                      <span 
+                        className={`px-2 py-1 rounded text-xs font-bold cursor-help ${getFraudScoreColor(passenger.paymentRiskScore)}`}
+                        title={`Payment fraud risk: ${passenger.paymentRiskScore.toFixed(1)}% | Chargebacks: ${passenger.chargebackCount} | Refund Rate: ${passenger.refundRate}%`}
+                      >
+                        {passenger.paymentRiskScore.toFixed(1)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-center" style={{ width: columnWidths.alerts }}>
+                    <div className="flex items-center justify-center space-x-1">
+                      {passenger.activeAlerts > 0 && (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-bold">
+                          {passenger.activeAlerts}
+                        </span>
+                      )}
+                      {passenger.activeAlerts === 0 && (
+                        <span className="text-gray-400 text-xs">0</span>
+                      )}
+                      {passenger.collusionSuspected && (
+                        <Shield className="w-3 h-3 text-red-500" title="Collusion suspected" />
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {passenger.lastAlertTime}
+                    </div>
+                  </td>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.investigation }}>
+                    <div className="text-center">
+                      <span 
+                        className={`px-2 py-1 rounded text-xs cursor-help truncate ${getInvestigationStatusColor(passenger.investigationStatus)}`}
+                        title={`Investigation Status: ${passenger.investigationStatus} | Account Age: ${passenger.accountAge} days`}
+                      >
+                        {passenger.investigationStatus}
+                      </span>
+                      {passenger.underInvestigation && (
+                        <div className="text-xs text-red-600 mt-1 flex items-center justify-center space-x-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Active</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.actions }}>
                     <div className="flex space-x-1">
@@ -1089,12 +1336,38 @@ const EnhancedPassengerTable = () => {
                         <MessageCircle className="w-3 h-3" />
                       </button>
                       <button 
-                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700" 
-                        title="Suspend"
+                        className="p-1 bg-purple-600 text-white rounded hover:bg-purple-700" 
+                        title="View Profile"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <UserX className="w-3 h-3" />
+                        <Eye className="w-3 h-3" />
                       </button>
+                      {passenger.fraudRiskScore >= 60 && (
+                        <button 
+                          className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700" 
+                          title="Investigate"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Shield className="w-3 h-3" />
+                        </button>
+                      )}
+                      {passenger.underInvestigation || passenger.fraudRiskScore >= 80 ? (
+                        <button 
+                          className="p-1 bg-red-600 text-white rounded hover:bg-red-700" 
+                          title="Suspend"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <UserX className="w-3 h-3" />
+                        </button>
+                      ) : (
+                        <button 
+                          className="p-1 bg-gray-400 text-white rounded opacity-50 cursor-not-allowed" 
+                          title="Suspend (Risk too low)"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <UserX className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1107,4 +1380,4 @@ const EnhancedPassengerTable = () => {
   );
 };
 
-export default EnhancedPassengerTable;
+export default EnhancedPassengerTableWithFraud;

@@ -1,10 +1,7 @@
 'use client';
 
-import React from 'react';
 import RedesignedPassengerProfile from '@/components/features/RedesignedPassengerProfile';
 
-const PassengerProfilePage = () => {
+export default function PassengerProfilePage() {
   return <RedesignedPassengerProfile />;
-};
-
-export default PassengerProfilePage;
+}

@@ -1,7 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle, X, Upload, Edit3, Download, MessageSquare, Shield, Car, CreditCard, Calendar, FileText, GraduationCap, Activity, Eye } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle, X, Upload, Edit3, Download, MessageSquare, Shield, Car, CreditCard, Calendar, FileText, GraduationCap, Activity, Eye, BarChart3, UserX } from 'lucide-react';
+
+// Define status badge function outside component so it's accessible in modals
+const getStatusBadgeForModal = (status: string) => {
+  const colors = {
+    critical: 'bg-red-500 text-white',
+    high: 'bg-orange-500 text-white', 
+    medium: 'bg-yellow-500 text-white',
+    low: 'bg-green-500 text-white',
+    investigating: 'bg-red-100 text-red-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100 text-green-800',
+    closed: 'bg-gray-100 text-gray-800',
+    active: 'bg-blue-100 text-blue-800',
+    resolved: 'bg-green-100 text-green-800'
+  };
+  return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+};
 
 interface DriverData {
   name: string;
@@ -230,74 +247,329 @@ const RedesignedDriverProfile = () => {
     </div>
   );
 
-  const FraudTab = () => (
-    <div className="space-y-6">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Shield className="w-6 h-6 text-red-600 flex-shrink-0" />
-          <div>
-            <h2 className="text-lg font-semibold text-red-800">Critical Risk Level</h2>
-            <p className="text-sm text-red-600">Last updated: 2 hours ago</p>
+  const FraudTab = () => {
+    const fraudData = {
+      overallRiskScore: 87.3,
+      lastUpdated: '2 hours ago',
+      investigationStatus: 'Active Investigation',
+      investigationId: 'INV-2024-001',
+      mlConfidence: 0.94,
+      
+      riskPillars: {
+        payment: { score: 92.8, status: 'critical', alerts: 12, icon: '💳', tooltip: 'Payment fraud detection including stolen cards, chargebacks, and unusual payment patterns' },
+        identity: { score: 76.2, status: 'high', alerts: 3, icon: '👤', tooltip: 'Identity verification status including document fraud and biometric validation' },
+        location: { score: 82.4, status: 'critical', alerts: 8, icon: '📍', tooltip: 'Location-based fraud detection including GPS manipulation and route anomalies' },
+        behavioral: { score: 87.5, status: 'critical', alerts: 15, icon: '🧠', tooltip: 'Behavioral pattern analysis including time patterns and usage anomalies' },
+        device: { score: 88.1, status: 'critical', alerts: 6, icon: '📱', tooltip: 'Device fingerprinting and multi-device fraud detection' },
+        network: { score: 79.6, status: 'high', alerts: 4, icon: '🌐', tooltip: 'Network analysis including collusion detection and social network fraud' }
+      },
+
+      investigations: [
+        { 
+          id: 'INV-2024-001', 
+          type: 'Payment Fraud', 
+          status: 'investigating', 
+          priority: 'critical', 
+          progress: 75, 
+          investigator: 'Sarah Chen', 
+          dueDate: '2024-08-30',
+          description: 'Multiple payment cards used in rapid succession, possible stolen card fraud',
+          evidence: ['5 different cards in 24 hours', 'Cards from different banks', 'Unusual spending pattern'],
+          nextAction: 'Contact payment processor for card validation'
+        },
+        { 
+          id: 'INV-2024-002', 
+          type: 'Location Manipulation', 
+          status: 'pending', 
+          priority: 'high', 
+          progress: 25, 
+          investigator: 'Mike Rodriguez', 
+          dueDate: '2024-09-01',
+          description: 'GPS anomalies suggest potential route manipulation for higher fares',
+          evidence: ['GPS jumping', 'Route deviations', 'Longer than expected trips'],
+          nextAction: 'Analyze GPS logs and compare with mapping data'
+        }
+      ],
+
+      recentIncidents: [
+        { date: '2024-08-25', type: 'Chargeback', amount: 450, status: 'resolved', id: 'INC-001' },
+        { date: '2024-08-20', type: 'Payment dispute', amount: 230, status: 'investigating', id: 'INC-002' },
+        { date: '2024-08-15', type: 'Identity flag', amount: 0, status: 'flagged', id: 'INC-003' }
+      ]
+    };
+
+    const getRiskColor = (score: number) => {
+      if (score >= 80) return 'from-red-500 to-red-600';
+      if (score >= 60) return 'from-orange-500 to-orange-600';
+      if (score >= 40) return 'from-yellow-500 to-yellow-600';
+      return 'from-green-500 to-green-600';
+    };
+
+    const getStatusBadge = (status: string) => {
+      const colors = {
+        critical: 'bg-red-500 text-white',
+        high: 'bg-orange-500 text-white', 
+        medium: 'bg-yellow-500 text-white',
+        low: 'bg-green-500 text-white',
+        investigating: 'bg-red-100 text-red-800',
+        pending: 'bg-yellow-100 text-yellow-800',
+        resolved: 'bg-green-100 text-green-800',
+        flagged: 'bg-orange-100 text-orange-800'
+      };
+      return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    };
+
+    // Click handlers for interactive buttons
+    const handleViewInvestigation = (investigation: any) => {
+      openModal('activity', {
+        type: 'investigation_details',
+        title: `Investigation: ${investigation.type}`,
+        data: investigation
+      });
+    };
+
+    const handleViewIncident = (incident: any) => {
+      openModal('activity', {
+        type: 'incident_details',
+        title: `Incident: ${incident.type}`,
+        data: incident
+      });
+    };
+
+    const handleSuspendAccount = () => {
+      showConfirmDialog(
+        'Suspend Driver Account',
+        'This will immediately suspend the driver account and prevent them from accepting new rides. This action can be reversed later.',
+        () => {
+          // Simulate API call
+          console.log('Account suspended successfully');
+          setActiveTab('disciplinary');
+        }
+      );
+    };
+
+    const handleEnhancedMonitoring = () => {
+      showConfirmDialog(
+        'Enable Enhanced Monitoring',
+        'This will add enhanced monitoring to track all driver activities and payments. Additional surveillance measures will be activated.',
+        () => {
+          // Simulate API call
+          console.log('Enhanced monitoring enabled');
+          alert('Enhanced monitoring has been activated for this driver.');
+        }
+      );
+    };
+
+    const handleGenerateReport = () => {
+      // Simulate report generation
+      const reportData = {
+        driverId: driverData.id,
+        riskScore: fraudData.overallRiskScore,
+        timestamp: new Date().toISOString(),
+        investigations: fraudData.investigations.length,
+        incidents: fraudData.recentIncidents.length
+      };
+      
+      openModal('activity', {
+        type: 'fraud_report',
+        title: 'Fraud Analysis Report',
+        data: reportData
+      });
+    };
+
+    const handleRiskPillarClick = (pillar: string, data: any) => {
+      openModal('activity', {
+        type: 'risk_details',
+        title: `${pillar.charAt(0).toUpperCase() + pillar.slice(1)} Risk Analysis`,
+        data: { pillar, ...data }
+      });
+    };
+
+
+    return (
+      <div className="space-y-4">
+        {/* Compact Risk Overview */}
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Critical Risk Level</h3>
+                <p className="text-sm opacity-90">Updated {fraudData.lastUpdated}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold">{fraudData.overallRiskScore}</div>
+              <div className="text-xs opacity-75">ML: {(fraudData.mlConfidence * 100).toFixed(0)}%</div>
+            </div>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-2xl font-bold text-red-600">4</div>
-            <div className="text-sm text-gray-700">Payment Disputes</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="text-2xl font-bold text-orange-600">2</div>
-            <div className="text-sm text-gray-700">Suspicious Patterns</div>
+          <div className="mt-3 bg-white/10 rounded-lg p-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm font-medium">{fraudData.investigationStatus} • {fraudData.investigationId}</span>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-              <div className="flex-1">
-                <div className="font-medium text-red-800">Multiple Payment Cards</div>
-                <div className="text-sm text-gray-600">5 different cards used in 24 hours</div>
-              </div>
-              <button 
-                onClick={() => showConfirmDialog(
-                  'Start Fraud Investigation',
-                  'This will flag the driver account and initiate a payment card investigation. Continue?',
-                  () => {
-                    // Actual investigation logic would go here
-                    setActiveTab('disciplinary');
-                  }
-                )}
-                className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors self-start"
+        {/* Modern Risk Pillars Grid */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-gray-600" />
+            <h4 className="font-medium text-gray-900">Risk Analysis</h4>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(fraudData.riskPillars).map(([pillar, data]) => (
+              <div 
+                key={pillar}
+                className="group relative bg-gray-50 rounded-lg p-3 border border-gray-200 hover:border-gray-300 transition-all cursor-pointer"
+                title={data.tooltip}
+                onClick={() => handleRiskPillarClick(pillar, data)}
               >
-                Investigate
-              </button>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{data.icon}</span>
+                    <span className="text-sm font-medium capitalize text-gray-700">{pillar}</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(data.status)}`}>
+                    {data.alerts}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-lg font-bold text-gray-900">{data.score.toFixed(0)}</div>
+                  <div className="flex-1">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div 
+                        className={`h-1.5 rounded-full bg-gradient-to-r ${getRiskColor(data.score)}`}
+                        style={{ width: `${Math.min(data.score, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  {data.tooltip}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Compact Investigations */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-orange-600" />
+              <h4 className="font-medium text-gray-900">Active Investigations</h4>
+            </div>
+            <span className="text-xs text-gray-500">{fraudData.investigations.length} active</span>
+          </div>
+          <div className="space-y-3">
+            {fraudData.investigations.map((inv) => (
+              <div key={inv.id} className="border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <h5 className="font-medium text-sm text-gray-900">{inv.type}</h5>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(inv.status)}`}>
+                      {inv.status}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${inv.priority === 'critical' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
+                      {inv.priority}
+                    </span>
+                  </div>
+                  <button 
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                    title="View investigation details"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewInvestigation(inv);
+                    }}
+                  >
+                    View →
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                  <span>{inv.investigator}</span>
+                  <span>Due: {inv.dueDate}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div 
+                    className="h-1 bg-blue-500 rounded-full"
+                    style={{ width: `${inv.progress}%` }}
+                    title={`${inv.progress}% complete`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Compact History & Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Incidents */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="w-4 h-4 text-gray-600" />
+              <h4 className="font-medium text-gray-900">Recent Incidents</h4>
+            </div>
+            <div className="space-y-2">
+              {fraudData.recentIncidents.map((incident, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer transition-colors rounded px-2"
+                  onClick={() => handleViewIncident(incident)}
+                  title="Click to view incident details"
+                >
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{incident.type}</div>
+                    <div className="text-xs text-gray-500">{incident.date}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">₱{incident.amount.toLocaleString()}</div>
+                    <span className={`px-1.5 py-0.5 rounded text-xs ${getStatusBadge(incident.status)}`}>
+                      {incident.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg border">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-              <div className="flex-1">
-                <div className="font-medium text-orange-800">Location Anomaly</div>
-                <div className="text-sm text-gray-600">Unusual pickup patterns detected</div>
-              </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <h4 className="font-medium text-gray-900 mb-3">Quick Actions</h4>
+            <div className="space-y-2">
               <button 
-                onClick={() => showConfirmDialog(
-                  'Schedule Location Review',
-                  'This will create a task for location pattern analysis. A notification will be sent to the investigation team.',
-                  () => {
-                    setActiveTab('disciplinary');
-                  }
-                )}
-                className="text-sm bg-orange-600 text-white px-3 py-1 rounded hover:bg-orange-700 transition-colors self-start"
+                onClick={handleSuspendAccount}
+                className="w-full bg-red-500 hover:bg-red-600 text-white p-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-between group"
+                title="Immediately suspend driver account and prevent new rides"
               >
-                Review
+                <span>Suspend Account</span>
+                <UserX className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              </button>
+              <button 
+                onClick={handleEnhancedMonitoring}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-between group"
+                title="Enable enhanced monitoring and tracking"
+              >
+                <span>Enhanced Monitoring</span>
+                <Activity className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              </button>
+              <button 
+                onClick={handleGenerateReport}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-between group"
+                title="Generate comprehensive fraud analysis report"
+              >
+                <span>Generate Report</span>
+                <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
               </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const LegalDocsTab = () => {
     const documents: Document[] = [
@@ -1580,6 +1852,255 @@ const RedesignedDriverProfile = () => {
                     Call Passenger
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fraud Investigation Details Modal */}
+      {activeModal.type === 'activity' && activeModal.data?.type === 'investigation_details' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{activeModal.data.title}</h3>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold mb-3">Investigation Details</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">ID:</span>
+                      <span className="ml-2 text-sm">{activeModal.data.data.id}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Status:</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs ${getStatusBadgeForModal(activeModal.data.data.status)}`}>
+                        {activeModal.data.data.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Priority:</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${activeModal.data.data.priority === 'critical' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
+                        {activeModal.data.data.priority}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Investigator:</span>
+                      <span className="ml-2 text-sm">{activeModal.data.data.investigator}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Due Date:</span>
+                      <span className="ml-2 text-sm">{activeModal.data.data.dueDate}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Progress:</span>
+                      <div className="ml-2 mt-1">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="h-2 bg-blue-500 rounded-full"
+                            style={{ width: `${activeModal.data.data.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500 mt-1">{activeModal.data.data.progress}% complete</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Description</h4>
+                  <p className="text-sm text-gray-600 mb-4">{activeModal.data.data.description}</p>
+                  
+                  <h4 className="font-semibold mb-3">Evidence</h4>
+                  <ul className="text-sm text-gray-600 space-y-2 mb-4">
+                    {activeModal.data.data.evidence?.map((item: string, index: number) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <h4 className="font-semibold mb-3">Next Action</h4>
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-700">{activeModal.data.data.nextAction}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6 pt-4 border-t">
+                <button className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium">
+                  Go to Investigation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Incident Details Modal */}
+      {activeModal.type === 'activity' && activeModal.data?.type === 'incident_details' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{activeModal.data.title}</h3>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Date:</span>
+                    <span className="ml-2 text-sm">{activeModal.data.data.date}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Type:</span>
+                    <span className="ml-2 text-sm">{activeModal.data.data.type}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Amount:</span>
+                    <span className="ml-2 text-sm font-medium">₱{activeModal.data.data.amount?.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Status:</span>
+                    <span className={`ml-2 px-2 py-1 rounded text-xs ${getStatusBadgeForModal(activeModal.data.data.status)}`}>
+                      {activeModal.data.data.status}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-500">Incident ID:</span>
+                  <span className="ml-2 text-sm font-mono">{activeModal.data.data.id}</span>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6 pt-4 border-t">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                  View Full Report
+                </button>
+                <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                  Download Evidence
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Risk Details Modal */}
+      {activeModal.type === 'activity' && activeModal.data?.type === 'risk_details' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-3xl w-full">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">{activeModal.data.title}</h3>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-2">{activeModal.data.data.icon}</div>
+                    <div className="text-3xl font-bold text-gray-900">{activeModal.data.data.score?.toFixed(1)}</div>
+                    <div className="text-sm text-gray-500">Risk Score</div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                    <div 
+                      className={`h-3 rounded-full bg-gradient-to-r ${getRiskColor(activeModal.data.data.score)}`}
+                      style={{ width: `${Math.min(activeModal.data.data.score, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-3">Risk Details</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Status:</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${getStatusBadgeForModal(activeModal.data.data.status)}`}>
+                        {activeModal.data.data.status}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-500">Active Alerts:</span>
+                      <span className="ml-2 text-sm font-bold text-red-600">{activeModal.data.data.alerts}</span>
+                    </div>
+                    <div className="pt-2">
+                      <span className="text-sm font-medium text-gray-500 block mb-2">Description:</span>
+                      <p className="text-sm text-gray-600">{activeModal.data.data.tooltip}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 mt-6 pt-4 border-t">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                  View Detailed Analysis
+                </button>
+                <button className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors">
+                  Create Investigation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fraud Report Modal */}
+      {activeModal.type === 'activity' && activeModal.data?.type === 'fraud_report' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Fraud Analysis Report</h3>
+                <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-red-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-red-600">{activeModal.data.data.riskScore}</div>
+                  <div className="text-sm text-red-700">Overall Risk Score</div>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-orange-600">{activeModal.data.data.investigations}</div>
+                  <div className="text-sm text-orange-700">Active Investigations</div>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{activeModal.data.data.incidents}</div>
+                  <div className="text-sm text-yellow-700">Total Incidents</div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h4 className="font-semibold mb-2">Report Summary</h4>
+                <p className="text-sm text-gray-600">
+                  Comprehensive fraud analysis for Driver ID {activeModal.data.data.driverId} generated on {new Date(activeModal.data.data.timestamp).toLocaleDateString()}.
+                  This report includes risk assessment across all fraud detection pillars, active investigations, and incident history.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                  Download PDF
+                </button>
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                  Export CSV
+                </button>
+                <button className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                  Email Report
+                </button>
               </div>
             </div>
           </div>

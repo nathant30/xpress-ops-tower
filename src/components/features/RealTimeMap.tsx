@@ -8,7 +8,7 @@ import { MapPin, Zap, AlertTriangle, Users, Activity, Settings, Filter, RefreshC
 
 import { RealTimeMapController, createMapConfig } from '@/lib/maps';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
-import { XpressCard as Card, Button, Badge } from '@/components/xpress';
+import { XpressCard, Button, Badge } from '@/components/xpress';
 import { DriverMarker, MapViewState, HeatmapData } from '@/types/maps';
 
 interface RealTimeMapProps {
@@ -317,21 +317,33 @@ export const RealTimeMap: React.FC<RealTimeMapProps> = ({
             <div className="flex flex-wrap items-center gap-4">
               {/* Layer Controls */}
               <div className="flex items-center space-x-4">
-                <XpressSwitch
-                  checked={showTraffic}
-                  onCheckedChange={handleToggleTraffic}
-                  label="Traffic"
-                />
-                <XpressSwitch
-                  checked={showHeatmap}
-                  onCheckedChange={handleToggleHeatmap}
-                  label="Demand Heatmap"
-                />
-                <XpressSwitch
-                  checked={showGeofences}
-                  onCheckedChange={handleToggleGeofences}
-                  label="Geofences"
-                />
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showTraffic}
+                    onChange={handleToggleTraffic}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Traffic</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showHeatmap}
+                    onChange={handleToggleHeatmap}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Demand Heatmap</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={showGeofences}
+                    onChange={handleToggleGeofences}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Geofences</span>
+                </label>
               </div>
 
               {/* Status Filters */}
@@ -394,14 +406,12 @@ export const RealTimeMap: React.FC<RealTimeMapProps> = ({
                 </div>
                 
                 {alert.status === 'open' && (
-                  <XpressButton
-                    size="sm"
-                    variant="outline"
+                  <button
                     onClick={() => acknowledgeEmergency(alert.incidentId)}
-                    className="ml-2"
+                    className="ml-2 px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
                   >
                     Acknowledge
-                  </XpressButton>
+                  </button>
                 )}
               </div>
             ))}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import RidesharingSidebar from '@/components/features/RidesharingSidebar';
-import { RefreshCw, Menu, X, Loader2 } from 'lucide-react';
+import { RefreshCw, Menu, X, Loader2, User, Bell, ChevronDown, LogOut, Settings, UserCircle } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -27,10 +27,35 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const router = useRouter();
   const { selectedServiceType, setSelectedServiceType, serviceTypes } = useServiceType();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarHovered, setSidebarHovered] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.user-dropdown')) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    if (userDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userDropdownOpen]);
   const [activeSection, setActiveSection] = useState('Dashboard');
   const [activeTab, setActiveTab] = useState('Overview');
 
@@ -92,7 +117,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       'bookings': 'Bookings',
       'drivers': 'Drivers',
       'passengers': 'Passengers',
-      'safety': 'Safety', 
+      'safety': 'Safety',
+      'fraud-protect': 'Fraud Protect',
       'reports': 'Reports',
       'settings': 'Settings'
     };
@@ -151,6 +177,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         return 'Earnings & Revenue';
       case 'safety':
         return 'Safety & Security';
+      case 'fraud-protect':
+        return 'Fraud Protection';
       case 'reports':
         return 'Reports & Analytics';
       case 'support':
@@ -184,6 +212,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
         return 'Revenue tracking and financial performance analysis';
       case 'safety':
         return 'Safety protocols and incident reporting system';
+      case 'fraud-protect':
+        return 'Advanced fraud detection and prevention system';
       case 'reports':
         return 'Business intelligence and operational analytics';
       case 'support':
@@ -191,7 +221,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'settings':
         return 'System configuration and administrative tools';
       default:
-        return 'Professional ridesharing operations management';
+        return 'Xpress Ops Tower - Advanced operations management platform';
     }
   };
 
@@ -218,10 +248,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-neutral-50 flex">
       {/* Desktop Sidebar Navigation */}
-      <div className="hidden md:block">
+      <div 
+        className="hidden md:block"
+        onMouseEnter={() => setSidebarHovered(true)}
+        onMouseLeave={() => setSidebarHovered(false)}
+      >
         <RidesharingSidebar
-          collapsed={sidebarCollapsed}
-          onCollapsedChange={setSidebarCollapsed}
+          collapsed={!sidebarHovered}
+          onCollapsedChange={() => {}} // Disabled click toggle
           activeItem={getCurrentPageId()}
           activeSection={activeSection}
           activeTab={activeTab}
@@ -229,12 +263,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             // This will be handled by the sidebar itself now
           }}
           onSectionChange={handleSectionChange}
-          userInfo={{
-            name: user ? `${user.firstName} ${user.lastName}` : 'Demo User',
-            role: user?.role || 'Admin'
-          }}
-          notifications={3}
-          onLogout={logout}
         />
       </div>
 
@@ -253,12 +281,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 setMobileMenuOpen(false);
               }}
               onSectionChange={handleSectionChange}
-              userInfo={{
-                name: user ? `${user.firstName} ${user.lastName}` : 'Demo User',
-                role: user?.role || 'Admin'
-              }}
-              notifications={3}
-              onLogout={logout}
             />
           </div>
         </div>
@@ -267,7 +289,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header - Hide for pages with custom headers */}
-        {!['bookings', 'live-map'].includes(pathname.substring(1)) && (
+        {!['bookings', 'live-map', 'safety'].includes(pathname.substring(1)) && (
           <header className="bg-white shadow-sm border-b border-gray-100 px-4 md:px-6 py-2 md:py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -318,6 +340,76 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <RefreshCw className="w-3 h-3" />
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
+
+                {/* User Account Dropdown */}
+                <div className="relative user-dropdown">
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="hidden md:block text-left">
+                      <p className="text-sm font-medium text-gray-900">{user ? `${user.firstName} ${user.lastName}` : 'Demo Admin'}</p>
+                      <p className="text-xs text-gray-500">{user?.role || 'admin'}</p>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="px-4 py-3 border-b border-gray-200">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{user ? `${user.firstName} ${user.lastName}` : 'Demo Admin'}</p>
+                            <p className="text-xs text-gray-500">{user?.role || 'admin'}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            router.push('/profile');
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <UserCircle className="w-4 h-4 mr-3" />
+                          Profile Settings
+                        </button>
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            router.push('/settings');
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        >
+                          <Settings className="w-4 h-4 mr-3" />
+                          System Settings
+                        </button>
+                      </div>
+                      
+                      <div className="border-t border-gray-200 py-1">
+                        <button
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            logout();
+                          }}
+                          className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </header>
@@ -334,10 +426,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-6">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span>Live Data: {lastRefresh.toLocaleTimeString()}</span>
+                <span>Live Data: {mounted ? lastRefresh.toLocaleTimeString() : '...'}</span>
               </div>
               <span className="hidden md:inline text-gray-400">•</span>
-              <span className="hidden md:inline">Professional Ridesharing Operations Dashboard</span>
+              <span className="hidden md:inline">Xpress Ops Tower</span>
               <span className="hidden md:inline text-gray-400">•</span>
               <span className="md:hidden">Xpress Operations</span>
               <span className="hidden md:inline">Real-time Fleet Management System</span>

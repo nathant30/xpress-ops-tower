@@ -211,6 +211,15 @@ const PerformanceTab: React.FC = () => {
     setDriverRankings(sortedData);
   };
 
+  const handleDriverClick = (driver: DriverRanking, index: number) => {
+    // Navigate to driver profile page
+    const driverId = `DRV${1000 + index}`;
+    console.log(`Opening driver profile for ${driver.name} (${driverId})`);
+    // In a real app, this would navigate to the driver profile page
+    // router.push(`/drivers/${driverId}`);
+    alert(`Opening profile for ${driver.name} (${driverId})\n\nRating: ${driver.rating}⭐\nCompletion Rate: ${driver.completionRate}%\nEarnings: ₱${driver.earnings.toLocaleString()}`);
+  };
+
   const getMetricColor = (color: string) => {
     const colors = {
       green: 'bg-green-50 border-green-200 text-green-700',
@@ -264,21 +273,21 @@ const PerformanceTab: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Performance KPI Cards - Matching Overview Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="h-full flex flex-col space-y-4">
+      {/* Performance KPI Cards - Compact Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {performanceMetrics.map((metric) => {
           const Icon = metric.icon;
           return (
             <div
               key={metric.title}
-              className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+              className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200"
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1">
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">{metric.title}</div>
-                <Icon className="w-4 h-4 text-gray-400" />
+                <Icon className="w-3 h-3 text-gray-400" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 mb-1">{metric.value}</div>
+              <div className="text-xl font-bold text-gray-900 mb-1">{metric.value}</div>
               {metric.trend && (
                 <div className={`flex items-center gap-1 text-xs font-medium ${
                   metric.trend.direction === 'up' ? 'text-emerald-600' : 'text-red-500'
@@ -291,161 +300,167 @@ const PerformanceTab: React.FC = () => {
         })}
         
         {/* Additional metrics to fill 5 columns */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center justify-between mb-1">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Rating</div>
-            <Star className="w-4 h-4 text-gray-400" />
+            <Star className="w-3 h-3 text-gray-400" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">4.7</div>
+          <div className="text-xl font-bold text-gray-900 mb-1">4.7</div>
           <div className="flex items-center gap-1 text-xs font-medium text-emerald-600">
             <span>↑ +0.2</span>
           </div>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center justify-between mb-1">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Response Time</div>
-            <TrendingUp className="w-4 h-4 text-gray-400" />
+            <TrendingUp className="w-3 h-3 text-gray-400" />
           </div>
-          <div className="text-2xl font-bold text-gray-900 mb-1">45s</div>
+          <div className="text-xl font-bold text-gray-900 mb-1">45s</div>
           <div className="flex items-center gap-1 text-xs font-medium text-emerald-600">
             <span>↓ -12%</span>
           </div>
         </div>
       </div>
 
-      {/* Driver Rankings Table */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
+      {/* Driver Rankings Table - Compact with Fixed Height */}
+      <Card className="flex-1 flex flex-col min-h-0">
+        <CardContent className="p-4 flex-1 flex flex-col min-h-0">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-lg text-gray-900">Driver Performance Rankings</h2>
             <div className="flex items-center space-x-2 text-xs text-gray-500">
               <TrendingUp className="w-4 h-4" />
               <span>Live data • Updated now</span>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
-                  <th 
-                    className="text-left py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('rank')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Rank</span>
-                      <SortIcon column="rank" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-left py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Driver</span>
-                      <SortIcon column="name" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-center py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('rating')}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>Rating</span>
-                      <SortIcon column="rating" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-center py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('completionRate')}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>Completion</span>
-                      <SortIcon column="completionRate" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-center py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('acceptanceRate')}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>Acceptance</span>
-                      <SortIcon column="acceptanceRate" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-center py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('trips')}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>Trips</span>
-                      <SortIcon column="trips" />
-                    </div>
-                  </th>
-                  <th 
-                    className="text-center py-3 font-medium cursor-pointer hover:text-gray-700 transition-colors"
-                    onClick={() => handleSort('earnings')}
-                  >
-                    <div className="flex items-center justify-center space-x-1">
-                      <span>Earnings</span>
-                      <SortIcon column="earnings" />
-                    </div>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {driverRankings.map((driver, index) => (
-                  <tr key={driver.name} className="hover:bg-gray-25 transition-colors">
-                    <td className="py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getRankBadge(driver.rank)}`}>
-                        #{driver.rank}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                          {driver.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900">{driver.name}</div>
-                          <div className="text-xs text-gray-500">DRV{1000 + index}</div>
-                        </div>
+          <div className="flex-1 overflow-auto min-h-0">
+            <div className="min-w-full">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white border-b border-gray-100 z-10">
+                  <tr className="text-gray-500 text-xs uppercase tracking-wide">
+                    <th 
+                      className="text-left py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('rank')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Rank</span>
+                        <SortIcon column="rank" />
                       </div>
-                    </td>
-                    <td className="text-center py-3">
-                      <div className="flex items-center justify-center">
-                        <Star className="w-3 h-3 text-yellow-400 mr-1 fill-current" />
-                        <span className="font-semibold text-gray-900">{driver.rating}</span>
+                    </th>
+                    <th 
+                      className="text-left py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Driver</span>
+                        <SortIcon column="name" />
                       </div>
-                    </td>
-                    <td className="text-center py-3">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className="bg-green-500 h-1.5 rounded-full"
-                            style={{ width: `${driver.completionRate}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium text-gray-700">{driver.completionRate}%</span>
+                    </th>
+                    <th 
+                      className="text-center py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('rating')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Rating</span>
+                        <SortIcon column="rating" />
                       </div>
-                    </td>
-                    <td className="text-center py-3">
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className="bg-blue-500 h-1.5 rounded-full"
-                            style={{ width: `${driver.acceptanceRate}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs font-medium text-gray-700">{driver.acceptanceRate}%</span>
+                    </th>
+                    <th 
+                      className="text-center py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('completionRate')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Completion</span>
+                        <SortIcon column="completionRate" />
                       </div>
-                    </td>
-                    <td className="text-center py-3 font-semibold text-gray-900">{driver.trips}</td>
-                    <td className="text-center py-3 font-semibold text-gray-900">₱{driver.earnings.toLocaleString()}</td>
+                    </th>
+                    <th 
+                      className="text-center py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('acceptanceRate')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Acceptance</span>
+                        <SortIcon column="acceptanceRate" />
+                      </div>
+                    </th>
+                    <th 
+                      className="text-center py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('trips')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Trips</span>
+                        <SortIcon column="trips" />
+                      </div>
+                    </th>
+                    <th 
+                      className="text-center py-2 font-medium cursor-pointer hover:text-gray-700 transition-colors"
+                      onClick={() => handleSort('earnings')}
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Earnings</span>
+                        <SortIcon column="earnings" />
+                      </div>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {driverRankings.map((driver, index) => (
+                    <tr 
+                      key={driver.name} 
+                      className="hover:bg-blue-50 transition-colors cursor-pointer"
+                      onClick={() => handleDriverClick(driver, index)}
+                    >
+                      <td className="py-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${getRankBadge(driver.rank)}`}>
+                          #{driver.rank}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                            {driver.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 text-sm">{driver.name}</div>
+                            <div className="text-xs text-gray-500">DRV{1000 + index}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-center py-2">
+                        <div className="flex items-center justify-center">
+                          <Star className="w-3 h-3 text-yellow-400 mr-1 fill-current" />
+                          <span className="font-semibold text-gray-900">{driver.rating}</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-10 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-green-500 h-1.5 rounded-full"
+                              style={{ width: `${driver.completionRate}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-medium text-gray-700">{driver.completionRate}%</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-10 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-blue-500 h-1.5 rounded-full"
+                              style={{ width: `${driver.acceptanceRate}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-medium text-gray-700">{driver.acceptanceRate}%</span>
+                        </div>
+                      </td>
+                      <td className="text-center py-2 font-semibold text-gray-900">{driver.trips}</td>
+                      <td className="text-center py-2 font-semibold text-gray-900">₱{driver.earnings.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </CardContent>
       </Card>

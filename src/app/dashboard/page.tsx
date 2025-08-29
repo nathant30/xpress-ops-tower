@@ -35,6 +35,7 @@ import LiveRidesPanel from '@/components/features/LiveRidesPanel';
 import PerformanceTab from '@/components/features/PerformanceTab';
 import DemandTab from '@/components/features/DemandTab';
 import SOSTab from '@/components/features/SOSTab';
+import FraudDashboard from '@/components/features/FraudDashboard';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -476,6 +477,7 @@ const DashboardPage = () => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [timeRange, setTimeRange] = useState('24h');
   const [selectedDate, setSelectedDate] = useState<Date | DateRange>(new Date());
+  const [userType, setUserType] = useState('drivers');
 
   // Use analytics hook for real data
   const { 
@@ -678,23 +680,97 @@ const DashboardPage = () => {
         </div>
       )}
 
-      {/* Tabs with Date Picker */}
+      {/* Tabs with Date Picker - Modern Pill Style */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <TabsList className="grid w-full md:w-auto grid-cols-5 md:grid-cols-none md:inline-flex bg-gray-100 p-1 rounded-lg h-12">
-            <TabsTrigger value="overview" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all">Overview</TabsTrigger>
-            <TabsTrigger value="performance" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all">Performance</TabsTrigger>
-            <TabsTrigger value="bookings" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all">Bookings</TabsTrigger>
-            <TabsTrigger value="sos" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all relative">
-              SOS
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>{alertCounts.sos}</span>
-            </TabsTrigger>
-            <TabsTrigger value="fraud" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all relative">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              Overview
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('performance')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === 'performance'
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Performance
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === 'bookings'
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Car className="w-4 h-4" />
+              Bookings
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('sos')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all relative ${
+                activeTab === 'sos'
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              Safety
+              <span className="ml-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold" style={{fontSize: '10px'}}>{alertCounts.sos}</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('fraud')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all relative ${
+                activeTab === 'fraud'
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4" />
               Fraud
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>{alertCounts.fraud}</span>
-            </TabsTrigger>
-          </TabsList>
+              <span className="ml-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold" style={{fontSize: '10px'}}>{alertCounts.fraud}</span>
+            </button>
+          </div>
           <div className="flex items-center space-x-3">
+            {activeTab === 'fraud' && (
+              <div className="flex border border-gray-200 rounded-lg bg-white">
+                <button
+                  onClick={() => setUserType('drivers')}
+                  className={`px-3 py-2 text-sm rounded-l-lg ${
+                    userType === 'drivers'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Drivers
+                </button>
+                <button
+                  onClick={() => setUserType('passengers')}
+                  className={`px-3 py-2 text-sm rounded-r-lg ${
+                    userType === 'passengers'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Passengers
+                </button>
+              </div>
+            )}
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value)}
@@ -877,8 +953,10 @@ const DashboardPage = () => {
 
           
           {/* Other Tab Contents */}
-          <TabsContent value="performance" className="mt-6">
-            <PerformanceTab />
+          <TabsContent value="performance" className="mt-3 h-full flex flex-col">
+            <div className="flex-1 overflow-hidden min-h-0">
+              <PerformanceTab />
+            </div>
           </TabsContent>
           
           <TabsContent value="bookings" className="mt-6">
@@ -1015,164 +1093,13 @@ const DashboardPage = () => {
             <SOSTab />
           </TabsContent>
           
-          <TabsContent value="fraud" className="mt-6">
-            <div className="space-y-6">
-              {/* Fraud KPI Cards - Matching Overview Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <KpiCard 
-                  label="Active Cases" 
-                  value="7"
-                  trend="+2 new"
-                  up={false}
-                  icon={AlertTriangle}
-                />
-                <KpiCard 
-                  label="Resolved Today" 
-                  value="12"
-                  trend="+15%"
-                  up={true}
-                  icon={CheckCircle}
-                />
-                <KpiCard 
-                  label="ML Accuracy" 
-                  value="94%"
-                  trend="+2.1%"
-                  up={true}
-                  icon={Target}
-                />
-                <KpiCard 
-                  label="Prevented Loss" 
-                  value="₱2.3M"
-                  trend="+18%"
-                  up={true}
-                  icon={DollarSign}
-                />
-                <KpiCard 
-                  label="False Positives" 
-                  value="3.2%"
-                  trend="-0.8%"
-                  up={false}
-                  icon={Shield}
-                />
-              </div>
-
-              {/* Fraud Detection Analysis */}
-              <Card className="mb-6">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold text-lg text-gray-900">Fraud Detection Analysis</h2>
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-green-600 font-medium text-sm">AI Active</span>
-                      </div>
-                      <button className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                        <Zap className="w-4 h-4" />
-                        <span>Run Scan</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-gray-500 text-xs uppercase tracking-wide border-b border-gray-100">
-                          <th className="text-left py-3 font-medium">Threat Type</th>
-                          <th className="text-center py-3 font-medium">Detected</th>
-                          <th className="text-center py-3 font-medium">Blocked</th>
-                          <th className="text-center py-3 font-medium">Success Rate</th>
-                          <th className="text-center py-3 font-medium">Risk Level</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        <tr className="hover:bg-gray-25 transition-colors">
-                          <td className="py-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                              <span className="font-medium text-gray-900">Payment Fraud</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3 font-semibold text-red-600">23</td>
-                          <td className="text-center py-3 font-semibold text-green-600">21</td>
-                          <td className="text-center py-3">
-                            <div className="flex items-center justify-center space-x-2">
-                              <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-green-500 h-1.5 rounded-full" style={{width: '91.3%'}}></div>
-                              </div>
-                              <span className="text-xs font-medium text-gray-700">91%</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3">
-                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">High</span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-gray-25 transition-colors">
-                          <td className="py-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              <span className="font-medium text-gray-900">Identity Theft</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3 font-semibold text-orange-600">12</td>
-                          <td className="text-center py-3 font-semibold text-green-600">11</td>
-                          <td className="text-center py-3">
-                            <div className="flex items-center justify-center space-x-2">
-                              <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-green-500 h-1.5 rounded-full" style={{width: '91.7%'}}></div>
-                              </div>
-                              <span className="text-xs font-medium text-gray-700">92%</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3">
-                            <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">Med</span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-gray-25 transition-colors">
-                          <td className="py-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                              <span className="font-medium text-gray-900">Account Takeover</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3 font-semibold text-yellow-600">8</td>
-                          <td className="text-center py-3 font-semibold text-green-600">8</td>
-                          <td className="text-center py-3">
-                            <div className="flex items-center justify-center space-x-2">
-                              <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-green-500 h-1.5 rounded-full" style={{width: '100%'}}></div>
-                              </div>
-                              <span className="text-xs font-medium text-gray-700">100%</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3">
-                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">Low</span>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-gray-25 transition-colors">
-                          <td className="py-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                              <span className="font-medium text-gray-900">Promo Abuse</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3 font-semibold text-purple-600">15</td>
-                          <td className="text-center py-3 font-semibold text-green-600">14</td>
-                          <td className="text-center py-3">
-                            <div className="flex items-center justify-center space-x-2">
-                              <div className="w-12 bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-green-500 h-1.5 rounded-full" style={{width: '93.3%'}}></div>
-                              </div>
-                              <span className="text-xs font-medium text-gray-700">93%</span>
-                            </div>
-                          </td>
-                          <td className="text-center py-3">
-                            <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">Med</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+          <TabsContent value="fraud" className="mt-3 h-full flex flex-col">
+            <div className="flex-1 overflow-hidden min-h-0">
+              <FraudDashboard 
+                userType={userType}
+                timeRange={timeRange}
+                dateRange={selectedDate}
+              />
             </div>
           </TabsContent>
           

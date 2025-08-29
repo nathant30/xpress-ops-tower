@@ -20,10 +20,10 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Xpress Ridesharing Operations',
-    template: '%s | Xpress Ridesharing Operations',
+    default: 'Xpress Ops Tower',
+    template: '%s | Xpress Ops Tower',
   },
-  description: 'Professional ridesharing operations dashboard - Real-time command center for dispatch, driver management, and passenger analytics',
+  description: 'Xpress Ops Tower - Advanced operations management platform for dispatch, driver management, and passenger analytics',
   keywords: ['ridesharing', 'operations', 'dashboard', 'dispatch', 'driver management', 'passenger analytics', 'real-time', 'Philippines', 'transportation', 'mobility'],
   authors: [{ name: 'Xpress Operations Team' }],
   creator: 'Xpress Operations Team',
@@ -47,15 +47,15 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    siteName: 'Xpress Ridesharing Operations',
-    title: 'Professional Ridesharing Operations Dashboard',
+    siteName: 'Xpress Ops Tower',
+    title: 'Xpress Ops Tower',
     description: 'Real-time command center for dispatch, driver management, and passenger analytics in the Philippines',
     locale: 'en_PH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Xpress Ridesharing Operations',
-    description: 'Professional ridesharing operations dashboard - Real-time command center for dispatch and analytics',
+    title: 'Xpress Ops Tower',
+    description: 'Xpress Ops Tower - Advanced operations management platform for dispatch and analytics',
   },
   icons: {
     icon: '/favicon.ico',

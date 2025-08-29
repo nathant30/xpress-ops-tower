@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { createLoginValidator, ValidationError } from '@/utils/validation';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login, isLoading, error } = useAuth();
@@ -90,7 +90,7 @@ export default function LoginPage() {
               <Shield className="h-6 w-6 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Welcome to Xpress Ops</h2>
-            <p className="text-gray-600 mt-2">Sign in to access your operations dashboard</p>
+            <p className="text-gray-600 mt-2">Sign in to access Xpress Ops Tower</p>
           </div>
 
           {/* Error Message */}
@@ -251,10 +251,25 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-xs text-gray-500">
-            Xpress Operations Dashboard v2.0 - Secure Authentication
+            Xpress Ops Tower v2.0 - Secure Authentication
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-neutral-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }

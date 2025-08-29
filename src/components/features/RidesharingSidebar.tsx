@@ -17,9 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Bell,
-  LogOut,
-  User,
   Activity,
   MapPin,
   MoreHorizontal
@@ -46,13 +43,6 @@ interface RidesharingSidebarProps {
   activeTab?: string;
   onItemSelect?: (itemId: string) => void;
   onSectionChange?: (section: string) => void;
-  userInfo?: {
-    name: string;
-    role: string;
-    avatar?: string;
-  };
-  notifications?: number;
-  onLogout?: () => void;
 }
 
 export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
@@ -63,13 +53,7 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
   activeSection = 'Dashboard',
   activeTab = 'Overview',
   onItemSelect,
-  onSectionChange,
-  userInfo = {
-    name: 'Operations Manager',
-    role: 'Admin'
-  },
-  notifications = 3,
-  onLogout
+  onSectionChange
 }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [moreExpanded, setMoreExpanded] = useState(false);
@@ -127,10 +111,15 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       badge: 'NEW',
       badgeColor: 'purple',
       tabs: ['Overview', 'Alerts', 'Reports']
-    }
-  };
-
-  const moreMenuStructure = {
+    },
+    'Fraud Protect': {
+      id: 'fraud-protect',
+      icon: AlertTriangle,
+      description: 'Advanced detection',
+      badge: 47,
+      badgeColor: 'red',
+      tabs: ['Overview', 'Active Alerts', 'Patterns', 'Settings']
+    },
     Reports: {
       id: 'reports',
       icon: BarChart3,
@@ -144,6 +133,8 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       tabs: ['System Health', 'User Management']
     }
   };
+
+  const moreMenuStructure = {};
 
   const mainNavigationItems: NavigationItem[] = Object.entries(mainMenuStructure).map(([section, config]) => ({
     id: config.id,
@@ -271,95 +262,67 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       collapsed ? 'w-16' : 'w-64'
     } ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Car className="w-5 h-5 text-white" />
+      <div className="p-4 border-b border-gray-700">
+        {!collapsed ? (
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img 
+                src="/images/xpress-x-logo-final.svg" 
+                alt="Xpress X Logo" 
+                className="h-6 w-6"
+              />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Xpress Ops</h2>
-              <p className="text-xs text-gray-400">Rideshare Command</p>
+              <p className="text-xs text-gray-400">Command Center</p>
             </div>
-          </div>
-        )}
-        
-        <button
-          onClick={toggleCollapsed}
-          className="p-2 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
-      </div>
-
-      {/* User Profile */}
-      <div className={`p-4 border-b border-gray-700 ${collapsed ? 'px-2' : ''}`}>
-        {collapsed ? (
-          <div className="flex justify-center relative">
-            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-              <User className="w-4 h-4 text-gray-300" />
-            </div>
-            {notifications > 0 && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">{notifications > 9 ? '9+' : notifications}</span>
-              </div>
-            )}
           </div>
         ) : (
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-gray-300" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
+          <div className="flex justify-center">
+            <div className="w-8 h-8 flex items-center justify-center">
+              <img 
+                src="/images/xpress-x-logo-final.svg" 
+                alt="Xpress X Logo" 
+                className="h-5 w-5"
+              />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{userInfo.name}</p>
-              <p className="text-xs text-gray-400 truncate">{userInfo.role}</p>
-            </div>
-            {notifications > 0 && (
-              <div className="relative">
-                <Bell className="w-5 h-5 text-gray-400" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">{notifications > 9 ? '9+' : notifications}</span>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
+
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
         <div className="space-y-1">
           {mainNavigationItems.map(renderNavigationItem)}
           
-          {/* More Section */}
-          <div className="mt-2">
-            <button
-              onClick={() => setMoreExpanded(!moreExpanded)}
-              className={`w-full flex items-center px-4 py-3 text-left transition-all duration-200 group relative text-gray-300 hover:bg-gray-700 hover:text-white ${collapsed ? 'justify-center' : 'justify-start'}`}
-            >
-              <MoreHorizontal className={`w-5 h-5 ${collapsed ? '' : 'mr-3'} flex-shrink-0`} />
+          {/* More Section - Only show if there are items */}
+          {moreNavigationItems.length > 0 && (
+            <div className="mt-2">
+              <button
+                onClick={() => setMoreExpanded(!moreExpanded)}
+                className={`w-full flex items-center px-4 py-3 text-left transition-all duration-200 group relative text-gray-300 hover:bg-gray-700 hover:text-white ${collapsed ? 'justify-center' : 'justify-start'}`}
+              >
+                <MoreHorizontal className={`w-5 h-5 ${collapsed ? '' : 'mr-3'} flex-shrink-0`} />
+                
+                {!collapsed && (
+                  <>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">More</div>
+                      <div className="text-xs text-gray-400">Additional tools</div>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${moreExpanded ? 'transform rotate-180' : ''}`} />
+                  </>
+                )}
+              </button>
               
-              {!collapsed && (
-                <>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">More</div>
-                    <div className="text-xs text-gray-400">Additional tools</div>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${moreExpanded ? 'transform rotate-180' : ''}`} />
-                </>
+              {moreExpanded && !collapsed && (
+                <div className="ml-4 space-y-1 border-l border-gray-700 pl-4">
+                  {moreNavigationItems.map(renderNavigationItem)}
+                </div>
               )}
-            </button>
-            
-            {moreExpanded && !collapsed && (
-              <div className="ml-4 space-y-1 border-l border-gray-700 pl-4">
-                {moreNavigationItems.map(renderNavigationItem)}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -384,19 +347,6 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
           )}
         </div>
 
-        {/* Logout */}
-        <div className={`px-4 ${collapsed ? 'px-2' : ''}`}>
-          <button
-            onClick={onLogout}
-            className={`w-full flex items-center py-2 text-gray-400 hover:text-red-400 transition-colors ${
-              collapsed ? 'justify-center' : 'justify-start'
-            }`}
-            title="Sign out"
-          >
-            <LogOut className={`w-4 h-4 ${collapsed ? '' : 'mr-2'}`} />
-            {!collapsed && <span className="text-sm">Sign out</span>}
-          </button>
-        </div>
       </div>
     </div>
   );

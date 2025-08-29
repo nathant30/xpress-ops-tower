@@ -21,6 +21,39 @@ import {
 } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { Card, CardContent } from '@/components/ui/card';
+import SafetyAlertMap from '@/components/SafetyAlertMap';
+
+interface SafetyMetrics {
+  activeAlerts: number;
+  resolvedToday: number;
+  investigating: number;
+  averageResponseTime: number;
+  highPriorityIncidents: number;
+  trends: {
+    activeAlerts: { change: number; period: string };
+    resolvedToday: { change: number; period: string };
+    investigating: { change: number; status: 'stable' | 'increasing' | 'decreasing' };
+    averageResponseTime: { change: number; improving: boolean };
+  };
+}
+
+interface ERTMember {
+  id: string;
+  name: string;
+  status: 'Available' | 'On Dispatch' | 'Unavailable';
+  location: string;
+  specialization: string[];
+  lastUpdated: Date;
+  currentIncident?: string;
+}
+
+interface ERTStatus {
+  totalMembers: number;
+  available: number;
+  onDispatch: number;
+  unavailable: number;
+  members: ERTMember[];
+}
 
 interface SOSAlert {
   id: string;
@@ -49,6 +82,73 @@ const SOSTab: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('active');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Real-time safety metrics
+  const [safetyMetrics] = useState<SafetyMetrics>({
+    activeAlerts: 2,
+    resolvedToday: 3,
+    investigating: 1,
+    averageResponseTime: 4.2,
+    highPriorityIncidents: 3,
+    trends: {
+      activeAlerts: { change: 2, period: 'new' },
+      resolvedToday: { change: 15, period: 'vs yesterday' },
+      investigating: { change: 0, status: 'stable' },
+      averageResponseTime: { change: -12, improving: true }
+    }
+  });
+
+  // Emergency Response Team Status
+  const [ertStatus] = useState<ERTStatus>({
+    totalMembers: 8,
+    available: 5,
+    onDispatch: 2,
+    unavailable: 1,
+    members: [
+      {
+        id: 'ert-001',
+        name: 'Sarah Chen',
+        status: 'On Dispatch',
+        location: 'EDSA Cubao',
+        specialization: ['Medical Emergency', 'Accident Response'],
+        lastUpdated: new Date(Date.now() - 5 * 60 * 1000),
+        currentIncident: 'SOS-001'
+      },
+      {
+        id: 'ert-002',
+        name: 'Miguel Rodriguez',
+        status: 'Available',
+        location: 'Makati Central',
+        specialization: ['Technical Rescue', 'Traffic Management'],
+        lastUpdated: new Date(Date.now() - 2 * 60 * 1000)
+      },
+      {
+        id: 'ert-003',
+        name: 'Ana Santos',
+        status: 'On Dispatch',
+        location: 'Ortigas Center',
+        specialization: ['Crisis Counseling', 'Coordination'],
+        lastUpdated: new Date(Date.now() - 12 * 60 * 1000),
+        currentIncident: 'SOS-004'
+      },
+      {
+        id: 'ert-004',
+        name: 'Roberto Garcia',
+        status: 'Available',
+        location: 'BGC Central',
+        specialization: ['Medical Emergency', 'Security'],
+        lastUpdated: new Date(Date.now() - 1 * 60 * 1000)
+      },
+      {
+        id: 'ert-005',
+        name: 'Lisa Wong',
+        status: 'Available',
+        location: 'Quezon City',
+        specialization: ['Traffic Management', 'Accident Response'],
+        lastUpdated: new Date(Date.now() - 3 * 60 * 1000)
+      }
+    ]
+  });
 
   const getServiceTypeInfo = () => {
     return serviceTypes.find(s => s.id === selectedServiceType) || serviceTypes[0];
@@ -156,6 +256,17 @@ const SOSTab: React.FC = () => {
 
   useEffect(() => {
     setTimeout(() => setLoading(false), 800);
+  }, []);
+
+  // Simulated WebSocket connection for live updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Simulate real-time updates every 30 seconds
+      console.log('Updating safety metrics and ERT status...');
+      // In a real implementation, this would update state from WebSocket messages
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = async () => {
@@ -319,134 +430,123 @@ const SOSTab: React.FC = () => {
         />
       </div>
 
-      {/* Emergency Alerts List */}
-      <Card className="mb-6">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg text-gray-900">Emergency Alerts</h2>
-            <div className="flex items-center space-x-3">
-              {/* Compact filter pills */}
-              <div className="flex space-x-1">
-                {(['all', 'active', 'resolved'] as FilterType[]).map((filterType) => (
-                  <button
-                    key={filterType}
-                    onClick={() => setFilter(filterType)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors capitalize ${
-                      filter === filterType
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {filterType}
-                  </button>
-                ))}
+      {/* Emergency Response Team (ERT) Status & Safety Map */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg text-gray-900">ERT Team Status</h3>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Activity className="w-4 h-4" />
+                <span>Live Status</span>
               </div>
-              
-              {activeAlertsCount > 0 && (
-                <div className="flex items-center space-x-2 px-3 py-1 bg-red-50 text-red-600 rounded-lg text-sm font-medium">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>{activeAlertsCount} Active</span>
-                </div>
-              )}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
-              </button>
             </div>
-          </div>
-          
-          <div className="space-y-4">
-            {filteredAlerts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Shield className="w-12 h-12 text-gray-400 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">No alerts match your filters</p>
-                <p className="text-sm">Emergency alerts will appear here when they occur</p>
+            
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{ertStatus.available}</div>
+                <div className="text-sm text-green-700">Available</div>
               </div>
-            ) : (
-              filteredAlerts.map((alert) => {
-                const severityColors = getSeverityColor(alert.severity);
-                return (
-                  <div
-                    key={alert.id}
-                    className={`p-4 bg-gray-50 rounded-lg border-l-4 transition-all hover:shadow-sm ${severityColors.border}`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-bold text-gray-900">{alert.alertId}</h3>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${severityColors.badge}`}>
-                            {alert.severity}
-                          </span>
-                          <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-bold ${getStatusColor(alert.status)}`}>
-                            {getStatusIcon(alert.status)}
-                            <span>{alert.status}</span>
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                          <div className="flex items-center space-x-2">
-                            {alert.type === 'driver' ? (
-                              <Car className="w-3 h-3 text-blue-500" />
-                            ) : (
-                              <User className="w-3 h-3 text-green-500" />
-                            )}
-                            <span className="font-medium">{alert.personName}</span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="w-3 h-3 text-gray-500" />
-                            <span className="truncate">{alert.location}</span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-3 h-3 text-gray-500" />
-                            <span>{alert.timeAgo}</span>
-                          </div>
-                        </div>
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{ertStatus.onDispatch}</div>
+                <div className="text-sm text-blue-700">On Dispatch</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-600">{ertStatus.unavailable}</div>
+                <div className="text-sm text-gray-700">Resting</div>
+              </div>
+            </div>
+            
+            <div className="text-center text-sm text-gray-600 mb-4">
+              Total Team Members: <span className="font-semibold">{ertStatus.totalMembers}</span>
+            </div>
 
-                        <p className="text-sm text-gray-700 mb-3">{alert.description}</p>
-
-                        <div className="flex flex-wrap gap-1">
-                          {alert.actions.slice(0, 3).map((action, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
-                            >
-                              {action}
-                            </span>
-                          ))}
-                          {alert.actions.length > 3 && (
-                            <span className="text-xs text-gray-500 px-2 py-1">
-                              +{alert.actions.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Compact Action Buttons */}
-                      <div className="flex space-x-2 ml-4">
-                        <button className="flex items-center space-x-1 px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors">
-                          <Phone className="w-3 h-3" />
-                          <span>Call</span>
-                        </button>
-                        
-                        <button className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors">
-                          <MapPin className="w-3 h-3" />
-                          <span>Track</span>
-                        </button>
-                      </div>
-                    </div>
+            {/* Team Members List - Compact */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Active Members</h4>
+              {ertStatus.members.slice(0, 3).map((member) => (
+                <div key={member.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                    <div className="text-xs text-gray-500">{member.location}</div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    member.status === 'Available' 
+                      ? 'bg-green-100 text-green-800'
+                      : member.status === 'On Dispatch'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {member.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg text-gray-900">Safety Alert Map</h3>
+              <div className="text-xs text-gray-500">Live locations</div>
+            </div>
+            
+            <div className="h-64 rounded-lg overflow-hidden">
+              <SafetyAlertMap
+                alerts={[
+                  {
+                    id: 'alert-1',
+                    latitude: 14.5676,
+                    longitude: 121.0437,
+                    priority: 'critical',
+                    title: 'SOS-001 Active',
+                    status: 'Active'
+                  },
+                  {
+                    id: 'alert-2',
+                    latitude: 14.5794,
+                    longitude: 121.0359,
+                    priority: 'high',
+                    title: 'SOS-004 Active',
+                    status: 'Active'
+                  }
+                ]}
+                ertMembers={[
+                  {
+                    id: 'ert-1',
+                    name: 'Sarah Chen',
+                    latitude: 14.5676,
+                    longitude: 121.0444,
+                    status: 'On Dispatch'
+                  },
+                  {
+                    id: 'ert-2',
+                    name: 'Ana Santos',
+                    latitude: 14.5794,
+                    longitude: 121.0366,
+                    status: 'On Dispatch'
+                  }
+                ]}
+                className="h-full w-full"
+              />
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div className="text-center p-2 bg-red-50 rounded">
+                <div className="text-lg font-bold text-red-600">2</div>
+                <div className="text-xs text-red-700">Active Alerts</div>
+              </div>
+              <div className="text-center p-2 bg-blue-50 rounded">
+                <div className="text-lg font-bold text-blue-600">4.2m</div>
+                <div className="text-xs text-blue-700">Avg Response</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 };
