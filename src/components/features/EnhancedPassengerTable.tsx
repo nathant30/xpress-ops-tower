@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star, CreditCard, Shield } from 'lucide-react';
+import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star } from 'lucide-react';
 
 const EnhancedPassengerTable = () => {
   const router = useRouter();
@@ -18,7 +18,7 @@ const EnhancedPassengerTable = () => {
     passenger: 180,
     status: 120,
     activity: 130,
-    bookings: 80,
+    today: 80,
     total: 100,
     rate: 100,
     payment: 100,
@@ -66,24 +66,23 @@ const EnhancedPassengerTable = () => {
     {
       id: 1,
       status: 'vip',
-      statusText: 'VIP',
-      statusTime: '2d ago',
-      type: 'VIP',
-      name: 'Maria Santos',
+      statusText: 'VIP Active',
+      statusTime: '2h ago',
+      role: 'VIP Customer',
+      name: 'Maria Santos 1922',
       passengerId: 'PSG-201922',
       completedBookings: 1248,
       completionRate: 98,
       completionTrend: 'up',
       cancellationRate: 2,
-      averageRating: 4.9,
       totalSpent: 85420.50,
       joinDate: 'Jan 15, 2023',
       region: 'NCR',
       paymentMethod: 'Credit Card',
-      riskLevel: 'Low',
-      riskDetails: 'Verified premium customer',
+      fraudRisk: 'Low',
+      fraudDetails: 'Excellent customer with verified identity',
       bookingsToday: 3,
-      currentActivity: 'Active',
+      currentActivity: 'Recently booked',
       issues: []
     },
     {
@@ -91,22 +90,21 @@ const EnhancedPassengerTable = () => {
       status: 'regular',
       statusText: 'Regular',
       statusTime: null,
-      type: 'Regular',
-      name: 'Juan dela Cruz',
+      role: 'Regular Customer',
+      name: 'Carlo Mendoza 1507',
       passengerId: 'PSG-201507',
       completedBookings: 529,
       completionRate: 94,
       completionTrend: 'stable',
-      cancellationRate: 8,
-      averageRating: 4.3,
+      cancellationRate: 6,
       totalSpent: 25730.00,
       joinDate: 'Jun 10, 2024',
       region: 'Davao',
       paymentMethod: 'Digital Wallet',
-      riskLevel: 'Low',
-      riskDetails: 'Good payment history',
+      fraudRisk: 'Low',
+      fraudDetails: 'Good payment history',
       bookingsToday: 1,
-      currentActivity: 'Booking now',
+      currentActivity: 'Active',
       issues: []
     },
     {
@@ -114,159 +112,536 @@ const EnhancedPassengerTable = () => {
       status: 'suspended',
       statusText: 'Suspended',
       statusTime: '6d ago',
-      type: 'Payment Issues',
-      name: 'Ana Rodriguez',
+      role: 'Payment Issues',
+      name: 'Liza Rodriguez 1095',
       passengerId: 'PSG-201095',
       completedBookings: 326,
       completionRate: 76,
       completionTrend: 'down',
-      cancellationRate: 25,
-      averageRating: 3.2,
+      cancellationRate: 24,
       totalSpent: 12450.00,
       joinDate: 'Mar 22, 2024',
       region: 'Bicol',
       paymentMethod: 'Cash',
-      riskLevel: 'High',
-      riskDetails: 'Multiple payment failures',
+      fraudRisk: 'High',
+      fraudDetails: 'Multiple payment failures',
       bookingsToday: 0,
       currentActivity: 'Suspended',
-      issues: ['Payment Failed', 'High Cancellation']
+      issues: ['Payment Failed']
     },
     {
       id: 4,
       status: 'premium',
       statusText: 'Premium',
       statusTime: null,
-      type: 'Premium',
-      name: 'Carlos Mendoza',
+      role: 'Premium Customer',
+      name: 'Ramon Cruz 1021',
       passengerId: 'PSG-201021',
       completedBookings: 892,
       completionRate: 96,
       completionTrend: 'up',
       cancellationRate: 4,
-      averageRating: 4.7,
       totalSpent: 67890.25,
       joinDate: 'Sep 08, 2023',
       region: 'Baguio',
       paymentMethod: 'Credit Card',
-      riskLevel: 'Low',
-      riskDetails: 'Excellent customer',
+      fraudRisk: 'Low',
+      fraudDetails: 'Excellent customer',
       bookingsToday: 2,
-      currentActivity: 'Recently booked',
+      currentActivity: 'Active',
       issues: []
     },
     {
       id: 5,
       status: 'new',
       statusText: 'New User',
-      statusTime: '1h ago',
-      type: 'New User (30 days)',
-      name: 'Sofia Garcia',
-      passengerId: 'PSG-202001',
-      completedBookings: 12,
-      completionRate: 92,
+      statusTime: null,
+      role: 'New Customer (30 days)',
+      name: 'Juan Flores 211',
+      passengerId: 'PSG-200211',
+      completedBookings: 18,
+      completionRate: 89,
       completionTrend: 'up',
-      cancellationRate: 8,
-      averageRating: 4.5,
+      cancellationRate: 11,
       totalSpent: 1250.00,
       joinDate: 'Aug 25, 2024',
       region: 'Cebu',
       paymentMethod: 'Digital Wallet',
-      riskLevel: 'Medium',
-      riskDetails: 'New user monitoring',
+      fraudRisk: 'Medium',
+      fraudDetails: 'New user monitoring',
       bookingsToday: 1,
       currentActivity: 'First week',
       issues: []
     },
     {
       id: 6,
-      status: 'banned',
-      statusText: 'Banned',
-      statusTime: '30d ago',
-      type: 'Multiple Violations',
-      name: 'Ricardo Tan',
-      passengerId: 'PSG-200845',
-      completedBookings: 156,
-      completionRate: 45,
-      completionTrend: 'down',
-      cancellationRate: 55,
-      averageRating: 2.1,
-      totalSpent: 8900.00,
-      joinDate: 'Nov 12, 2023',
-      region: 'Iloilo',
-      paymentMethod: 'Cash',
-      riskLevel: 'Critical',
-      riskDetails: 'Fraud detected, multiple violations',
-      bookingsToday: 0,
-      currentActivity: 'Banned',
-      issues: ['Fraud Alert', 'Abuse Report', 'Fake Account']
-    },
-    {
-      id: 7,
       status: 'regular',
       statusText: 'Regular',
-      statusTime: '5m ago',
-      type: 'Regular',
-      name: 'Elena Reyes',
-      passengerId: 'PSG-201345',
-      completedBookings: 678,
-      completionRate: 89,
+      statusTime: null,
+      role: 'Regular Customer',
+      name: 'Grace Reyes 325',
+      passengerId: 'PSG-200325',
+      completedBookings: 756,
+      completionRate: 92,
       completionTrend: 'stable',
-      cancellationRate: 11,
-      averageRating: 4.1,
+      cancellationRate: 8,
       totalSpent: 34560.75,
       joinDate: 'Apr 18, 2024',
-      region: 'NCR',
+      region: 'Bicol',
       paymentMethod: 'Bank Transfer',
-      riskLevel: 'Low',
-      riskDetails: 'Regular customer',
+      fraudRisk: 'Low',
+      fraudDetails: 'Clean record',
       bookingsToday: 2,
-      currentActivity: 'Just booked',
+      currentActivity: 'Active',
       issues: []
     },
     {
-      id: 8,
+      id: 7,
       status: 'suspended',
       statusText: 'Suspended',
-      statusTime: '12d ago',
-      type: 'Under Investigation',
-      name: 'Miguel Santos',
-      passengerId: 'PSG-201678',
+      statusTime: '2d ago',
+      role: 'Under Investigation',
+      name: 'Maria Cruz 5',
+      passengerId: 'PSG-200005',
       completedBookings: 445,
       completionRate: 67,
       completionTrend: 'down',
       cancellationRate: 33,
-      averageRating: 3.4,
       totalSpent: 18750.00,
       joinDate: 'Jul 05, 2024',
-      region: 'Davao',
+      region: 'Cebu',
       paymentMethod: 'Digital Wallet',
-      riskLevel: 'High',
-      riskDetails: 'Under investigation for violations',
+      fraudRisk: 'High',
+      fraudDetails: 'Under investigation for violations',
       bookingsToday: 0,
       currentActivity: 'Suspended',
-      issues: ['Violation Report', 'Poor Rating']
+      issues: ['Violation Report']
+    },
+    {
+      id: 8,
+      status: 'vip',
+      statusText: 'VIP Active',
+      statusTime: null,
+      role: 'VIP Customer',
+      name: 'Ramon Navarro 22',
+      passengerId: 'PSG-200022',
+      completedBookings: 2187,
+      completionRate: 97,
+      completionTrend: 'stable',
+      cancellationRate: 3,
+      totalSpent: 156780.00,
+      joinDate: 'May 12, 2022',
+      region: 'Cebu',
+      paymentMethod: 'Credit Card',
+      fraudRisk: 'Low',
+      fraudDetails: 'Top tier customer',
+      bookingsToday: 4,
+      currentActivity: 'Active',
+      issues: []
+    },
+    {
+      id: 9,
+      status: 'new',
+      statusText: 'New User',
+      statusTime: '1d ago',
+      role: 'New Customer',
+      name: 'Roberto Dela Cruz 987',
+      passengerId: 'PSG-200987',
+      completedBookings: 3,
+      completionRate: 100,
+      completionTrend: 'stable',
+      cancellationRate: 0,
+      totalSpent: 350.00,
+      joinDate: 'Aug 28, 2024',
+      region: 'NCR',
+      paymentMethod: 'Digital Wallet',
+      fraudRisk: 'Medium',
+      fraudDetails: 'New customer verification',
+      bookingsToday: 1,
+      currentActivity: 'New user',
+      issues: []
+    },
+    {
+      id: 10,
+      status: 'premium',
+      statusText: 'Premium',
+      statusTime: null,
+      role: 'Premium Customer',
+      name: 'Ana Marie Tan 456',
+      passengerId: 'PSG-201456',
+      completedBookings: 1134,
+      completionRate: 94,
+      completionTrend: 'up',
+      cancellationRate: 6,
+      totalSpent: 78650.25,
+      joinDate: 'Feb 15, 2023',
+      region: 'Cebu',
+      paymentMethod: 'Credit Card',
+      fraudRisk: 'Low',
+      fraudDetails: 'Premium customer',
+      bookingsToday: 2,
+      currentActivity: 'Active',
+      issues: []
+    },
+    {
+      id: 11,
+      status: 'suspended',
+      statusText: 'Suspended',
+      statusTime: '5d ago',
+      role: 'High Cancellation',
+      name: 'Mark Anthony Lee 789',
+      passengerId: 'PSG-201789',
+      completedBookings: 234,
+      completionRate: 58,
+      completionTrend: 'down',
+      cancellationRate: 42,
+      totalSpent: 8900.00,
+      joinDate: 'Dec 20, 2023',
+      region: 'Davao',
+      paymentMethod: 'Cash',
+      fraudRisk: 'Critical',
+      fraudDetails: 'High cancellation rate',
+      bookingsToday: 0,
+      currentActivity: 'Suspended',
+      issues: ['High Cancellation', 'Customer Complaints']
+    },
+    {
+      id: 12,
+      status: 'regular',
+      statusText: 'Regular',
+      statusTime: null,
+      role: 'Regular Customer',
+      name: 'Jenny Rose Garcia 234',
+      passengerId: 'PSG-201234',
+      completedBookings: 678,
+      completionRate: 91,
+      completionTrend: 'up',
+      cancellationRate: 9,
+      totalSpent: 32450.50,
+      joinDate: 'Jan 10, 2024',
+      region: 'NCR',
+      paymentMethod: 'Digital Wallet',
+      fraudRisk: 'Low',
+      fraudDetails: 'Good customer',
+      bookingsToday: 1,
+      currentActivity: 'Active',
+      issues: []
+    },
+    {
+      id: 13,
+      status: 'inactive',
+      statusText: 'Inactive',
+      statusTime: '14d ago',
+      role: 'Inactive Customer',
+      name: 'Carlos Miguel Santos 567',
+      passengerId: 'PSG-200567',
+      completedBookings: 445,
+      completionRate: 84,
+      completionTrend: 'stable',
+      cancellationRate: 16,
+      totalSpent: 23450.00,
+      joinDate: 'Nov 05, 2023',
+      region: 'Baguio',
+      paymentMethod: 'Credit Card',
+      fraudRisk: 'Medium',
+      fraudDetails: 'Long inactive period',
+      bookingsToday: 0,
+      currentActivity: 'Inactive 14d',
+      issues: ['Long Inactive']
+    },
+    {
+      id: 14,
+      status: 'regular',
+      statusText: 'Regular',
+      statusTime: null,
+      role: 'Regular Customer',
+      name: 'Lisa Mae Rodriguez 890',
+      passengerId: 'PSG-201890',
+      completedBookings: 556,
+      completionRate: 89,
+      completionTrend: 'up',
+      cancellationRate: 11,
+      totalSpent: 28750.75,
+      joinDate: 'Jun 18, 2024',
+      region: 'Cebu',
+      paymentMethod: 'Bank Transfer',
+      fraudRisk: 'Low',
+      fraudDetails: 'Good performance',
+      bookingsToday: 1,
+      currentActivity: 'Active',
+      issues: []
+    },
+    {
+      id: 15,
+      status: 'banned',
+      statusText: 'Banned',
+      statusTime: '30d ago',
+      role: 'Banned Customer',
+      name: 'David John Cruz 123',
+      passengerId: 'PSG-200123',
+      completedBookings: 89,
+      completionRate: 42,
+      completionTrend: 'down',
+      cancellationRate: 58,
+      totalSpent: 3450.00,
+      joinDate: 'Mar 15, 2024',
+      region: 'NCR',
+      paymentMethod: 'Cash',
+      fraudRisk: 'Critical',
+      fraudDetails: 'Fraudulent activities detected',
+      bookingsToday: 0,
+      currentActivity: 'Banned',
+      issues: ['Fraud', 'Fake Account']
+    },
+    // Additional passengers...
+    {
+      id: 16,
+      status: 'vip',
+      statusText: 'VIP Active',
+      statusTime: null,
+      role: 'VIP Customer',
+      name: 'Michael Angelo Perez 445',
+      passengerId: 'PSG-201445',
+      completedBookings: 2156,
+      completionRate: 98,
+      completionTrend: 'up',
+      cancellationRate: 2,
+      totalSpent: 189750.00,
+      joinDate: 'Aug 01, 2022',
+      region: 'Davao',
+      paymentMethod: 'Credit Card',
+      fraudRisk: 'Low',
+      fraudDetails: 'Outstanding customer',
+      bookingsToday: 5,
+      currentActivity: 'Active',
+      issues: []
     }
   ];
 
-  const filteredPassengers = passengersData.filter(passenger => {
-    const matchesSearch = 
-      passenger.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      passenger.passengerId.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = selectedType === 'All' || 
-      (selectedType === 'Active' && ['vip', 'premium', 'regular', 'new'].includes(passenger.status)) ||
-      (selectedType === 'Suspended' && passenger.status === 'suspended') ||
-      (selectedType === 'Banned' && passenger.status === 'banned') ||
-      (selectedType === 'VIP' && passenger.status === 'vip') ||
-      (selectedType === 'Premium' && passenger.status === 'premium') ||
-      (selectedType === 'New Users' && passenger.status === 'new');
+  const getStatusIcon = (status: string) => {
+    if (status === 'vip') return '👑';
+    if (status === 'premium') return '⭐';
+    if (status === 'regular') return '🟢';
+    if (status === 'new') return '🟠';
+    if (status === 'suspended') return '🔴';
+    if (status === 'banned') return '⛔';
+    if (status === 'inactive') return '⚫';
+    return '🔵';
+  };
 
-    const matchesStatus = selectedStatus === 'All' || 
-      passenger.currentActivity.toLowerCase().includes(selectedStatus.toLowerCase());
+  const getCompletionRateColor = (rate: number) => {
+    if (rate >= 95) return 'text-green-600 bg-green-50';
+    if (rate >= 85) return 'text-yellow-600 bg-yellow-50';
+    return 'text-red-600 bg-red-50';
+  };
 
-    return matchesSearch && matchesType && matchesStatus;
-  });
+  const getFraudRiskColor = (risk: string) => {
+    if (risk === 'Critical') return 'bg-red-100 text-red-800 border border-red-300';
+    if (risk === 'High') return 'bg-orange-100 text-orange-800 border border-orange-300';
+    if (risk === 'Medium') return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+    return 'bg-green-100 text-green-800 border border-green-300';
+  };
+
+  const getTrendIcon = (trend: string) => {
+    if (trend === 'up') return <TrendingUp className="w-3 h-3 text-green-500 inline ml-1" />;
+    if (trend === 'down') return <TrendingDown className="w-3 h-3 text-red-500 inline ml-1" />;
+    return null;
+  };
+
+  const getStatusTooltip = (statusText: string) => {
+    switch (statusText) {
+      case 'VIP Active':
+        return 'VIP customer with highest priority and benefits';
+      case 'Premium':
+        return 'Premium customer with enhanced service benefits';
+      case 'Regular':
+        return 'Standard customer account in good standing';
+      case 'New User':
+        return 'New customer within first 30 days';
+      case 'Suspended':
+        return 'Customer temporarily suspended due to violations or issues';
+      case 'Banned':
+        return 'Customer permanently banned from the platform';
+      case 'Inactive':
+        return 'Customer hasn\'t booked rides for extended period';
+      default:
+        return 'Current customer account status';
+    }
+  };
+
+  const getActivityTooltip = (activity: string) => {
+    if (activity.includes('Active')) {
+      return 'Customer actively using the platform';
+    } else if (activity.includes('Recently booked')) {
+      return 'Customer made a recent booking';
+    } else if (activity.includes('First week')) {
+      return 'New customer in their first week';
+    } else if (activity.includes('Inactive')) {
+      return 'Customer has been inactive for specified duration';
+    } else if (activity.includes('Suspended')) {
+      return 'Customer account is temporarily suspended';
+    } else if (activity.includes('Banned')) {
+      return 'Customer is permanently banned from the platform';
+    } else {
+      return 'Current customer activity status';
+    }
+  };
+
+  // Get contextual status options based on selected passenger type
+  const getContextualStatusOptions = (passengerType: string) => {
+    switch (passengerType) {
+      case 'Active':
+        return [
+          { 
+            id: 'All', 
+            label: 'All Active', 
+            count: passengersData.filter(p => 
+              p.status !== 'suspended' && 
+              p.status !== 'inactive' && 
+              p.status !== 'banned'
+            ).length,
+            tooltip: 'Show all active customers regardless of tier'
+          },
+          { 
+            id: 'VIP', 
+            label: 'VIP', 
+            count: passengersData.filter(p => p.status === 'vip').length,
+            tooltip: 'VIP customers with highest benefits'
+          },
+          { 
+            id: 'Premium', 
+            label: 'Premium', 
+            count: passengersData.filter(p => p.status === 'premium').length,
+            tooltip: 'Premium customers with enhanced service'
+          },
+          { 
+            id: 'Regular', 
+            label: 'Regular', 
+            count: passengersData.filter(p => p.status === 'regular').length,
+            tooltip: 'Regular customers in good standing'
+          },
+          { 
+            id: 'New Users', 
+            label: 'New Users', 
+            count: passengersData.filter(p => p.status === 'new').length,
+            tooltip: 'New customers within 30 days'
+          },
+          { 
+            id: 'Issues', 
+            label: 'Issues', 
+            count: passengersData.filter(p => 
+              p.issues.length > 0 && 
+              p.status !== 'suspended' && p.status !== 'inactive' && 
+              p.status !== 'banned'
+            ).length,
+            tooltip: 'Active customers with minor issues'
+          }
+        ];
+      
+      case 'Suspended':
+        return [
+          { 
+            id: 'All', 
+            label: 'All Suspended', 
+            count: passengersData.filter(p => p.status === 'suspended').length,
+            tooltip: 'Show all suspended customers'
+          },
+          { 
+            id: 'Payment Issues', 
+            label: 'Payment', 
+            count: passengersData.filter(p => 
+              p.status === 'suspended' && 
+              p.issues.some(issue => issue.includes('Payment'))
+            ).length,
+            tooltip: 'Customers suspended for payment issues'
+          },
+          { 
+            id: 'High Cancellation', 
+            label: 'Cancellation', 
+            count: passengersData.filter(p => 
+              p.status === 'suspended' && 
+              p.issues.some(issue => issue.includes('Cancellation'))
+            ).length,
+            tooltip: 'Customers suspended for high cancellation rates'
+          },
+          { 
+            id: 'Violations', 
+            label: 'Violations', 
+            count: passengersData.filter(p => 
+              p.status === 'suspended' && 
+              p.issues.some(issue => issue.includes('Violation'))
+            ).length,
+            tooltip: 'Customers suspended for policy violations'
+          }
+        ];
+      
+      case 'Inactive':
+        return [
+          { 
+            id: 'All', 
+            label: 'All Inactive', 
+            count: passengersData.filter(p => p.status === 'inactive').length,
+            tooltip: 'Show all inactive customers'
+          },
+          { 
+            id: 'Short Term', 
+            label: 'Short Term', 
+            count: passengersData.filter(p => 
+              p.status === 'inactive' && 
+              p.currentActivity.includes('14d')
+            ).length,
+            tooltip: 'Customers inactive for 1-14 days'
+          },
+          { 
+            id: 'Long Term', 
+            label: 'Long Term', 
+            count: passengersData.filter(p => 
+              p.status === 'inactive' && 
+              !p.currentActivity.includes('14d')
+            ).length,
+            tooltip: 'Customers inactive for more than 14 days'
+          }
+        ];
+      
+      case 'Banned':
+        return [
+          { 
+            id: 'All', 
+            label: 'All Banned', 
+            count: passengersData.filter(p => p.status === 'banned').length,
+            tooltip: 'Show all permanently banned customers'
+          },
+          { 
+            id: 'Fraud', 
+            label: 'Fraud', 
+            count: passengersData.filter(p => 
+              p.status === 'banned' && 
+              p.issues.some(issue => issue.includes('Fraud'))
+            ).length,
+            tooltip: 'Customers banned for fraudulent activities'
+          },
+          { 
+            id: 'Fake Account', 
+            label: 'Fake', 
+            count: passengersData.filter(p => 
+              p.status === 'banned' && 
+              p.issues.some(issue => issue.includes('Fake'))
+            ).length,
+            tooltip: 'Customers banned for fake account violations'
+          }
+        ];
+      
+      default:
+        return [
+          { 
+            id: 'All', 
+            label: 'All', 
+            count: passengersData.length,
+            tooltip: 'Show all customers regardless of status'
+          }
+        ];
+    }
+  };
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -281,20 +656,25 @@ const EnhancedPassengerTable = () => {
     router.push('/passenger-profile');
   };
 
-  const handleMouseDown = (e: React.MouseEvent, column: string) => {
+  const isRecentlyChanged = (id: number) => {
+    const changeTime = recentChanges[id];
+    return changeTime && (Date.now() - changeTime) < 5000; // 5 seconds
+  };
+
+  // Column resize handlers
+  const handleResizeStart = (column: string, e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsResizing(column);
     setResizeStartX(e.clientX);
     setResizeStartWidth(columnWidths[column as keyof typeof columnWidths]);
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleResizeMove = (e: MouseEvent) => {
     if (!isResizing) return;
     
     const deltaX = e.clientX - resizeStartX;
-    const newWidth = Math.max(80, resizeStartWidth + deltaX);
+    const newWidth = Math.max(60, resizeStartWidth + deltaX); // Minimum width of 60px
     
     setColumnWidths(prev => ({
       ...prev,
@@ -302,368 +682,416 @@ const EnhancedPassengerTable = () => {
     }));
   };
 
-  const handleMouseUp = () => {
+  const handleResizeEnd = () => {
     setIsResizing(null);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'vip': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'premium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'regular': return 'bg-green-100 text-green-800 border-green-200';
-      case 'new': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'suspended': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'banned': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  // Add global mouse event listeners for resize
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
     }
+  }, [isResizing, resizeStartX, resizeStartWidth]);
+
+  // Reset column widths to default
+  const resetColumnWidths = () => {
+    setColumnWidths(defaultColumnWidths);
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk.toLowerCase()) {
-      case 'low': return 'text-green-600';
-      case 'medium': return 'text-yellow-600';
-      case 'high': return 'text-orange-600';
-      case 'critical': return 'text-red-600';
-      default: return 'text-gray-600';
-    }
-  };
+  // Filter and sort passengers with contextual logic
+  const filteredPassengers = passengersData
+    .filter(passenger => {
+      // Search filter
+      const matchesSearch = searchTerm === '' || 
+        passenger.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        passenger.passengerId.toLowerCase().includes(searchTerm.toLowerCase());
+
+      // Type filter (primary filter)
+      let matchesType = false;
+      switch (selectedType) {
+        case 'Active':
+          matchesType = passenger.status !== 'suspended' && 
+                      passenger.status !== 'inactive' && 
+                      passenger.status !== 'banned';
+          break;
+        case 'Suspended':
+          matchesType = passenger.status === 'suspended';
+          break;
+        case 'Inactive':
+          matchesType = passenger.status === 'inactive';
+          break;
+        case 'Banned':
+          matchesType = passenger.status === 'banned';
+          break;
+        default:
+          matchesType = true;
+      }
+
+      // Contextual status filter (secondary filter based on type)
+      let matchesStatus = false;
+      if (selectedStatus === 'All') {
+        matchesStatus = true;
+      } else {
+        // Apply contextual status filtering based on selected type
+        switch (selectedType) {
+          case 'Active':
+            if (selectedStatus === 'VIP') {
+              matchesStatus = passenger.status === 'vip';
+            } else if (selectedStatus === 'Premium') {
+              matchesStatus = passenger.status === 'premium';
+            } else if (selectedStatus === 'Regular') {
+              matchesStatus = passenger.status === 'regular';
+            } else if (selectedStatus === 'New Users') {
+              matchesStatus = passenger.status === 'new';
+            } else if (selectedStatus === 'Issues') {
+              matchesStatus = passenger.issues.length > 0;
+            }
+            break;
+          
+          case 'Suspended':
+            if (selectedStatus === 'Payment Issues') {
+              matchesStatus = passenger.issues.some(issue => 
+                issue.includes('Payment')
+              );
+            } else if (selectedStatus === 'High Cancellation') {
+              matchesStatus = passenger.issues.some(issue => 
+                issue.includes('Cancellation')
+              );
+            } else if (selectedStatus === 'Violations') {
+              matchesStatus = passenger.issues.some(issue => 
+                issue.includes('Violation')
+              );
+            }
+            break;
+          
+          case 'Inactive':
+            if (selectedStatus === 'Short Term') {
+              matchesStatus = passenger.currentActivity.includes('14d');
+            } else if (selectedStatus === 'Long Term') {
+              matchesStatus = !passenger.currentActivity.includes('14d');
+            }
+            break;
+          
+          case 'Banned':
+            if (selectedStatus === 'Fraud') {
+              matchesStatus = passenger.issues.some(issue => 
+                issue.includes('Fraud')
+              );
+            } else if (selectedStatus === 'Fake Account') {
+              matchesStatus = passenger.issues.some(issue => 
+                issue.includes('Fake')
+              );
+            }
+            break;
+          
+          default:
+            matchesStatus = true;
+        }
+      }
+
+      return matchesSearch && matchesType && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      
+      let aValue = a[sortField as keyof typeof a];
+      let bValue = b[sortField as keyof typeof b];
+      
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
-    <div className="p-6 bg-white">
-      {/* Header Section */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Passenger Management</h1>
-          <p className="text-gray-600 mt-1">Monitor and manage passenger accounts across all regions</p>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <RotateCw className="w-4 h-4" />
-          Last updated: {lastUpdated.toLocaleTimeString()}
-        </div>
-      </div>
-
-      {/* Controls Section */}
-      <div className="space-y-4 mb-6">
-        {/* Search and Filters */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative flex-1 min-w-[300px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+    <div className="space-y-3">
+      {/* Enhanced Filter Section */}
+      <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
+        {/* Search and Date Filters */}
+        <div className="flex items-center space-x-4 mb-3">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search passengers by name or ID..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Search name or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-64"
             />
           </div>
-
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-          >
-            <option value="All">All Passengers</option>
-            <option value="Active">Active</option>
-            <option value="VIP">VIP</option>
-            <option value="Premium">Premium</option>
-            <option value="New Users">New Users</option>
-            <option value="Suspended">Suspended</option>
-            <option value="Banned">Banned</option>
-          </select>
-
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-          >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Booking">Booking</option>
-            <option value="Suspended">Suspended</option>
-            <option value="Banned">Banned</option>
-          </select>
+          
+          <input type="date" className="border border-gray-200 rounded px-3 py-2 text-sm" />
+          <span className="text-gray-500">to</span>
+          <input type="date" className="border border-gray-200 rounded px-3 py-2 text-sm" />
+          
+          <div className="ml-auto flex items-center space-x-3">
+            <span className="text-xs text-gray-500">
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+            <button 
+              onClick={() => setLastUpdated(new Date())}
+              className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            >
+              <RotateCw className="w-3 h-3" />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
-        {/* Results Summary */}
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>Showing {filteredPassengers.length} of {passengersData.length} passengers</span>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              Active: {passengersData.filter(p => ['vip', 'premium', 'regular', 'new'].includes(p.status)).length}
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              Suspended: {passengersData.filter(p => p.status === 'suspended').length}
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              Banned: {passengersData.filter(p => p.status === 'banned').length}
-            </span>
+        {/* Passenger Type Filters */}
+        <div className="flex items-center space-x-4 mb-3">
+          <span className="text-sm font-medium text-gray-700">Customer Type:</span>
+          {[
+            { 
+              id: 'Active', 
+              label: 'Active', 
+              count: passengersData.filter(p => 
+                p.status !== 'suspended' && 
+                p.status !== 'inactive' && 
+                p.status !== 'banned'
+              ).length,
+              tooltip: 'Customers currently active and using the platform'
+            },
+            { 
+              id: 'Suspended', 
+              label: 'Suspended', 
+              count: passengersData.filter(p => p.status === 'suspended').length,
+              tooltip: 'Customers temporarily suspended due to violations or issues'
+            },
+            { 
+              id: 'Inactive', 
+              label: 'Inactive', 
+              count: passengersData.filter(p => p.status === 'inactive').length,
+              tooltip: 'Customers who haven\'t used the platform for extended period'
+            },
+            { 
+              id: 'Banned', 
+              label: 'Banned', 
+              count: passengersData.filter(p => p.status === 'banned').length,
+              tooltip: 'Customers permanently banned from the platform'
+            }
+          ].map(type => (
+            <button
+              key={type.id}
+              onClick={() => {
+                setSelectedType(type.id);
+                setSelectedStatus('All'); // Reset status when passenger type changes
+              }}
+              title={type.tooltip}
+              className={`flex items-center space-x-2 px-3 py-1 text-sm rounded transition-colors ${
+                selectedType === type.id 
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                  : 'text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              <span>{type.label}</span>
+              <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                selectedType === type.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }`}>
+                {type.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Status Filter Pills */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <span className="text-sm font-medium text-gray-700">Status:</span>
+            {getContextualStatusOptions(selectedType).map(status => (
+              <button
+                key={status.id}
+                onClick={() => setSelectedStatus(status.id)}
+                title={status.tooltip}
+                className={`flex items-center space-x-2 px-3 py-1 text-sm rounded-full transition-colors ${
+                  selectedStatus === status.id 
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                    : 'text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                <span>{status.label}</span>
+                <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                  selectedStatus === status.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {status.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedType('Active');
+                setSelectedStatus('All');
+              }}
+              className="text-gray-600 hover:text-gray-900 text-sm"
+            >
+              Clear
+            </button>
+            <button 
+              onClick={resetColumnWidths}
+              className="text-gray-600 hover:text-gray-900 text-sm"
+              title="Reset column widths to default"
+            >
+              Reset Layout
+            </button>
+            <button 
+              onClick={() => {
+                // Export functionality
+                const csvContent = "data:text/csv;charset=utf-8," + 
+                  "Name,Passenger ID,Status,Activity,Bookings Today,Total Bookings,Completion Rate,Payment,Risk\n" +
+                  filteredPassengers.map(p => 
+                    `"${p.name}","${p.passengerId}","${p.statusText}","${p.currentActivity}","${p.bookingsToday}","${p.completedBookings}","${p.completionRate}%","${p.paymentMethod}","${p.fraudRisk}"`
+                  ).join("\n");
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "enhanced_passenger_data.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            >
+              Export all
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+      {/* Enhanced Table with Fixed Headers */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 420px)' }}>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.passenger }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('name')}>
-                    Passenger
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'passenger')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.status }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('status')}>
-                    Status
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'status')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.activity }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('currentActivity')}>
-                    Activity
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'activity')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.bookings }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('bookingsToday')}>
-                    Today
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'bookings')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.total }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('completedBookings')}>
-                    Total
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'total')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.rate }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('completionRate')}>
-                    Rate
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'rate')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.payment }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('paymentMethod')}>
-                    Payment
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'payment')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none border-r border-gray-200"
-                  style={{ width: columnWidths.risk }}
-                >
-                  <div className="flex items-center gap-1 cursor-pointer" onClick={() => handleSort('riskLevel')}>
-                    Risk
-                    <ArrowUpDown className="w-3 h-3" />
-                  </div>
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 hover:opacity-50"
-                    onMouseDown={(e) => handleMouseDown(e, 'risk')}
-                  />
-                </th>
-                <th 
-                  className="relative text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider select-none"
-                  style={{ width: columnWidths.actions }}
-                >
-                  Actions
-                </th>
+                {[
+                  { key: 'passenger', label: 'Passenger', tooltip: 'Customer name and unique passenger ID' },
+                  { key: 'status', label: 'Status', tooltip: 'Current account status and customer tier' },
+                  { key: 'activity', label: 'Activity', tooltip: 'Current customer activity and engagement' },
+                  { key: 'today', label: 'Today', tooltip: 'Number of bookings made today' },
+                  { key: 'total', label: 'Total', tooltip: 'Total bookings since joining' },
+                  { key: 'rate', label: 'Rate %', tooltip: 'Booking completion rate percentage with trend' },
+                  { key: 'payment', label: 'Payment', tooltip: 'Primary payment method used' },
+                  { key: 'risk', label: 'Risk', tooltip: 'Fraud risk assessment level' },
+                  { key: 'actions', label: 'Actions', tooltip: 'Quick actions available for this customer' }
+                ].map((column) => (
+                  <th
+                    key={column.key}
+                    className="text-left py-2 px-3 font-medium text-gray-700 text-xs relative border-r border-gray-200 last:border-r-0"
+                    style={{ width: columnWidths[column.key as keyof typeof columnWidths] }}
+                    title={column.tooltip}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{column.label}</span>
+                      <div
+                        className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 hover:bg-opacity-50 transition-colors"
+                        onMouseDown={(e) => handleResizeStart(column.key, e)}
+                        title="Drag to resize column"
+                      />
+                    </div>
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPassengers.map((passenger) => (
+            <tbody className="divide-y divide-gray-100">
+              {filteredPassengers.map(passenger => (
                 <tr 
-                  key={passenger.id}
-                  className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                    recentChanges[passenger.id] ? 'bg-blue-50' : ''
+                  key={passenger.id} 
+                  className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${
+                    isRecentlyChanged(passenger.id) ? 'bg-yellow-50' : ''
                   }`}
                   onClick={() => handleRowClick(passenger)}
                 >
-                  {/* Passenger Info */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-800">
-                          {passenger.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{passenger.name}</div>
-                        <div className="text-sm text-gray-500">{passenger.passengerId}</div>
-                      </div>
-                    </div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.passenger }}>
+                    <div className="font-medium text-gray-900 text-sm truncate">{passenger.name}</div>
+                    <div className="text-xs text-gray-500 truncate">{passenger.passengerId}</div>
                   </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="space-y-1">
-                      <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(passenger.status)}`}>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.status }}>
+                    <div className="flex items-center space-x-1">
+                      <span>{getStatusIcon(passenger.status)}</span>
+                      <span 
+                        className="text-xs cursor-help truncate" 
+                        title={getStatusTooltip(passenger.statusText)}
+                      >
                         {passenger.statusText}
                       </span>
-                      {passenger.statusTime && (
-                        <div className="text-xs text-gray-500">{passenger.statusTime}</div>
-                      )}
                     </div>
                   </td>
-
-                  {/* Activity */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="text-sm text-gray-900">{passenger.currentActivity}</div>
-                    <div className="text-xs text-gray-500">{passenger.region}</div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.activity }}>
+                    <span 
+                      className={`text-xs cursor-help truncate ${
+                        passenger.currentActivity.includes('Active') ? 'text-green-600' :
+                        passenger.currentActivity.includes('Recently booked') ? 'text-blue-600' :
+                        passenger.currentActivity.includes('First week') ? 'text-yellow-600' :
+                        passenger.currentActivity.includes('New user') ? 'text-orange-600' :
+                        passenger.currentActivity.includes('Suspended') ? 'text-red-600' :
+                        passenger.currentActivity.includes('Banned') ? 'text-red-800' :
+                        passenger.currentActivity.includes('Inactive') ? 'text-gray-600' :
+                        'text-gray-600'
+                      }`}
+                      title={getActivityTooltip(passenger.currentActivity)}
+                    >
+                      {passenger.currentActivity}
+                    </span>
                   </td>
-
-                  {/* Today's Bookings */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">{passenger.bookingsToday}</div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.today }}>
+                    <span className="font-bold text-gray-900">{passenger.bookingsToday}</span>
                   </td>
-
-                  {/* Total Bookings */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">{passenger.completedBookings.toLocaleString()}</div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-xs" style={{ width: columnWidths.total }}>
+                    <div>{passenger.completedBookings.toLocaleString()}</div>
                     <div className="text-xs text-gray-500">₱{passenger.totalSpent.toLocaleString()}</div>
                   </td>
-
-                  {/* Completion Rate */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-medium text-gray-900">{passenger.completionRate}%</span>
-                      {passenger.completionTrend === 'up' && <TrendingUp className="w-3 h-3 text-green-500" />}
-                      {passenger.completionTrend === 'down' && <TrendingDown className="w-3 h-3 text-red-500" />}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                      {passenger.averageRating}
-                    </div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.rate }}>
+                    <span className={`px-2 py-1 rounded text-xs ${getCompletionRateColor(passenger.completionRate)}`}>
+                      {passenger.completionRate}%
+                      {getTrendIcon(passenger.completionTrend)}
+                    </span>
                   </td>
-
-                  {/* Payment Method */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="flex items-center gap-1 text-sm text-gray-900">
-                      <CreditCard className="w-3 h-3" />
-                      {passenger.paymentMethod}
-                    </div>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-xs" style={{ width: columnWidths.payment }}>
+                    {passenger.paymentMethod}
                   </td>
-
-                  {/* Risk Level */}
-                  <td className="px-4 py-3 border-r border-gray-200">
-                    <div className="flex items-center gap-1">
-                      <Shield className={`w-3 h-3 ${getRiskColor(passenger.riskLevel)}`} />
-                      <span className={`text-sm font-medium ${getRiskColor(passenger.riskLevel)}`}>
-                        {passenger.riskLevel}
-                      </span>
-                    </div>
-                    {passenger.issues.length > 0 && (
-                      <div className="text-xs text-red-600 mt-1">
-                        {passenger.issues[0]}
-                        {passenger.issues.length > 1 && ` +${passenger.issues.length - 1} more`}
-                      </div>
-                    )}
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.risk }}>
+                    <span 
+                      className={`px-2 py-1 rounded text-xs cursor-help truncate ${getFraudRiskColor(passenger.fraudRisk)}`}
+                      title={passenger.fraudDetails}
+                    >
+                      {passenger.fraudRisk}
+                    </span>
                   </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                        <MessageCircle className="w-4 h-4" />
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.actions }}>
+                    <div className="flex space-x-1">
+                      <button className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700" title="Message">
+                        <MessageCircle className="w-3 h-3" />
                       </button>
-                      {passenger.issues.length > 0 && (
-                        <button className="p-1 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded">
-                          <AlertTriangle className="w-4 h-4" />
-                        </button>
-                      )}
-                      {passenger.status === 'banned' && (
-                        <button className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
-                          <UserX className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button className="p-1 bg-red-600 text-white rounded hover:bg-red-700" title="Suspend">
+                        <UserX className="w-3 h-3" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Footer Stats */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <div className="text-2xl font-semibold text-green-800">
-            {passengersData.filter(p => ['vip', 'premium', 'regular', 'new'].includes(p.status)).length}
-          </div>
-          <div className="text-sm text-green-600">Active Passengers</div>
-        </div>
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="text-2xl font-semibold text-blue-800">
-            ₱{passengersData.reduce((sum, p) => sum + p.totalSpent, 0).toLocaleString()}
-          </div>
-          <div className="text-sm text-blue-600">Total Revenue</div>
-        </div>
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <div className="text-2xl font-semibold text-yellow-800">
-            {Math.round(passengersData.reduce((sum, p) => sum + p.averageRating, 0) / passengersData.length * 10) / 10}
-          </div>
-          <div className="text-sm text-yellow-600">Average Rating</div>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <div className="text-2xl font-semibold text-red-800">
-            {passengersData.filter(p => p.riskLevel === 'High' || p.riskLevel === 'Critical').length}
-          </div>
-          <div className="text-sm text-red-600">High Risk</div>
         </div>
       </div>
     </div>

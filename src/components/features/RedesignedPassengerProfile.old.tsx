@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle, X, Upload, Edit3, Download, MessageSquare, Shield, Car, CreditCard, Calendar, FileText, GraduationCap, Activity, Eye, User, MapPin, Star } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle, X, Upload, Edit3, Download, MessageSquare, Shield, CreditCard, Calendar, FileText, Activity, Eye, User, MapPin, Clock, Star } from 'lucide-react';
 
 interface PassengerData {
   name: string;
@@ -19,8 +19,10 @@ interface PassengerData {
   totalBookings: number;
   bookingsToday: number;
   totalSpent: number;
-  avgBookingValue: string;
+  avgTripValue: string;
   riskLevel: string;
+  paymentMethod: string;
+  isVerified: boolean;
 }
 
 interface Tab {
@@ -82,8 +84,10 @@ const RedesignedPassengerProfile = () => {
     totalBookings: 1248,
     bookingsToday: 3,
     totalSpent: 85420.50,
-    avgBookingValue: '₱68.50',
-    riskLevel: 'Low'
+    avgTripValue: '₱68.50',
+    riskLevel: 'Low',
+    paymentMethod: 'Credit Card',
+    isVerified: true
   };
 
   const tabs: Tab[] = [
@@ -91,13 +95,10 @@ const RedesignedPassengerProfile = () => {
     { id: 'fraud', label: 'Risk Profile', icon: Shield, urgent: false },
     { id: 'identity', label: 'Identity', icon: User, urgent: false },
     { id: 'payments', label: 'Payments', icon: CreditCard, urgent: false },
-    { id: 'bookings', label: 'Bookings', icon: Calendar, urgent: false },
+    { id: 'bookings', label: 'Booking History', icon: Calendar, urgent: false },
     { id: 'ratings', label: 'Ratings', icon: Star, urgent: false },
-    { id: 'disciplinary', label: 'Support Issues', icon: AlertTriangle, urgent: false },
-    { id: 'wallet', label: 'Wallet', icon: CreditCard, urgent: false },
-    { id: 'chat', label: 'Chat', icon: MessageSquare, urgent: false },
-    { id: 'history', label: 'App History', icon: FileText, urgent: false },
-    { id: 'preferences', label: 'Preferences', icon: User, urgent: false }
+    { id: 'support', label: 'Support', icon: MessageSquare, urgent: false },
+    { id: 'activity', label: 'Activity Log', icon: FileText, urgent: false }
   ];
 
   const QuickActions = () => (
@@ -111,7 +112,7 @@ const RedesignedPassengerProfile = () => {
         <span className="hidden sm:inline">Call</span>
       </button>
       <button 
-        onClick={() => setActiveTab('chat')}
+        onClick={() => setActiveTab('support')}
         className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition-colors"
         title={`Message ${passengerData.name}`}
       >
@@ -119,7 +120,7 @@ const RedesignedPassengerProfile = () => {
         <span className="hidden sm:inline">Message</span>
       </button>
       <button 
-        onClick={() => setActiveTab('disciplinary')}
+        onClick={() => showConfirmDialog('Suspend Passenger', 'Are you sure you want to suspend this passenger account?', () => console.log('Suspending passenger'))}
         className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm transition-colors"
         title={`Suspend ${passengerData.name}`}
       >
@@ -161,7 +162,7 @@ const RedesignedPassengerProfile = () => {
           <div className="flex items-start gap-3">
             <Star className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0 fill-current" />
             <div className="flex-1">
-              <h3 className="font-semibold text-purple-800">VIP Customer Status</h3>
+              <h3 className="font-semibold text-purple-800">VIP Customer</h3>
               <p className="text-purple-700 text-sm mt-1">Premium customer with excellent booking history and high lifetime value.</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">Lifetime Value: ₱{passengerData.totalSpent.toLocaleString()}</span>
@@ -173,7 +174,7 @@ const RedesignedPassengerProfile = () => {
       )}
 
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="text-2xl font-bold text-green-600">{passengerData.completionRate}%</div>
           <div className="text-sm text-green-800">Completion Rate</div>
@@ -182,7 +183,15 @@ const RedesignedPassengerProfile = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-2xl font-bold text-blue-600">₱{passengerData.totalSpent.toLocaleString()}</div>
           <div className="text-sm text-blue-800">Total Spent</div>
-          <div className="text-xs text-blue-600 mt-1">{passengerData.avgBookingValue} avg</div>
+          <div className="text-xs text-blue-600 mt-1">{passengerData.avgTripValue} avg</div>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-1">
+            <Star className="w-5 h-5 text-yellow-500 fill-current" />
+            <div className="text-2xl font-bold text-yellow-600">{passengerData.rating}</div>
+          </div>
+          <div className="text-sm text-yellow-800">Average Rating</div>
+          <div className="text-xs text-yellow-600 mt-1">Passenger rating</div>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="text-2xl font-bold text-red-600">{passengerData.cancellationRate}%</div>
@@ -198,24 +207,15 @@ const RedesignedPassengerProfile = () => {
         </div>
         <div className="p-4 space-y-3">
           {[
-            { time: '2 hours ago', from: 'Mall of Asia', to: 'BGC', status: 'completed', fare: '₱185.50', rating: 5 },
-            { time: '6 hours ago', from: 'Makati CBD', to: 'Ortigas', status: 'completed', fare: '₱125.00', rating: 5 },
-            { time: '1 day ago', from: 'Airport', to: 'Quezon City', status: 'completed', fare: '₱280.00', rating: 4 },
-            { time: '2 days ago', from: 'Alabang', to: 'Manila', status: 'cancelled', fare: '₱0.00', rating: null },
+            { time: '2 hours ago', from: 'Mall of Asia', to: 'BGC', status: 'completed', fare: '₱185.50' },
+            { time: '6 hours ago', from: 'Makati CBD', to: 'Ortigas', status: 'completed', fare: '₱125.00' },
+            { time: '1 day ago', from: 'Airport', to: 'Quezon City', status: 'completed', fare: '₱280.00' },
+            { time: '2 days ago', from: 'Alabang', to: 'Manila', status: 'cancelled', fare: '₱0.00' },
           ].map((booking, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
                 <div className="text-sm font-medium">{booking.from} → {booking.to}</div>
-                <div className="text-xs text-gray-500 flex items-center gap-2">
-                  <span>{booking.time}</span>
-                  {booking.rating && (
-                    <div className="flex items-center">
-                      {[...Array(booking.rating)].map((_, i) => (
-                        <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <div className="text-xs text-gray-500">{booking.time}</div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-medium">{booking.fare}</div>
@@ -249,33 +249,175 @@ const RedesignedPassengerProfile = () => {
           <div className="text-sm text-gray-600">This Year</div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Customer Badges */}
+  const RiskProfileTab = () => (
+    <div className="space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Shield className="w-6 h-6 text-green-600" />
+          <h3 className="text-lg font-semibold text-green-800">Risk Assessment: {passengerData.riskLevel}</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 className="font-medium text-green-800 mb-2">Positive Indicators</h4>
+            <ul className="space-y-1 text-sm text-green-700">
+              <li>• Verified identity and payment method</li>
+              <li>• High completion rate (98%)</li>
+              <li>• Low cancellation rate (2%)</li>
+              <li>• Excellent passenger rating (4.9/5)</li>
+              <li>• Long-term customer (1+ year)</li>
+              <li>• High lifetime value customer</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="font-medium text-green-800 mb-2">Account Security</h4>
+            <ul className="space-y-1 text-sm text-green-700">
+              <li>• 2FA enabled</li>
+              <li>• Email verified</li>
+              <li>• Phone verified</li>
+              <li>• No suspicious activity</li>
+              <li>• Regular payment patterns</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const IdentityTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white border rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">Identity Verification</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium mb-3">Personal Information</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-gray-600">Full Name</label>
+                <div className="font-medium">{passengerData.name}</div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Email</label>
+                <div className="font-medium flex items-center gap-2">
+                  {passengerData.email}
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Phone</label>
+                <div className="font-medium flex items-center gap-2">
+                  {passengerData.phone}
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600">Location</label>
+                <div className="font-medium">{passengerData.location}</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium mb-3">Verification Status</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <span className="text-sm">Identity Verified</span>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <span className="text-sm">Email Verified</span>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <span className="text-sm">Phone Verified</span>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <span className="text-sm">Payment Method Verified</span>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const PaymentsTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white border rounded-lg p-6">
+        <h3 className="text-lg font-semibold mb-4">Payment Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium mb-3">Payment Methods</h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <div className="text-sm font-medium">•••• •••• •••• 4532</div>
+                    <div className="text-xs text-gray-500">Primary • Expires 12/25</div>
+                  </div>
+                </div>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <h4 className="font-medium mb-3">Payment Statistics</h4>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Success Rate</span>
+                <span className="font-medium">99.2%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Failed Payments</span>
+                <span className="font-medium">2</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Refunds</span>
+                <span className="font-medium">₱1,250.00</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Average Transaction</span>
+                <span className="font-medium">{passengerData.avgTripValue}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
       <div className="bg-white border rounded-lg">
         <div className="p-4 border-b bg-gray-50">
-          <h3 className="font-semibold text-gray-900">Customer Achievements</h3>
+          <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
         </div>
-        <div className="p-4">
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { icon: '👑', title: 'VIP Member', value: 'Active' },
-              { icon: '⭐', title: 'Top Rated', value: '4.9/5' },
-              { icon: '🎯', title: 'Reliable', value: '98%' },
-              { icon: '💎', title: 'Premium', value: 'Since 2023' },
-              { icon: '🔥', title: 'Frequent User', value: '1.2K rides' },
-              { icon: '💳', title: 'Trusted Payer', value: '100%' },
-              { icon: '📱', title: 'App Expert', value: 'All features' },
-              { icon: '🎉', title: 'Loyal Customer', value: '1.5 years' }
-            ].map(badge => (
-              <div key={badge.title} className="text-center">
-                <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-white text-2xl mx-auto mb-1">
-                  {badge.icon}
-                </div>
-                <div className="text-xs text-gray-600">{badge.title}</div>
-                <div className="font-semibold text-xs">{badge.value}</div>
+        <div className="p-4 space-y-3">
+          {[
+            { date: '2024-08-29', amount: '₱185.50', status: 'completed', booking: 'BOK-123456' },
+            { date: '2024-08-29', amount: '₱125.00', status: 'completed', booking: 'BOK-123455' },
+            { date: '2024-08-28', amount: '₱280.00', status: 'completed', booking: 'BOK-123454' },
+            { date: '2024-08-28', amount: '₱95.00', status: 'refunded', booking: 'BOK-123453' },
+            { date: '2024-08-27', amount: '₱150.00', status: 'completed', booking: 'BOK-123452' },
+          ].map((transaction, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <div className="text-sm font-medium">{transaction.booking}</div>
+                <div className="text-xs text-gray-500">{transaction.date}</div>
               </div>
-            ))}
-          </div>
+              <div className="text-right">
+                <div className="text-sm font-medium">{transaction.amount}</div>
+                <div className={`text-xs px-2 py-1 rounded-full ${
+                  transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                  transaction.status === 'refunded' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {transaction.status}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -284,153 +426,35 @@ const RedesignedPassengerProfile = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview': return <OverviewTab />;
-      case 'fraud': 
-        return (
-          <div className="space-y-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Shield className="w-6 h-6 text-green-600" />
-                <h3 className="text-lg font-semibold text-green-800">Risk Assessment: {passengerData.riskLevel}</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-green-800 mb-2">Positive Indicators</h4>
-                  <ul className="space-y-1 text-sm text-green-700">
-                    <li>• Verified identity and payment method</li>
-                    <li>• High completion rate (98%)</li>
-                    <li>• Low cancellation rate (2%)</li>
-                    <li>• Excellent passenger rating (4.9/5)</li>
-                    <li>• Long-term customer (1+ year)</li>
-                    <li>• High lifetime value customer</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-medium text-green-800 mb-2">Account Security</h4>
-                  <ul className="space-y-1 text-sm text-green-700">
-                    <li>• 2FA enabled</li>
-                    <li>• Email verified</li>
-                    <li>• Phone verified</li>
-                    <li>• No suspicious activity</li>
-                    <li>• Regular payment patterns</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 'identity':
-        return (
-          <div className="space-y-6">
-            <div className="bg-white border rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">Identity Verification</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium mb-3">Personal Information</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm text-gray-600">Full Name</label>
-                      <div className="font-medium">{passengerData.name}</div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Email</label>
-                      <div className="font-medium flex items-center gap-2">
-                        {passengerData.email}
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Phone</label>
-                      <div className="font-medium flex items-center gap-2">
-                        {passengerData.phone}
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm text-gray-600">Location</label>
-                      <div className="font-medium">{passengerData.location}</div>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium mb-3">Verification Status</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm">Identity Verified</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm">Email Verified</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm">Phone Verified</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="text-sm">Payment Method Verified</span>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      case 'payments':
-        return (
-          <div className="text-center py-12">
-            <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Payment history and methods details coming soon...</p>
-          </div>
-        );
-      case 'bookings':
+      case 'fraud': return <RiskProfileTab />;
+      case 'identity': return <IdentityTab />;
+      case 'payments': return <PaymentsTab />;
+      case 'bookings': 
         return (
           <div className="text-center py-12">
             <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Detailed booking history coming soon...</p>
+            <p className="text-gray-600">Booking history details coming soon...</p>
           </div>
         );
-      case 'ratings':
+      case 'ratings': 
         return (
           <div className="text-center py-12">
             <Star className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">Ratings and reviews details coming soon...</p>
           </div>
         );
-      case 'disciplinary':
-        return (
-          <div className="text-center py-12">
-            <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Support issues and resolution history coming soon...</p>
-          </div>
-        );
-      case 'wallet':
-        return (
-          <div className="text-center py-12">
-            <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Wallet and payment details coming soon...</p>
-          </div>
-        );
-      case 'chat':
+      case 'support': 
         return (
           <div className="text-center py-12">
             <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Chat history and messaging interface coming soon...</p>
+            <p className="text-gray-600">Support chat interface coming soon...</p>
           </div>
         );
-      case 'history':
+      case 'activity': 
         return (
           <div className="text-center py-12">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">App usage history and activity log coming soon...</p>
-          </div>
-        );
-      case 'preferences':
-        return (
-          <div className="text-center py-12">
-            <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600">Customer preferences and settings coming soon...</p>
+            <p className="text-gray-600">Activity log details coming soon...</p>
           </div>
         );
       default: return <OverviewTab />;
@@ -458,7 +482,9 @@ const RedesignedPassengerProfile = () => {
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">
                   {passengerData.name}
-                  <CheckCircle className="w-5 h-5 text-blue-600 inline ml-2" />
+                  {passengerData.isVerified && (
+                    <CheckCircle className="w-5 h-5 text-blue-600 inline ml-2" />
+                  )}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span>PSG-{passengerData.id}</span>
@@ -466,7 +492,10 @@ const RedesignedPassengerProfile = () => {
                     <MapPin className="w-4 h-4" />
                     {passengerData.location}
                   </span>
-                  <span>{passengerData.lastBooking}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {passengerData.lastBooking}
+                  </span>
                 </div>
               </div>
             </div>
@@ -490,10 +519,14 @@ const RedesignedPassengerProfile = () => {
               Member since: {passengerData.joinDate}
             </div>
             <div className="text-sm text-gray-600">
-              Last booking: {passengerData.lastBooking}
+              Payment: {passengerData.paymentMethod}
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+          <div className={`flex items-center gap-2 text-sm font-medium ${
+            passengerData.riskLevel === 'Low' ? 'text-green-600' :
+            passengerData.riskLevel === 'Medium' ? 'text-yellow-600' :
+            'text-red-600'
+          }`}>
             <Shield className="w-4 h-4" />
             Risk: {passengerData.riskLevel}
           </div>
