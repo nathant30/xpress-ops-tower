@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
-import DriverTableDemo from '@/components/features/DriverTableDemo';
+import EnhancedDriverTable from '@/components/features/EnhancedDriverTable';
 
 const DriversPage = () => {
   return (
-    <DriverTableDemo category="ACTIVE" />
+    <div className="space-y-4">
+      <EnhancedDriverTable />
+    </div>
   );
 };
 
