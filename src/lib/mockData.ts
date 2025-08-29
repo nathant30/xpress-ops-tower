@@ -49,6 +49,85 @@ export const mockRegions: Region[] = [
   },
 ];
 
+// Mock users data for authentication
+export const mockUsers = [
+  {
+    id: 'usr-demo',
+    email: 'admin@xpress.ops',
+    firstName: 'Demo',
+    lastName: 'Admin',
+    role: 'admin',
+    password: '$2a$12$S.jxM4rEth04DGpK/Gsom.iLuJkRJv0AR5RmmAfoqeRz0H3xVINt6', // password: "demo123"
+    regionId: 'reg-001',
+    permissions: ['drivers:read', 'drivers:write', 'bookings:read', 'analytics:read', 'system:admin'],
+    mfaEnabled: false,
+    isActive: true,
+    lastLogin: null,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-08-29'),
+  },
+  {
+    id: 'usr-001',
+    email: 'admin@xpress.ph',
+    firstName: 'Maria',
+    lastName: 'Santos',
+    role: 'admin',
+    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj5h.dYmKqMC', // password: "admin123"
+    regionId: 'reg-001',
+    permissions: ['drivers:read', 'drivers:write', 'bookings:read', 'analytics:read', 'system:admin'],
+    mfaEnabled: false,
+    isActive: true,
+    lastLogin: null,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-08-27'),
+  },
+  {
+    id: 'usr-002',
+    email: 'dispatcher@xpress.ph',
+    firstName: 'Jose',
+    lastName: 'Rizal',
+    role: 'dispatcher',
+    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj5h.dYmKqMC', // password: "admin123"
+    regionId: 'reg-001',
+    permissions: ['drivers:read', 'drivers:write', 'bookings:read', 'bookings:write'],
+    mfaEnabled: true,
+    isActive: true,
+    lastLogin: null,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-08-27'),
+  },
+  {
+    id: 'usr-003',
+    email: 'analyst@xpress.ph',
+    firstName: 'Ana',
+    lastName: 'Cruz',
+    role: 'analyst',
+    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj5h.dYmKqMC', // password: "admin123"
+    regionId: 'reg-001',
+    permissions: ['drivers:read', 'bookings:read', 'analytics:read'],
+    mfaEnabled: false,
+    isActive: true,
+    lastLogin: null,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-08-27'),
+  },
+  {
+    id: 'usr-004',
+    email: 'safety@xpress.ph',
+    firstName: 'Roberto',
+    lastName: 'Del Rosario',
+    role: 'safety_monitor',
+    password: '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj5h.dYmKqMC', // password: "admin123"
+    regionId: 'reg-001',
+    permissions: ['drivers:read', 'incidents:read', 'incidents:write'],
+    mfaEnabled: false,
+    isActive: true,
+    lastLogin: null,
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-08-27'),
+  }
+];
+
 // Mock drivers data
 export const mockDrivers: Driver[] = [
   {
@@ -609,5 +688,53 @@ export class MockDataService {
         incidentTrend: Math.random() * 10 - 5, // -5 to +5
       }
     }));
+  }
+
+  // User authentication operations
+  static getUserByEmail(email: string) {
+    return mockUsers.find(u => u.email === email);
+  }
+
+  static getUserById(id: string) {
+    return mockUsers.find(u => u.id === id);
+  }
+
+  static updateUserLastLogin(userId: string) {
+    const user = mockUsers.find(u => u.id === userId);
+    if (user) {
+      user.lastLogin = new Date().toISOString();
+    }
+  }
+
+  static verifyMfaCode(userId: string, code: string): boolean {
+    // Mock MFA verification - in real implementation, verify TOTP/SMS code
+    const user = mockUsers.find(u => u.id === userId);
+    if (!user || !user.mfaEnabled) return false;
+    
+    // Simple mock verification - accept any 6-digit code for demo
+    return /^\d{6}$/.test(code);
+  }
+
+  static createUser(userData: any) {
+    const newUser = {
+      id: `usr-${Date.now()}`,
+      ...userData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    mockUsers.push(newUser);
+    return newUser;
+  }
+
+  static updateUser(id: string, updates: any) {
+    const index = mockUsers.findIndex(u => u.id === id);
+    if (index === -1) return null;
+    
+    mockUsers[index] = {
+      ...mockUsers[index],
+      ...updates,
+      updatedAt: new Date()
+    };
+    return mockUsers[index];
   }
 }

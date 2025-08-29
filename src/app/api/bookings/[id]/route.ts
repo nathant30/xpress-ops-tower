@@ -11,9 +11,59 @@ import {
 import { MockDataService } from '@/lib/mockData';
 import { BookingStatus } from '@/types';
 
+// Real-time update broadcasting function
+async function broadcastBookingUpdate(bookingId: string, status: string, data: any) {
+  try {
+    const update = {
+      type: 'booking_update',
+      bookingId,
+      status,
+      timestamp: new Date().toISOString(),
+      data
+    };
+    
+    console.log('Broadcasting booking status update:', update);
+    
+    global.realtimeUpdates = global.realtimeUpdates || [];
+    global.realtimeUpdates.push(update);
+    
+    if (global.realtimeUpdates.length > 100) {
+      global.realtimeUpdates = global.realtimeUpdates.slice(-100);
+    }
+  } catch (error) {
+    console.error('Failed to broadcast booking update:', error);
+  }
+}
+
 
 // GET /api/bookings/[id] - Get booking by ID
 export const GET = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/bookings/[id]',
+      'GET'
+    );
+  }
+
+  // Check if user has bookings:read permission
+  if (!user.permissions.includes('bookings:read')) {
+    return createApiError(
+      'Insufficient permissions to view booking',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'bookings:read' },
+      '/api/bookings/[id]',
+      'GET'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -51,6 +101,32 @@ export const GET = asyncHandler(async (request: NextRequest, context?: { params:
 
 // PATCH /api/bookings/[id] - Update booking status and details
 export const PATCH = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/bookings/[id]',
+      'PATCH'
+    );
+  }
+
+  // Check if user has bookings:write permission
+  if (!user.permissions.includes('bookings:write')) {
+    return createApiError(
+      'Insufficient permissions to update booking',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'bookings:write' },
+      '/api/bookings/[id]',
+      'PATCH'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -163,23 +239,92 @@ export const PATCH = asyncHandler(async (request: NextRequest, context?: { param
   }
   
   // If driver was assigned, update their status
+  let assignedDriver = null;
   if (body.driverId && body.status === 'assigned') {
     MockDataService.updateDriver(body.driverId, { status: 'busy' });
+    assignedDriver = MockDataService.getDriverById(body.driverId);
   }
   
   // If booking completed or cancelled, make driver available again
   if (['completed', 'cancelled', 'failed'].includes(body.status) && updatedBooking.driverId) {
     MockDataService.updateDriver(updatedBooking.driverId, { status: 'active' });
   }
+
+  // Broadcast real-time update for status change
+  if (body.status) {
+    let message = '';
+    switch (body.status) {
+      case 'assigned':
+        message = assignedDriver ? 
+          `Booking assigned to driver ${assignedDriver.firstName} ${assignedDriver.lastName}` :
+          'Booking assigned to driver';
+        break;
+      case 'accepted':
+        message = 'Driver accepted the booking';
+        break;
+      case 'en_route':
+        message = 'Driver is on the way to pickup location';
+        break;
+      case 'arrived':
+        message = 'Driver has arrived at pickup location';
+        break;
+      case 'in_progress':
+        message = 'Trip is in progress';
+        break;
+      case 'completed':
+        message = 'Trip completed successfully';
+        break;
+      case 'cancelled':
+        message = 'Booking has been cancelled';
+        break;
+      default:
+        message = `Booking status updated to ${body.status}`;
+    }
+
+    await broadcastBookingUpdate(id, body.status, {
+      booking: updatedBooking,
+      driver: assignedDriver,
+      message
+    });
+  }
   
   return createApiResponse(
-    { booking: updatedBooking },
+    { 
+      booking: updatedBooking,
+      realtimeUpdate: body.status ? true : false
+    },
     'Booking updated successfully'
   );
 });
 
 // DELETE /api/bookings/[id] - Cancel booking (same as PATCH with cancelled status)
 export const DELETE = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/bookings/[id]',
+      'DELETE'
+    );
+  }
+
+  // Check if user has bookings:cancel permission (or write)
+  if (!user.permissions.includes('bookings:cancel') && !user.permissions.includes('bookings:write')) {
+    return createApiError(
+      'Insufficient permissions to cancel booking',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'bookings:cancel' },
+      '/api/bookings/[id]',
+      'DELETE'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -215,9 +360,18 @@ export const DELETE = asyncHandler(async (request: NextRequest, context?: { para
   if (existingBooking.driverId) {
     MockDataService.updateDriver(existingBooking.driverId, { status: 'active' });
   }
+
+  // Broadcast real-time update for cancellation
+  await broadcastBookingUpdate(id, 'cancelled', {
+    booking: updatedBooking,
+    message: 'Booking has been cancelled'
+  });
   
   return createApiResponse(
-    { booking: updatedBooking },
+    { 
+      booking: updatedBooking,
+      realtimeUpdate: true
+    },
     'Booking cancelled successfully'
   );
 });

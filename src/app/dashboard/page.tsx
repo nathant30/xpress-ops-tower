@@ -22,7 +22,9 @@ import {
   MoreHorizontal,
   ChevronDown,
   Filter,
-  Calendar
+  Calendar,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -34,6 +36,7 @@ import PerformanceTab from '@/components/features/PerformanceTab';
 import DemandTab from '@/components/features/DemandTab';
 import SOSTab from '@/components/features/SOSTab';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 interface DashboardData {
   drivers: any[];
@@ -471,9 +474,19 @@ const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState('today');
+  const [timeRange, setTimeRange] = useState('24h');
   const [selectedDate, setSelectedDate] = useState<Date | DateRange>(new Date());
+
+  // Use analytics hook for real data
+  const { 
+    data: analyticsData, 
+    loading: analyticsLoading, 
+    error: analyticsError,
+    refresh: refreshAnalytics 
+  } = useAnalytics({
+    timeRange,
+    serviceType: selectedServiceType
+  });
 
   // Metro Manila Multi-Service Data Structure
   const multiServiceData = {
@@ -523,16 +536,70 @@ const DashboardPage = () => {
   const shouldShowServiceFilter = serviceTypeApplicablePages.Dashboard?.includes(activeTab);
 
   const getCurrentData = (metricKey: keyof typeof multiServiceData) => {
+    // Use real data when available, fallback to mock data
+    if (analyticsData) {
+      switch (metricKey) {
+        case 'activeDrivers':
+          return {
+            count: analyticsData.metrics.totalDrivers,
+            available: analyticsData.metrics.activeDrivers,
+            change: 12.5, // Could calculate from historical data
+            trend: 'up' as const
+          };
+        case 'activeRides':
+          return {
+            count: analyticsData.metrics.activeBookings,
+            change: 8.5,
+            trend: 'up' as const
+          };
+        case 'avgWaitTime':
+          return {
+            minutes: Math.round(analyticsData.rideshareKPIs.averageWaitTime / 60 * 100) / 100,
+            change: -0.8,
+            trend: 'down' as const
+          };
+        case 'revenue':
+          return {
+            amount: analyticsData.rideshareKPIs.totalRevenue,
+            change: 12.8,
+            trend: 'up' as const
+          };
+        case 'completedTrips':
+          return {
+            count: analyticsData.metrics.completedBookings,
+            change: 15.2,
+            trend: 'up' as const
+          };
+        default:
+          return multiServiceData[metricKey][selectedServiceType as keyof typeof multiServiceData.activeDrivers] || 
+                 multiServiceData[metricKey].ALL;
+      }
+    }
+    
     return multiServiceData[metricKey][selectedServiceType as keyof typeof multiServiceData.activeDrivers] || 
            multiServiceData[metricKey].ALL;
   };
+
+  // Calculate alert counts from analytics data if available
+  const getAlertCounts = () => {
+    if (analyticsData) {
+      const alertsActive = Object.values(analyticsData.alerts).filter(Boolean).length;
+      return {
+        sos: Math.max(2, Math.floor(alertsActive / 2)), // Mock SOS alerts
+        fraud: Math.max(7, alertsActive) // Use total alerts as fraud indicators
+      };
+    }
+    return { sos: 2, fraud: 7 };
+  };
+
+  const alertCounts = getAlertCounts();
 
   const tabs = [
     { id: 'Overview', name: 'Overview', icon: Activity },
     { id: 'Performance', name: 'Performance', icon: TrendingUp },
     { id: 'Bookings', name: 'Bookings', icon: Car },
-    { id: 'SOS', name: 'SOS', icon: Shield, count: 2, color: 'red' as const },
-    { id: 'Fraud', name: 'Fraud', icon: AlertTriangle, count: 7, color: 'orange' as const }
+    { id: 'SOS', name: 'SOS', icon: Shield, count: alertCounts.sos, color: 'red' as const },
+    { id: 'Fraud', name: 'Fraud', icon: AlertTriangle, count: alertCounts.fraud, color: 'orange' as const }
   ];
 
   useEffect(() => {
@@ -557,12 +624,35 @@ const DashboardPage = () => {
     });
   }, []);
 
-  if (loading && !dashboardData) {
+  // Show loading state if analytics are still loading initially
+  if (analyticsLoading && !analyticsData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
           <p className="text-neutral-600">Loading Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error and no data
+  if (analyticsError && !analyticsData) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <h3 className="text-red-800 font-medium">Failed to Load Dashboard</h3>
+          </div>
+          <p className="text-red-700 text-sm mt-1">{analyticsError}</p>
+          <button
+            onClick={refreshAnalytics}
+            className="mt-3 inline-flex items-center space-x-2 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Retry</span>
+          </button>
         </div>
       </div>
     );
@@ -570,6 +660,24 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Error Banner for Partial Errors */}
+      {analyticsError && analyticsData && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <span className="text-yellow-800 text-sm">Data refresh failed - showing cached data</span>
+            </div>
+            <button
+              onClick={refreshAnalytics}
+              className="text-yellow-800 hover:text-yellow-900 underline text-sm"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs with Date Picker */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -579,21 +687,37 @@ const DashboardPage = () => {
             <TabsTrigger value="bookings" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all">Bookings</TabsTrigger>
             <TabsTrigger value="sos" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all relative">
               SOS
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>2</span>
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>{alertCounts.sos}</span>
             </TabsTrigger>
             <TabsTrigger value="fraud" className="text-sm font-medium px-4 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md transition-all relative">
               Fraud
-              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>7</span>
+              <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style={{fontSize: '10px'}}>{alertCounts.fraud}</span>
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center space-x-3">
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="1h">Last Hour</option>
+              <option value="24h">Last 24 Hours</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="30d">Last 30 Days</option>
+            </select>
             <DatePicker 
               date={selectedDate}
               onDateChange={(date) => date && setSelectedDate(date)}
               className="w-48"
-              placeholder="Select date range"
+              placeholder="Custom date range"
               mode="range"
             />
+            {analyticsLoading && (
+              <div className="flex items-center space-x-2 text-blue-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Updating...</span>
+              </div>
+            )}
           </div>
         </div>
 

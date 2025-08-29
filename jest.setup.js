@@ -29,6 +29,25 @@ jest.mock('next/image', () => ({
   },
 }));
 
+// Mock Redis for testing
+jest.mock('@/lib/redis', () => ({
+  redis: {
+    createSession: jest.fn().mockResolvedValue(undefined),
+    getSession: jest.fn().mockResolvedValue(null),
+    updateSessionActivity: jest.fn().mockResolvedValue(undefined),
+    deleteSession: jest.fn().mockResolvedValue(undefined),
+    checkRateLimit: jest.fn().mockResolvedValue({ allowed: true, remaining: 99 }),
+    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy' }),
+    setCache: jest.fn().mockResolvedValue(undefined),
+    getCache: jest.fn().mockResolvedValue(null),
+    deleteCache: jest.fn().mockResolvedValue(1),
+  },
+  getRedis: jest.fn(() => ({
+    healthCheck: jest.fn().mockResolvedValue({ status: 'healthy' }),
+  })),
+  initializeRedis: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock environment variables
 process.env.NEXT_PUBLIC_APP_NAME = 'Xpress Ops Tower';
 process.env.NEXT_PUBLIC_DEFAULT_TIMEZONE = 'Asia/Manila';

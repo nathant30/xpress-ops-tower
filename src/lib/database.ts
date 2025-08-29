@@ -1,7 +1,98 @@
 // Database Connection Utilities for Xpress Ops Tower
 // PostgreSQL with connection pooling for high-performance operations
 
-import { Pool, PoolClient, QueryResult } from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
+import type { PoolClient, QueryResult } from 'pg';
+
+// Mock database for development when PostgreSQL is not available
+class MockDatabasePool {
+  private mockData: Map<string, any[]> = new Map();
+
+  constructor(config: DatabaseConfig) {
+    // Initialize with some mock data
+    this.mockData.set('drivers', [
+      { id: 1, name: 'Juan Dela Cruz', status: 'available', location: '14.5995,120.9842' },
+      { id: 2, name: 'Maria Santos', status: 'on_trip', location: '14.6042,120.9822' },
+    ]);
+    this.mockData.set('bookings', [
+      { id: 1, driver_id: 2, status: 'active', fare: 245 },
+    ]);
+  }
+
+  getStats() {
+    return {
+      totalCount: 10,
+      idleCount: 8,
+      waitingCount: 0,
+    };
+  }
+
+  async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+    // Mock common queries
+    if (text.includes('SELECT 1') || text.includes('SELECT NOW()')) {
+      return {
+        rows: [{ now: new Date().toISOString(), version: 'MockDB 1.0' }] as T[],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: []
+      };
+    }
+    
+    if (text.includes('statement_timeout') || text.includes('lock_timeout')) {
+      return {
+        rows: [] as T[],
+        rowCount: 0,
+        command: 'SET',
+        oid: 0,
+        fields: []
+      };
+    }
+
+    return {
+      rows: [] as T[],
+      rowCount: 0,
+      command: 'SELECT',
+      oid: 0,
+      fields: []
+    };
+  }
+
+  async transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
+    const mockClient = {
+      query: this.query.bind(this),
+      release: () => {}
+    };
+    return callback(mockClient);
+  }
+
+  async batchTransaction(queries: Array<{text: string; params?: any[]}>): Promise<QueryResult[]> {
+    return queries.map(() => ({
+      rows: [],
+      rowCount: 0,
+      command: 'SELECT',
+      oid: 0,
+      fields: []
+    }));
+  }
+
+  async healthCheck() {
+    return {
+      status: 'healthy' as const,
+      responseTime: 5,
+      connections: {
+        total: 10,
+        idle: 8,
+        waiting: 0,
+      }
+    };
+  }
+
+  async close(): Promise<void> {
+    // No-op for mock
+  }
+}
 
 // Database configuration interface
 interface DatabaseConfig {
@@ -198,12 +289,24 @@ const getDatabaseConfig = (): DatabaseConfig => {
 };
 
 // Singleton database instance
-let dbInstance: DatabasePool | null = null;
+let dbInstance: DatabasePool | MockDatabasePool | null = null;
 
-export const getDatabase = (): DatabasePool => {
+export const getDatabase = (): DatabasePool | MockDatabasePool => {
   if (!dbInstance) {
     const config = getDatabaseConfig();
-    dbInstance = new DatabasePool(config);
+    
+    // In development, use mock if PostgreSQL is not available
+    if (process.env.NODE_ENV === 'development' || process.env.USE_MOCK_DB === 'true') {
+      try {
+        // Try to create real connection first
+        dbInstance = new DatabasePool(config);
+      } catch (error) {
+        console.log('PostgreSQL not available, using mock database for development');
+        dbInstance = new MockDatabasePool(config);
+      }
+    } else {
+      dbInstance = new DatabasePool(config);
+    }
   }
   return dbInstance;
 };
@@ -371,15 +474,23 @@ export class DatabaseUtils {
 }
 
 // Export the default database instance and utilities
-export const db = getDatabase();
-export const dbUtils = new DatabaseUtils(db);
+export { getDatabase as db };
+export const dbUtils = new DatabaseUtils(getDatabase());
 
 // Database initialization for application startup
 export const initializeDatabase = async (): Promise<void> => {
   try {
     // Test connection
-    const healthCheck = await db.healthCheck();
+    const currentDb = getDatabase();
+    const healthCheck = await currentDb.healthCheck();
     if (healthCheck.status === 'unhealthy') {
+      // In development, fall back to mock if health check fails
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Database health check failed, using mock database for development');
+        // Force recreation with mock
+        dbInstance = new MockDatabasePool(getDatabaseConfig());
+        return;
+      }
       throw new Error('Database health check failed');
     }
 
@@ -388,14 +499,21 @@ export const initializeDatabase = async (): Promise<void> => {
       connections: healthCheck.connections
     });
 
-    // Set up any required database configurations
-    await db.query(`
-      SET statement_timeout = '60s';
-      SET lock_timeout = '30s';
-      SET idle_in_transaction_session_timeout = '300s';
-    `);
+    // Set up any required database configurations (skip for mock)
+    if (!(currentDb instanceof MockDatabasePool)) {
+      await currentDb.query(`
+        SET statement_timeout = '60s';
+        SET lock_timeout = '30s';
+        SET idle_in_transaction_session_timeout = '300s';
+      `);
+    }
 
   } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Failed to initialize database, using mock database for development');
+      dbInstance = new MockDatabasePool(getDatabaseConfig());
+      return;
+    }
     console.error('Failed to initialize database connection:', error);
     throw error;
   }

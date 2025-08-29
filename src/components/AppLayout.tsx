@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import RidesharingSidebar from '@/components/features/RidesharingSidebar';
-import { RefreshCw, Menu, X } from 'lucide-react';
+import { RefreshCw, Menu, X, Loader2 } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HealthStatus {
   status: string;
@@ -25,6 +26,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { selectedServiceType, setSelectedServiceType, serviceTypes } = useServiceType();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
@@ -51,6 +53,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return false;
   };
 
+  // TEMPORARILY DISABLED - Authentication check - redirect to login if not authenticated
+  // useEffect(() => {
+  //   if (!authLoading && !isAuthenticated) {
+  //     const currentPath = pathname;
+  //     const isPublicPath = currentPath === '/login';
+  //     
+  //     if (!isPublicPath) {
+  //       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+  //     }
+  //   }
+  // }, [authLoading, isAuthenticated, pathname, router]);
+
+  // Health status monitoring
   useEffect(() => {
     const fetchHealthStatus = async () => {
       try {
@@ -67,6 +82,47 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const interval = setInterval(fetchHealthStatus, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Update active section based on current path
+  useEffect(() => {
+    const path = pathname.substring(1) || 'dashboard';
+    const sectionMap: { [key: string]: string } = {
+      'dashboard': 'Dashboard',
+      'live-map': 'Live Map',
+      'bookings': 'Bookings',
+      'drivers': 'Drivers',
+      'passengers': 'Passengers',
+      'safety': 'Safety', 
+      'reports': 'Reports',
+      'settings': 'Settings'
+    };
+    const section = sectionMap[path] || 'Dashboard';
+    if (section !== activeSection) {
+      setActiveSection(section);
+    }
+  }, [pathname, activeSection]);
+
+  // TEMPORARILY DISABLED - Show loading screen while checking authentication
+  // if (authLoading) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+  //         <p className="text-neutral-600">Authenticating...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
+  // Don't render the main layout for login page and driver profile page
+  if (pathname === '/login' || pathname === '/driver-profile') {
+    return <>{children}</>;
+  }
+
+  // TEMPORARILY DISABLED - Don't render anything if not authenticated (will redirect)
+  // if (!isAuthenticated) {
+  //   return null;
+  // }
 
   const refreshData = () => {
     setLastRefresh(new Date());
@@ -158,24 +214,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     setActiveTab(defaultTabs[section] || 'Overview');
   };
 
-  // Update active section based on current path
-  React.useEffect(() => {
-    const path = pathname.substring(1) || 'dashboard';
-    const sectionMap: { [key: string]: string } = {
-      'dashboard': 'Dashboard',
-      'live-map': 'Live Map',
-      'bookings': 'Bookings',
-      'drivers': 'Drivers',
-      'passengers': 'Passengers',
-      'safety': 'Safety', 
-      'reports': 'Reports',
-      'settings': 'Settings'
-    };
-    const section = sectionMap[path] || 'Dashboard';
-    if (section !== activeSection) {
-      setActiveSection(section);
-    }
-  }, [pathname, activeSection]);
 
   return (
     <div className="min-h-screen bg-neutral-50 flex">
@@ -192,10 +230,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           }}
           onSectionChange={handleSectionChange}
           userInfo={{
-            name: 'Operations Manager',
-            role: 'Admin'
+            name: user ? `${user.firstName} ${user.lastName}` : 'Demo User',
+            role: user?.role || 'Admin'
           }}
           notifications={3}
+          onLogout={logout}
         />
       </div>
 
@@ -215,10 +254,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
               }}
               onSectionChange={handleSectionChange}
               userInfo={{
-                name: 'Operations Manager',
-                role: 'Admin'
+                name: user ? `${user.firstName} ${user.lastName}` : 'Demo User',
+                role: user?.role || 'Admin'
               }}
               notifications={3}
+              onLogout={logout}
             />
           </div>
         </div>
@@ -284,12 +324,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
         )}
 
         {/* Main Page Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-8">
+        <main className="flex-1 overflow-auto p-3 md:p-6">
           {children}
         </main>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-100 py-4 md:py-6">
+        <footer className="bg-white border-t border-gray-100 py-3 md:py-4">
           <div className="px-4 md:px-8 text-center text-xs md:text-sm text-gray-600">
             <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-6">
               <div className="flex items-center space-x-2">

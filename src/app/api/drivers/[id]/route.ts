@@ -9,12 +9,40 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
+import { withAuthAndRateLimit } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { UpdateDriverRequest } from '@/types';
 
 
 // GET /api/drivers/[id] - Get driver by ID
 export const GET = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/drivers/[id]',
+      'GET'
+    );
+  }
+
+  // Check if user has drivers:read permission
+  if (!user.permissions.includes('drivers:read')) {
+    return createApiError(
+      'Insufficient permissions to view driver',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:read' },
+      '/api/drivers/[id]',
+      'GET'
+    );
+  }
+  
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -35,6 +63,32 @@ export const GET = asyncHandler(async (request: NextRequest, context?: { params:
 
 // PUT /api/drivers/[id] - Update driver
 export const PUT = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/drivers/[id]',
+      'PUT'
+    );
+  }
+
+  // Check if user has drivers:write permission
+  if (!user.permissions.includes('drivers:write')) {
+    return createApiError(
+      'Insufficient permissions to update driver',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:write' },
+      '/api/drivers/[id]',
+      'PUT'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -79,6 +133,32 @@ export const PUT = asyncHandler(async (request: NextRequest, context?: { params:
 
 // PATCH /api/drivers/[id] - Partial update driver
 export const PATCH = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/drivers/[id]',
+      'PATCH'
+    );
+  }
+
+  // Check if user has drivers:write permission
+  if (!user.permissions.includes('drivers:write')) {
+    return createApiError(
+      'Insufficient permissions to update driver',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:write' },
+      '/api/drivers/[id]',
+      'PATCH'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }
@@ -126,6 +206,32 @@ export const PATCH = asyncHandler(async (request: NextRequest, context?: { param
 
 // DELETE /api/drivers/[id] - Delete driver
 export const DELETE = asyncHandler(async (request: NextRequest, context?: { params: { id: string } }) => {
+  // Get user from request for authentication
+  const { getUserFromRequest } = await import('@/lib/auth');
+  const user = await getUserFromRequest(request);
+  
+  if (!user) {
+    return createApiError(
+      'Authentication required',
+      'UNAUTHORIZED',
+      401,
+      undefined,
+      '/api/drivers/[id]',
+      'DELETE'
+    );
+  }
+
+  // Check if user has drivers:delete permission
+  if (!user.permissions.includes('drivers:delete')) {
+    return createApiError(
+      'Insufficient permissions to delete driver',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:delete' },
+      '/api/drivers/[id]',
+      'DELETE'
+    );
+  }
   if (!context?.params) {
     return createApiError('Missing route parameters', 'MISSING_PARAMS', 400);
   }

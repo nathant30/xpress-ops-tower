@@ -11,11 +11,52 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
+import { withAuthAndRateLimit } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { CreateBookingRequest } from '@/types';
 
+// Real-time update broadcasting function
+async function broadcastBookingUpdate(bookingId: string, status: string, data: any) {
+  try {
+    // In a real implementation, this would use WebSocket connections or server-sent events
+    // For now, we'll simulate by storing the update in a cache/database
+    const update = {
+      type: 'booking_update',
+      bookingId,
+      status,
+      timestamp: new Date().toISOString(),
+      data
+    };
+    
+    console.log('Broadcasting booking update:', update);
+    
+    // Store update for WebSocket connections to pick up
+    // In real implementation, send to all connected clients
+    global.realtimeUpdates = global.realtimeUpdates || [];
+    global.realtimeUpdates.push(update);
+    
+    // Keep only last 100 updates
+    if (global.realtimeUpdates.length > 100) {
+      global.realtimeUpdates = global.realtimeUpdates.slice(-100);
+    }
+  } catch (error) {
+    console.error('Failed to broadcast booking update:', error);
+  }
+}
+
 // GET /api/bookings - List all bookings with filtering and pagination
-export const GET = asyncHandler(async (request: NextRequest) => {
+export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
+  // Check if user has bookings:read permission
+  if (!user.permissions.includes('bookings:read')) {
+    return createApiError(
+      'Insufficient permissions to view bookings',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'bookings:read' },
+      '/api/bookings',
+      'GET'
+    );
+  }
   const queryParams = parseQueryParams(request);
   const paginationParams = parsePaginationParams(request);
   
@@ -65,7 +106,18 @@ export const GET = asyncHandler(async (request: NextRequest) => {
 });
 
 // POST /api/bookings - Create a new booking
-export const POST = asyncHandler(async (request: NextRequest) => {
+export const POST = withAuthAndRateLimit(async (request: NextRequest, user) => {
+  // Check if user has bookings:write permission
+  if (!user.permissions.includes('bookings:write')) {
+    return createApiError(
+      'Insufficient permissions to create bookings',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'bookings:write' },
+      '/api/bookings',
+      'POST'
+    );
+  }
   const body = await request.json() as CreateBookingRequest;
   
   // Validate required fields
@@ -141,6 +193,12 @@ export const POST = asyncHandler(async (request: NextRequest) => {
   
   const newBooking = MockDataService.createBooking(bookingData);
   
+  // Broadcast real-time update for new booking
+  await broadcastBookingUpdate(newBooking.id, 'requested', {
+    booking: newBooking,
+    message: 'New booking created and waiting for driver assignment'
+  });
+  
   // In a real implementation, this would trigger driver matching algorithm
   // For now, we'll simulate finding available drivers
   const availableDrivers = MockDataService.getDrivers({
@@ -150,11 +208,34 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     driver.services.includes(body.serviceType) &&
     driver.isActive
   );
+
+  // Simulate assignment process if drivers are available
+  if (availableDrivers.length > 0) {
+    // Simulate assignment delay
+    setTimeout(async () => {
+      const assignedDriver = availableDrivers[0];
+      const updatedBooking = MockDataService.updateBooking(newBooking.id, {
+        driverId: assignedDriver.id,
+        status: 'assigned',
+        assignedAt: new Date(),
+        estimatedPickupTime: new Date(Date.now() + 8 * 60 * 1000), // 8 minutes
+      });
+
+      if (updatedBooking) {
+        await broadcastBookingUpdate(newBooking.id, 'assigned', {
+          booking: updatedBooking,
+          driver: assignedDriver,
+          message: `Booking assigned to driver ${assignedDriver.firstName} ${assignedDriver.lastName}`
+        });
+      }
+    }, 2000); // 2 second delay to simulate processing
+  }
   
   return createApiResponse({
     booking: newBooking,
     availableDrivers: availableDrivers.length,
-    estimatedAssignmentTime: availableDrivers.length > 0 ? '2-5 minutes' : 'No drivers available'
+    estimatedAssignmentTime: availableDrivers.length > 0 ? '2-5 minutes' : 'No drivers available',
+    realtimeUpdates: true
   }, 'Booking created successfully', 201);
 });
 

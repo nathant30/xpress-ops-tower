@@ -52,6 +52,7 @@ interface RidesharingSidebarProps {
     avatar?: string;
   };
   notifications?: number;
+  onLogout?: () => void;
 }
 
 export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
@@ -67,7 +68,8 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
     name: 'Operations Manager',
     role: 'Admin'
   },
-  notifications = 3
+  notifications = 3,
+  onLogout
 }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [moreExpanded, setMoreExpanded] = useState(false);
@@ -385,7 +387,8 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
         {/* Logout */}
         <div className={`px-4 ${collapsed ? 'px-2' : ''}`}>
           <button
-            className={`w-full flex items-center py-2 text-gray-400 hover:text-white transition-colors ${
+            onClick={onLogout}
+            className={`w-full flex items-center py-2 text-gray-400 hover:text-red-400 transition-colors ${
               collapsed ? 'justify-center' : 'justify-start'
             }`}
             title="Sign out"

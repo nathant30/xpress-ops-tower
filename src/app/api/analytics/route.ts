@@ -2,17 +2,35 @@
 import { NextRequest } from 'next/server';
 import { 
   createApiResponse, 
+  createApiError,
   parseQueryParams,
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
+import { withAuthAndRateLimit } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 
 // GET /api/analytics - Get performance metrics and KPIs
-export const GET = asyncHandler(async (request: NextRequest) => {
+export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
+  // Check if user has analytics:read permission
+  if (!user.permissions.includes('analytics:read')) {
+    return createApiError(
+      'Insufficient permissions to view analytics',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'analytics:read' },
+      '/api/analytics',
+      'GET'
+    );
+  }
   const queryParams = parseQueryParams(request);
   const timeRange = queryParams.timeRange || '24h';
-  const regionId = queryParams.regionId;
+  let regionId = queryParams.regionId;
+  
+  // Apply regional filtering for non-admin users
+  if (user.role !== 'admin' && user.regionId) {
+    regionId = user.regionId;
+  }
   
   // Get base performance metrics
   const baseMetrics = MockDataService.getPerformanceMetrics();
@@ -86,6 +104,18 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     locationTrackingHealth: allDrivers.length > 0 ? 
       (realTimeMetrics.recentUpdates / allDrivers.length) * 100 : 0,
   };
+
+  // Enhanced KPI calculations for ridesharing operations
+  const rideshareKPIs = calculateRideshareKPIs(allBookings, allDrivers, allIncidents);
+  
+  // Service performance comparison
+  const servicePerformance = calculateServicePerformance(allBookings);
+  
+  // Peak hours analysis
+  const peakHoursAnalysis = calculatePeakHours(allBookings);
+  
+  // Geographic distribution analysis
+  const geoDistribution = calculateGeographicDistribution(allBookings, allDrivers);
   
   // Generate hourly data for charts (last 24 hours)
   const hourlyData = generateHourlyChartData();
@@ -99,6 +129,10 @@ export const GET = asyncHandler(async (request: NextRequest) => {
       ...realTimeMetrics,
       ...derivedMetrics,
     },
+    rideshareKPIs,
+    servicePerformance,
+    peakHours: peakHoursAnalysis,
+    geoDistribution,
     regional: regionalMetrics || {
       summary: regionalComparison,
       selected: regionId || null,
@@ -113,8 +147,13 @@ export const GET = asyncHandler(async (request: NextRequest) => {
       highIncidentRate: realTimeMetrics.criticalIncidents > 5,
       lowFulfillmentRate: derivedMetrics.bookingFulfillmentRate < 85,
       locationTrackingIssues: derivedMetrics.locationTrackingHealth < 80,
+      // Enhanced alerts from rideshare KPIs
+      longWaitTimes: rideshareKPIs.averageWaitTime > 300, // > 5 minutes
+      lowDriverOnlineTime: rideshareKPIs.averageDriverOnlineTime < 8, // < 8 hours
+      surgeNeeded: rideshareKPIs.demandSupplyRatio > 1.5,
     },
     lastUpdated: new Date(),
+    userRegion: regionId,
   }, 'Analytics data retrieved successfully');
 });
 
@@ -170,6 +209,124 @@ function generateHourlyChartData() {
   }
   
   return hours;
+}
+
+// Enhanced KPI calculation functions
+function calculateRideshareKPIs(bookings: any[], drivers: any[], incidents: any[]) {
+  const completedBookings = bookings.filter(b => b.status === 'completed');
+  const activeBookings = bookings.filter(b => 
+    ['requested', 'searching', 'assigned', 'accepted', 'en_route', 'arrived', 'in_progress'].includes(b.status)
+  );
+
+  // Calculate wait times (mock realistic data)
+  const averageWaitTime = completedBookings.length > 0 ? 
+    completedBookings.reduce((sum, b) => {
+      const waitTime = b.assignedAt ? 
+        new Date(b.assignedAt).getTime() - new Date(b.requestedAt).getTime() : 
+        Math.random() * 600000; // 0-10 minutes mock
+      return sum + waitTime;
+    }, 0) / completedBookings.length / 1000 : 0; // Convert to seconds
+
+  // Driver performance metrics
+  const averageDriverOnlineTime = drivers.length > 0 ? 
+    drivers.reduce((sum, d) => sum + (Math.random() * 8 + 4), 0) / drivers.length : 0; // 4-12 hours mock
+  
+  // Demand-supply ratio
+  const demandSupplyRatio = drivers.filter(d => d.status === 'active').length > 0 ? 
+    activeBookings.length / drivers.filter(d => d.status === 'active').length : 0;
+
+  // Trip efficiency metrics
+  const averageTripDuration = completedBookings.length > 0 ?
+    completedBookings.reduce((sum, b) => {
+      const duration = b.completedAt && b.acceptedAt ?
+        new Date(b.completedAt).getTime() - new Date(b.acceptedAt).getTime() :
+        Math.random() * 1800000; // 0-30 minutes mock
+      return sum + duration;
+    }, 0) / completedBookings.length / 1000 / 60 : 0; // Convert to minutes
+
+  // Revenue metrics (mock calculation)
+  const totalRevenue = completedBookings.length * 150; // Average ₱150 per trip
+  const revenuePerDriver = drivers.length > 0 ? totalRevenue / drivers.length : 0;
+
+  return {
+    averageWaitTime: Math.round(averageWaitTime),
+    averageDriverOnlineTime: Math.round(averageDriverOnlineTime * 100) / 100,
+    demandSupplyRatio: Math.round(demandSupplyRatio * 100) / 100,
+    averageTripDuration: Math.round(averageTripDuration),
+    totalRevenue,
+    revenuePerDriver: Math.round(revenuePerDriver),
+    completionRate: bookings.length > 0 ? Math.round((completedBookings.length / bookings.length) * 100) : 0,
+    cancellationRate: bookings.length > 0 ? Math.round((bookings.filter(b => b.status === 'cancelled').length / bookings.length) * 100) : 0,
+  };
+}
+
+function calculateServicePerformance(bookings: any[]) {
+  const services = ['ride_4w', 'ride_2w', 'send_delivery', 'eats_delivery', 'mart_delivery'];
+  
+  return services.map(service => {
+    const serviceBookings = bookings.filter(b => b.serviceType === service);
+    const completedBookings = serviceBookings.filter(b => b.status === 'completed');
+    
+    return {
+      service,
+      totalBookings: serviceBookings.length,
+      completedBookings: completedBookings.length,
+      completionRate: serviceBookings.length > 0 ? 
+        Math.round((completedBookings.length / serviceBookings.length) * 100) : 0,
+      averageRating: Math.random() * 1 + 4, // Mock 4-5 rating
+      revenue: completedBookings.length * (service.includes('delivery') ? 80 : 150), // Different pricing
+    };
+  });
+}
+
+function calculatePeakHours(bookings: any[]) {
+  const hourlyStats = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    bookings: 0,
+    completedBookings: 0,
+    averageWaitTime: 0,
+  }));
+
+  // Simulate realistic peak hours data
+  const peakHours = [7, 8, 9, 17, 18, 19, 20]; // Rush hours
+  
+  hourlyStats.forEach((stat, index) => {
+    const isPeak = peakHours.includes(index);
+    stat.bookings = Math.floor(Math.random() * (isPeak ? 100 : 50)) + (isPeak ? 50 : 10);
+    stat.completedBookings = Math.floor(stat.bookings * (0.8 + Math.random() * 0.15));
+    stat.averageWaitTime = Math.floor(Math.random() * (isPeak ? 600 : 300)) + (isPeak ? 300 : 120);
+  });
+
+  return {
+    hourlyStats,
+    peakHours: peakHours.map(hour => ({
+      hour,
+      label: `${hour}:00 - ${hour + 1}:00`,
+      multiplier: 1.2 + Math.random() * 0.8, // Surge multiplier
+    })),
+  };
+}
+
+function calculateGeographicDistribution(bookings: any[], drivers: any[]) {
+  // Mock geographic distribution for Philippine regions
+  const regions = [
+    { id: 'reg-001', name: 'Metro Manila', bookings: 0, drivers: 0, coverage: 0 },
+    { id: 'reg-002', name: 'Cebu City', bookings: 0, drivers: 0, coverage: 0 },
+    { id: 'reg-003', name: 'Davao City', bookings: 0, drivers: 0, coverage: 0 },
+  ];
+
+  regions.forEach(region => {
+    region.bookings = bookings.filter(b => b.regionId === region.id).length;
+    region.drivers = drivers.filter(d => d.regionId === region.id).length;
+    region.coverage = region.drivers > 0 ? Math.min(100, (region.drivers / 50) * 100) : 0; // Coverage based on driver density
+  });
+
+  return {
+    regions,
+    totalCoverage: regions.reduce((sum, r) => sum + r.coverage, 0) / regions.length,
+    bestPerforming: regions.reduce((best, current) => 
+      current.coverage > best.coverage ? current : best, regions[0]),
+  };
 }
 
 // OPTIONS handler for CORS

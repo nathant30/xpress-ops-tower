@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star } from 'lucide-react';
 
 const EnhancedDriverTable = () => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('Active');
   const [selectedStatus, setSelectedStatus] = useState('All');
@@ -1045,7 +1047,7 @@ const EnhancedDriverTable = () => {
   };
 
   const handleRowClick = (driver: any) => {
-    setSelectedDriver(driver);
+    router.push('/driver-profile');
   };
 
   const isRecentlyChanged = (id: number) => {

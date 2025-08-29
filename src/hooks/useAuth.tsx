@@ -5,7 +5,22 @@
 
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+// Import types only, not the implementation
+export enum AuditEventType {
+  LOGIN = 'LOGIN',
+  LOGOUT = 'LOGOUT',
+  TOKEN_REFRESH = 'TOKEN_REFRESH',
+  PROFILE_UPDATE = 'PROFILE_UPDATE',
+  MFA_SETUP = 'MFA_SETUP',
+  MFA_VERIFICATION = 'MFA_VERIFICATION'
+}
+
+export enum SecurityLevel {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM', 
+  HIGH = 'HIGH',
+  CRITICAL = 'CRITICAL'
+}
 
 export interface User {
   id: string;
@@ -98,7 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Token validation failed');
       }
 
-      const { user, permissions } = await response.json();
+      const { data } = await response.json();
+      const { user, permissions } = data;
       const decoded = jwtDecode<any>(token);
 
       setAuthState({
@@ -109,13 +125,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionExpiry: decoded.exp * 1000
       });
 
-      auditLogger.logEvent(
-        AuditEventType.LOGIN,
-        SecurityLevel.LOW,
-        'SUCCESS',
-        { method: 'token_validation' },
-        { userId: user.id, resource: 'auth', action: 'validate' }
-      );
+      // Client-side audit logging
+      console.log('AUTH_EVENT:', {
+        type: AuditEventType.LOGIN,
+        level: SecurityLevel.LOW,
+        outcome: 'SUCCESS',
+        userId: user.id,
+        method: 'token_validation'
+      });
     } catch (error) {
       clearTokens();
       setAuthState(prev => ({ 
@@ -139,10 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.error?.message || data.message || 'Login failed');
       }
 
-      const { token, refreshToken: refresh, user, permissions } = data;
+      const { token, refreshToken: refresh, user, permissions } = data.data;
       
       // Store tokens
       localStorage.setItem(TOKEN_KEY, token);
@@ -158,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionExpiry: decoded.exp * 1000
       });
 
-      auditLogger.logEvent(
+      console.log(
         AuditEventType.LOGIN,
         SecurityLevel.LOW,
         'SUCCESS',
@@ -181,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: errorMessage 
       }));
 
-      auditLogger.logEvent(
+      console.log(
         AuditEventType.LOGIN,
         SecurityLevel.MEDIUM,
         'FAILURE',
@@ -214,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (userId) {
-      auditLogger.logEvent(
+      console.log(
         AuditEventType.LOGOUT,
         SecurityLevel.LOW,
         'SUCCESS',
@@ -241,7 +258,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Token refresh failed');
       }
 
-      const { token, refreshToken: newRefresh, user, permissions } = await response.json();
+      const { data } = await response.json();
+      const { token, refreshToken: newRefresh, user, permissions } = data;
       
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(REFRESH_KEY, newRefresh);

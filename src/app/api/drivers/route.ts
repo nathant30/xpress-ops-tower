@@ -11,18 +11,36 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
+import { withAuth, withAuthAndRateLimit } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { CreateDriverRequest } from '@/types';
 
-// GET /api/drivers - List all drivers with filtering and pagination
-export const GET = asyncHandler(async (request: NextRequest) => {
+// GET /api/drivers - List all drivers with filtering and pagination  
+export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
+  // Check if user has drivers:read permission
+  if (!user.permissions.includes('drivers:read')) {
+    return createApiError(
+      'Insufficient permissions to view drivers',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:read' },
+      '/api/drivers',
+      'GET'
+    );
+  }
   const queryParams = parseQueryParams(request);
   const paginationParams = parsePaginationParams(request);
+  
+  // Apply regional filtering for non-admin users
+  let regionFilter = queryParams.region;
+  if (user.role !== 'admin' && user.regionId) {
+    regionFilter = user.regionId;
+  }
   
   // Get drivers with filters
   const drivers = MockDataService.getDrivers({
     status: queryParams.status,
-    region: queryParams.region,
+    region: regionFilter,
     search: queryParams.search,
     services: queryParams.services,
   });
@@ -54,7 +72,19 @@ export const GET = asyncHandler(async (request: NextRequest) => {
 });
 
 // POST /api/drivers - Create a new driver
-export const POST = asyncHandler(async (request: NextRequest) => {
+export const POST = withAuthAndRateLimit(async (request: NextRequest, user) => {
+  // Check if user has drivers:write permission
+  if (!user.permissions.includes('drivers:write')) {
+    return createApiError(
+      'Insufficient permissions to create drivers',
+      'PERMISSION_DENIED',
+      403,
+      { requiredPermission: 'drivers:write' },
+      '/api/drivers',
+      'POST'
+    );
+  }
+
   const body = await request.json() as CreateDriverRequest;
   
   // Validate required fields
