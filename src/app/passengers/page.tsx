@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
-import PassengerTableDemo from '@/components/features/PassengerTableDemo';
+import EnhancedPassengerTable from '@/components/features/EnhancedPassengerTable';
 
 const PassengersPage = () => {
   return (
-    <PassengerTableDemo category="ACTIVE" />
+    <div className="space-y-4">
+      <EnhancedPassengerTable />
+    </div>
   );
 };
 

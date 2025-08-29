@@ -1168,57 +1168,89 @@ const BookingsPage = () => {
         </div>
       </div>
       
-      {/* Force Assignment Modal */}
+      {/* Enhanced Force Assignment Modal */}
       {forceAssignModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Force Assign Driver</h2>
-                  <p className="text-sm text-gray-500">Booking #{bookings.find(b => b.id === forceAssignModal)?.bookingId}</p>
+                  <h2 className="text-xl font-bold">🚨 Force Assign Driver</h2>
+                  <p className="text-orange-100 text-sm">Booking #{bookings.find(b => b.id === forceAssignModal)?.bookingId} - Urgent Assignment Required</p>
                 </div>
                 <button 
                   onClick={() => setForceAssignModal(null)} 
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
                 >
-                  <XCircle className="w-5 h-5 text-gray-400" />
+                  <XCircle className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            
-            <div className="p-6 max-h-96 overflow-y-auto">
-              <div className="space-y-3">
+
+            <div className="p-6">
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-center gap-2 text-orange-800 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>This booking has been waiting for {getRequestingTime(bookings.find(b => b.id === forceAssignModal)!)}. Select a driver below:</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 max-h-96 overflow-y-auto">
                 {[
-                  { id: 'DR001', name: 'Carlos Mendoza', rating: 4.8, distance: 0.8, eta: 4, plate: 'ABC-1234', vehicle: 'Toyota Vios' },
-                  { id: 'DR002', name: 'Maria Santos', rating: 4.9, distance: 1.2, eta: 6, plate: 'XYZ-5678', vehicle: 'Honda Click' },
-                  { id: 'DR003', name: 'Juan dela Cruz', rating: 4.7, distance: 2.1, eta: 8, plate: 'DEF-9012', vehicle: 'Toyota Fortuner' }
+                  { id: 'DR001', name: 'Carlos Mendoza', rating: 4.8, distance: 0.8, eta: 4, plate: 'ABC-1234', vehicle: 'Toyota Vios', status: 'Available', trips: 847 },
+                  { id: 'DR002', name: 'Maria Santos', rating: 4.9, distance: 1.2, eta: 6, plate: 'XYZ-5678', vehicle: 'Honda Click', status: 'Available', trips: 1205 },
+                  { id: 'DR003', name: 'Juan dela Cruz', rating: 4.7, distance: 2.1, eta: 8, plate: 'DEF-9012', vehicle: 'Toyota Fortuner', status: 'Available', trips: 632 }
                 ].map((driver) => (
                   <div
                     key={driver.id}
                     onClick={() => handleForceAssign(forceAssignModal)}
-                    className="p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-all"
+                    className="group p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 hover:shadow-md"
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <UserCheck className="w-5 h-5 text-blue-600" />
+                    <div className="flex items-center gap-4">
+                      {/* Driver Avatar */}
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0 text-white font-semibold">
+                        {driver.name.split(' ').map(n => n[0]).join('')}
                       </div>
                       
+                      {/* Driver Info */}
                       <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-gray-900">{driver.name}</h3>
-                          <div className="text-sm text-gray-500">
-                            {driver.distance} km • {driver.eta} min ETA
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-semibold text-gray-900">{driver.name}</h3>
+                          <div className="text-right">
+                            <div className="text-sm font-medium text-orange-600">{driver.distance} km away</div>
+                            <div className="text-xs text-gray-500">ETA: {driver.eta} minutes</div>
                           </div>
                         </div>
                         
-                        <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                            <span>{driver.rating}</span>
+                        {/* Rating & Stats */}
+                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-3 h-3 ${
+                                  i < Math.floor(driver.rating) 
+                                    ? 'text-yellow-400 fill-current' 
+                                    : 'text-gray-300'
+                                }`} 
+                              />
+                            ))}
+                            <span className="font-medium ml-1">{driver.rating}</span>
                           </div>
-                          <span>{driver.vehicle}</span>
-                          <span>{driver.plate}</span>
+                          <span>•</span>
+                          <span>{driver.trips} trips</span>
+                          <span>•</span>
+                          <span className="text-green-600 font-medium">{driver.status}</span>
+                        </div>
+                        
+                        {/* Vehicle Info */}
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-600">
+                            🚗 {driver.vehicle} - <span className="font-mono">{driver.plate}</span>
+                          </div>
+                          <button className="group-hover:bg-orange-500 group-hover:text-white px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md text-sm font-medium transition-colors">
+                            Assign Now
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1227,16 +1259,16 @@ const BookingsPage = () => {
               </div>
             </div>
             
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-500">Select a driver to assign</p>
-                <button
-                  onClick={() => setForceAssignModal(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                💡 <strong>Tip:</strong> Choose the closest driver for fastest pickup
               </div>
+              <button
+                onClick={() => setForceAssignModal(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
