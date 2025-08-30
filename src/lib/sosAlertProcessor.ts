@@ -8,6 +8,7 @@ import { redis } from './redis';
 import { db } from './database';
 import { getWebSocketManager } from './websocket';
 import Joi from 'joi';
+import { logger } from './security/productionLogger';
 
 export interface SOSAlert {
   id: string;
@@ -298,10 +299,10 @@ class SOSAlertProcessor {
           under5Seconds: processingTime < this.PROCESSING_TARGET_MS
         });
         
-        console.log(`🚨 SOS ${sosAlert.sosCode} processed in ${processingTime}ms`);
+        logger.info(`🚨 SOS ${sosAlert.sosCode} processed in ${processingTime}ms`);
         
       } catch (error) {
-        console.error(`Critical error processing SOS ${sosAlert.sosCode}:`, error);
+        logger.error(`Critical error processing SOS ${sosAlert.sosCode}:`, error);
         
         // Mark as failed but continue trying emergency dispatch
         sosAlert.status = 'dispatched'; // Still mark as dispatched for emergency response
@@ -361,10 +362,10 @@ class SOSAlertProcessor {
         return acc;
       }, {} as Record<string, string>);
       
-      console.log(`🚨 Emergency services dispatched for SOS ${sosAlert.sosCode}:`, sosAlert.emergencyServicesNotified);
+      logger.info(`🚨 Emergency services dispatched for SOS ${sosAlert.sosCode}:`, sosAlert.emergencyServicesNotified);
       
     } catch (error) {
-      console.error(`Failed to dispatch emergency services for SOS ${sosAlert.sosCode}:`, error);
+      logger.error(`Failed to dispatch emergency services for SOS ${sosAlert.sosCode}:`, error);
       throw error;
     }
   }
@@ -473,7 +474,7 @@ class SOSAlertProcessor {
         });
       }
     } catch (error) {
-      console.warn(`Failed to update driver ${driverId} status to emergency:`, error);
+      logger.warn(`Failed to update driver ${driverId} status to emergency:`, error);
     }
   }
 
@@ -505,7 +506,7 @@ class SOSAlertProcessor {
       responseTime
     });
     
-    console.log(`✅ SOS ${sosAlert.sosCode} acknowledged in ${responseTime}ms`);
+    logger.info(`✅ SOS ${sosAlert.sosCode} acknowledged in ${responseTime}ms`);
   }
 
   /**
@@ -536,7 +537,7 @@ class SOSAlertProcessor {
       resolution
     });
     
-    console.log(`✅ SOS ${sosAlert.sosCode} resolved by ${resolvedBy}`);
+    logger.info(`✅ SOS ${sosAlert.sosCode} resolved by ${resolvedBy}`);
   }
 
   /**
@@ -560,7 +561,7 @@ class SOSAlertProcessor {
           alerts.push(JSON.parse(data));
         }
       } catch (error) {
-        console.warn(`Failed to parse SOS alert ${key}:`, error);
+        logger.warn(`Failed to parse SOS alert ${key}:`, error);
       }
     }
     
@@ -596,7 +597,7 @@ class SOSAlertProcessor {
           this.triggerPanicButton(data);
         }
       } catch (error) {
-        console.error(`Error processing SOS channel ${channel}:`, error);
+        logger.error(`Error processing SOS channel ${channel}:`, error);
       }
     });
   }
@@ -677,7 +678,7 @@ class SOSAlertProcessor {
       return nearestResult.rows.length > 0 ? nearestResult.rows[0].id : 'default-region';
       
     } catch (error) {
-      console.warn('Failed to determine region from location:', error);
+      logger.warn('Failed to determine region from location:', error);
       return 'default-region';
     }
   }
@@ -725,7 +726,7 @@ class SOSAlertProcessor {
       const data = await redis.get(`sos:active:${sosId}`);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.warn(`Failed to get SOS ${sosId} from cache:`, error);
+      logger.warn(`Failed to get SOS ${sosId} from cache:`, error);
       return null;
     }
   }
@@ -773,7 +774,7 @@ class SOSAlertProcessor {
         JSON.stringify(sosAlert.emergencyReferenceNumbers)
       ]);
     } catch (error) {
-      console.error(`Failed to save SOS ${sosAlert.sosCode} to database:`, error);
+      logger.error(`Failed to save SOS ${sosAlert.sosCode} to database:`, error);
       // Don't throw here - emergency processing should continue
     }
   }
@@ -788,7 +789,7 @@ class SOSAlertProcessor {
         WHERE id = $3
       `, [sosAlert.status, sosAlert.responseTime, sosAlert.id]);
     } catch (error) {
-      console.warn(`Failed to update SOS ${sosAlert.sosCode} in database:`, error);
+      logger.warn(`Failed to update SOS ${sosAlert.sosCode} in database:`, error);
     }
   }
 
@@ -812,7 +813,7 @@ class SOSAlertProcessor {
     try {
       await this.saveSOSToDatabase(sosAlert);
     } catch (dbError) {
-      console.error('Critical: Failed to save SOS to database:', dbError);
+      logger.error('Critical: Failed to save SOS to database:', dbError);
     }
     
     // Broadcast failure for manual intervention
@@ -850,7 +851,7 @@ class SOSAlertProcessor {
 
   private startMetricsCollection(): void {
     setInterval(() => {
-      console.log('SOS Alert Processor Metrics:', {
+      logger.info('SOS Alert Processor Metrics:', {
         ...this.metrics,
         processingQueueLength: this.processingQueue.length,
         isProcessing: this.isProcessing,

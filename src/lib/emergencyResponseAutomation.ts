@@ -8,6 +8,7 @@ import { emergencyAlertService } from './emergencyAlerts';
 import { redis } from './redis';
 import { db } from './database';
 import { getWebSocketManager } from './websocket';
+import { logger } from './security/productionLogger';
 
 export interface EmergencyResponse {
   id: string;
@@ -230,12 +231,12 @@ class EmergencyResponseAutomation {
       // Save to database
       await this.saveEmergencyResponseToDatabase(emergencyResponse);
       
-      console.log(`🚨 Emergency response ${emergencyResponse.responseCode} initiated in ${emergencyResponse.dispatchTime}ms`);
+      logger.info(`🚨 Emergency response ${emergencyResponse.responseCode} initiated in ${emergencyResponse.dispatchTime}ms`);
       
       return emergencyResponse;
       
     } catch (error) {
-      console.error(`Failed to dispatch emergency response ${emergencyResponse.responseCode}:`, error);
+      logger.error(`Failed to dispatch emergency response ${emergencyResponse.responseCode}:`, error);
       
       // Mark as failed but continue with manual coordination
       emergencyResponse.status = 'escalated';
@@ -333,7 +334,7 @@ class EmergencyResponseAutomation {
     
     await this.broadcastEmergencyResponse(response, 'escalated');
     
-    console.log(`⚠️ Emergency response ${response.responseCode} escalated to level ${response.escalationLevel}`);
+    logger.info(`⚠️ Emergency response ${response.responseCode} escalated to level ${response.escalationLevel}`);
   }
 
   /**
@@ -378,7 +379,7 @@ class EmergencyResponseAutomation {
     // Broadcast completion
     await this.broadcastEmergencyResponse(response, 'completed');
     
-    console.log(`✅ Emergency response ${response.responseCode} ${outcome.status} in ${response.resolutionTime}ms`);
+    logger.info(`✅ Emergency response ${response.responseCode} ${outcome.status} in ${response.resolutionTime}ms`);
     
     return response;
   }
@@ -467,7 +468,7 @@ class EmergencyResponseAutomation {
       .sort((a, b) => a.currentLoad - b.currentLoad);
     
     if (availableCoordinators.length === 0) {
-      console.warn('No available emergency coordinators');
+      logger.warn('No available emergency coordinators');
       return null;
     }
     
@@ -621,7 +622,7 @@ class EmergencyResponseAutomation {
       
       return result.rows.length > 0 ? result.rows[0].id : 'default-region';
     } catch (error) {
-      console.warn('Failed to determine region:', error);
+      logger.warn('Failed to determine region:', error);
       return 'default-region';
     }
   }
@@ -709,7 +710,7 @@ class EmergencyResponseAutomation {
         response.dispatchTime
       ]);
     } catch (error) {
-      console.error(`Failed to save emergency response ${response.responseCode}:`, error);
+      logger.error(`Failed to save emergency response ${response.responseCode}:`, error);
     }
   }
 
@@ -739,7 +740,7 @@ class EmergencyResponseAutomation {
         response.id
       ]);
     } catch (error) {
-      console.warn(`Failed to update emergency response ${response.responseCode}:`, error);
+      logger.warn(`Failed to update emergency response ${response.responseCode}:`, error);
     }
   }
 
@@ -780,7 +781,7 @@ class EmergencyResponseAutomation {
   private setupEmergencyChannels(): void {
     redis.subscribe(['emergency:response_update'], (channel, message) => {
       // Handle external response updates
-      console.log('Emergency response channel update:', channel, message);
+      logger.info('Emergency response channel update:', channel, message);
     });
   }
 
@@ -792,7 +793,7 @@ class EmergencyResponseAutomation {
         timestamp: new Date().toISOString()
       };
       
-      console.log('Emergency Response Automation Metrics:', metrics);
+      logger.info('Emergency Response Automation Metrics:', metrics);
     }, 300000); // Every 5 minutes
   }
 
@@ -836,18 +837,18 @@ class EmergencyResponseAutomation {
         response.resolutionTime
       ]);
     } catch (error) {
-      console.warn('Failed to create completion record:', error);
+      logger.warn('Failed to create completion record:', error);
     }
   }
 
   private async notifyEscalationTeam(response: EmergencyResponse, reason: string): Promise<void> {
     // Notify escalation team
-    console.log(`🚨 ESCALATION: Response ${response.responseCode} escalated - ${reason}`);
+    logger.info(`🚨 ESCALATION: Response ${response.responseCode} escalated - ${reason}`);
   }
 
   private async involveExternalAuthorities(response: EmergencyResponse): Promise<void> {
     // Involve external authorities for maximum escalation
-    console.log(`🚨 EXTERNAL AUTHORITIES: Response ${response.responseCode} requires external intervention`);
+    logger.info(`🚨 EXTERNAL AUTHORITIES: Response ${response.responseCode} requires external intervention`);
   }
 
   private async logPerformanceMetric(metricType: string, value: number): Promise<void> {

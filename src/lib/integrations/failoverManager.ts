@@ -6,6 +6,7 @@ import { redis } from '../redis';
 import { db } from '../database';
 import { apiManagement } from './apiManagement';
 import EventEmitter from 'events';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface FailoverConfig {
   id: string;
@@ -264,7 +265,7 @@ class FailoverManager extends EventEmitter {
       this.startHealthCheck(failoverConfig);
     }
 
-    console.log(`🔄 Created failover configuration: ${failoverConfig.name}`);
+    logger.info('Created failover configuration', { configName: failoverConfig.name, configId });
     return failoverConfig;
   }
 
@@ -303,20 +304,20 @@ class FailoverManager extends EventEmitter {
 
       // Check if provider is available
       if (!this.isProviderAvailable(config.id, provider.id)) {
-        console.log(`⚠️ Skipping unavailable provider: ${provider.name}`);
+        logger.warn('Skipping unavailable provider', { providerName: provider.name });
         continue;
       }
 
       // Check circuit breaker
       const circuitBreaker = this.circuitBreakers.get(`${config.id}:${provider.id}`);
       if (circuitBreaker && !circuitBreaker.canExecute()) {
-        console.log(`🚫 Circuit breaker open for provider: ${provider.name}`);
+        logger.warn('Circuit breaker open for provider', { providerName: provider.name });
         continue;
       }
 
       try {
         // Execute request
-        console.log(`📡 Executing request via provider: ${provider.name} (attempt ${attempts})`);
+        logger.debug('Executing request via provider', { providerName: provider.name, attempt: attempts });
         const result = await Promise.race([
           requestFn(provider),
           this.createTimeoutPromise(config.strategy.parameters.timeout || 10000)
@@ -371,7 +372,7 @@ class FailoverManager extends EventEmitter {
           error: lastError.message
         });
 
-        console.error(`❌ Provider ${provider.name} failed:`, lastError.message);
+        logger.error('Provider failed', { providerName: provider.name, error: lastError.message });
 
         // Wait before next attempt
         if (attempts < maxAttempts && config.strategy.parameters.retryDelay) {
@@ -432,7 +433,7 @@ class FailoverManager extends EventEmitter {
       }
     });
 
-    console.log(`🔧 Manual failover executed: ${fromProviderId} → ${toProviderId}`);
+    logger.info('Manual failover executed', { fromProviderId, toProviderId });
   }
 
   /**
@@ -510,7 +511,7 @@ class FailoverManager extends EventEmitter {
     // Update cache
     this.configs.set(configId, config);
 
-    console.log(`🔧 Updated provider ${providerId} in config ${configId}`);
+    logger.info('Updated provider in config', { providerId, configId });
   }
 
   // Private methods
@@ -725,7 +726,7 @@ class FailoverManager extends EventEmitter {
     // Emit event
     this.emit('failover', event);
 
-    console.log(`📝 Logged failover event: ${event.type} - ${event.reason}`);
+    logger.info('Logged failover event', { eventType: event.type, reason: event.reason });
   }
 
   private async disableProvider(
@@ -808,7 +809,7 @@ class FailoverManager extends EventEmitter {
         }
       } catch (error) {
         healthy = false;
-        console.error(`Health check failed for ${provider.name}:`, error);
+        logger.error('Health check failed for provider', { providerName: provider.name, error: error instanceof Error ? error.message : error });
         break;
       }
     }
@@ -853,9 +854,9 @@ class FailoverManager extends EventEmitter {
         }
       }
       
-      console.log(`🔄 Loaded ${this.configs.size} failover configurations`);
+      logger.info('Loaded failover configurations', { configCount: this.configs.size });
     } catch (error) {
-      console.error('Failed to load failover configurations:', error);
+      logger.error('Failed to load failover configurations:', error instanceof Error ? error.message : error);
     }
   }
 
@@ -876,7 +877,7 @@ class FailoverManager extends EventEmitter {
 
   private async collectMetrics(configId: string): Promise<void> {
     // This would implement comprehensive metrics collection
-    console.log(`📊 Collecting metrics for failover config: ${configId}`);
+    logger.debug(`Collecting metrics for failover config: ${configId}`);
   }
 }
 

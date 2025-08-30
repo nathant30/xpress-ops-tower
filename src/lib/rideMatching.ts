@@ -4,6 +4,7 @@
 import { getDatabase } from './database';
 import { redis } from './redis';
 import { getWebSocketManager } from './websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -158,7 +159,7 @@ export class RideMatchingEngine {
         this.activeMatches.delete(matchingId);
       }
 
-      console.error('Ride matching failed:', error);
+      logger.error('Ride matching failed', error instanceof Error ? error.message : error);
       
       return {
         success: false,
@@ -384,7 +385,7 @@ export class RideMatchingEngine {
       return candidates;
 
     } catch (error) {
-      console.error('Error finding driver candidates:', error);
+      logger.error('Error finding driver candidates', error instanceof Error ? error.message : error);
       return [];
     }
   }
@@ -517,7 +518,7 @@ export class RideMatchingEngine {
       return result;
 
     } catch (error) {
-      console.error('Driver assignment failed:', error);
+      logger.error('Driver assignment failed', error instanceof Error ? error.message : error);
       return { 
         success: false, 
         reason: (error as Error).message 
@@ -559,7 +560,7 @@ export class RideMatchingEngine {
       await this.updateDriverAvailabilityCache(driver.id, false);
 
     } catch (error) {
-      console.error('Error broadcasting ride assignment:', error);
+      logger.error('Error broadcasting ride assignment', error instanceof Error ? error.message : error);
     }
   }
 
@@ -627,7 +628,7 @@ export class RideMatchingEngine {
         JSON.stringify({ isAvailable, lastUpdated: new Date().toISOString() })
       );
     } catch (error) {
-      console.error('Error updating driver availability cache:', error);
+      logger.error('Error updating driver availability cache', error instanceof Error ? error.message : error);
     }
   }
 
@@ -673,7 +674,7 @@ export class RideMatchingEngine {
       }
 
     } catch (error) {
-      console.error('Error logging matching performance:', error);
+      logger.error('Error logging matching performance', error instanceof Error ? error.message : error);
     }
   }
 }

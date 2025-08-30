@@ -3,12 +3,13 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { 
   Search, Filter, Calendar, MapPin, Navigation, User, Clock, 
   DollarSign, Phone, MessageCircle, MoreVertical, RefreshCw,
   CheckCircle, XCircle, AlertTriangle, Eye, Edit, Star, Loader
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 import { useBookingsData, useBookingMutations } from '@/hooks/useApiData';
@@ -103,7 +104,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
       await updateBooking(bookingId, { status: newStatus });
       refreshBookings(); // Refresh data after update
     } catch (error) {
-      console.error('Failed to update booking status:', error);
+      logger.error('Failed to update booking status', { component: 'BookingManagement' });
     }
   }, [updateBooking, refreshBookings]);
 
@@ -113,7 +114,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
       await cancelBooking(bookingId);
       refreshBookings(); // Refresh data after cancellation
     } catch (error) {
-      console.error('Failed to cancel booking:', error);
+      logger.error('Failed to cancel booking', { component: 'BookingManagement' });
     }
   }, [cancelBooking, refreshBookings]);
 
@@ -726,4 +727,7 @@ export const BookingManagement: React.FC<BookingManagementProps> = ({
   );
 };
 
-export default BookingManagement;
+// Add displayName for debugging
+BookingManagement.displayName = 'BookingManagement';
+
+export default memo(BookingManagement);

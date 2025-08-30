@@ -1,0 +1,217 @@
+# Security Monitoring Configuration for Xpress Ops Tower
+# Prometheus rules for security incident detection
+
+groups:
+  - name: xpress_security_alerts
+    rules:
+      # Authentication anomalies
+      - alert: ExcessiveFailedLogins
+        expr: rate(auth_failed_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: high
+          category: authentication
+          team: security
+        annotations:
+          summary: "Excessive failed login attempts detected"
+          description: "{{ $value }} failed login attempts per second over the last 5 minutes"
+          runbook_url: "https://wiki.xpress.com/security/failed-logins"
+          
+      - alert: SuspiciousLoginLocation
+        expr: auth_location_anomaly_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          category: authentication
+          team: security
+        annotations:
+          summary: "Suspicious login location detected"
+          description: "Login attempt from unusual geographic location"
+          
+      # Emergency system alerts
+      - alert: SOSSystemDown
+        expr: up{job="sos-service"} == 0
+        for: 10s
+        labels:
+          severity: critical
+          category: emergency
+          team: emergency-response
+        annotations:
+          summary: "🚨 CRITICAL: SOS System is DOWN"
+          description: "Emergency SOS service is not responding - IMMEDIATE ACTION REQUIRED"
+          escalation: "emergency-coordinator"
+          
+      - alert: EmergencyResponseDelay
+        expr: sos_response_time_seconds > 5
+        for: 0s
+        labels:
+          severity: critical
+          category: emergency
+          team: emergency-response
+        annotations:
+          summary: "🚨 Emergency response time exceeded"
+          description: "SOS response time: {{ $value }}s (threshold: 5s)"
+          
+      # Database security
+      - alert: DatabaseConnectionAnomaly
+        expr: rate(database_connections_failed_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: high
+          category: database
+          team: infrastructure
+        annotations:
+          summary: "Database connection failures detected"
+          description: "{{ $value }} database connection failures per second"
+          
+      - alert: UnauthorizedDatabaseAccess
+        expr: database_unauthorized_queries_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          category: database
+          team: security
+        annotations:
+          summary: "🚨 Unauthorized database access attempt"
+          description: "Potential SQL injection or unauthorized query detected"
+          
+      # Network security
+      - alert: DDoSAttackDetected
+        expr: rate(http_requests_total[1m]) > 1000
+        for: 30s
+        labels:
+          severity: high
+          category: network
+          team: security
+        annotations:
+          summary: "Potential DDoS attack detected"
+          description: "{{ $value }} requests per second - potential attack"
+          
+      - alert: WAFBlockedRequests
+        expr: rate(waf_blocked_requests_total[5m]) > 50
+        for: 1m
+        labels:
+          severity: medium
+          category: network
+          team: security
+        annotations:
+          summary: "High volume of blocked requests"
+          description: "WAF blocking {{ $value }} requests per second"
+          
+      # Application security
+      - alert: MemoryLeakDetected
+        expr: process_resident_memory_bytes > 2e9
+        for: 5m
+        labels:
+          severity: high
+          category: application
+          team: development
+        annotations:
+          summary: "Potential memory leak in application"
+          description: "Application memory usage: {{ $value | humanize }}B"
+          
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: high
+          category: application
+          team: development
+        annotations:
+          summary: "High application error rate"
+          description: "{{ $value | humanizePercentage }} of requests are failing"
+
+  - name: xpress_compliance_monitoring
+    rules:
+      # Data protection compliance
+      - alert: PersonalDataAccessed
+        expr: increase(personal_data_access_total[1h]) > 100
+        for: 0s
+        labels:
+          severity: medium
+          category: compliance
+          team: legal
+        annotations:
+          summary: "High volume of personal data access"
+          description: "{{ $value }} personal data records accessed in the last hour"
+          
+      - alert: DataRetentionViolation
+        expr: data_retention_violation_total > 0
+        for: 0s
+        labels:
+          severity: high
+          category: compliance
+          team: legal
+        annotations:
+          summary: "Data retention policy violation detected"
+          description: "Data older than retention policy detected"
+          
+      - alert: AuditLogMissing
+        expr: increase(audit_log_entries_total[10m]) == 0
+        for: 10m
+        labels:
+          severity: high
+          category: compliance
+          team: security
+        annotations:
+          summary: "Audit logging has stopped"
+          description: "No audit log entries in the last 10 minutes"
+
+  - name: xpress_operational_alerts
+    rules:
+      # Performance monitoring
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: medium
+          category: performance
+          team: development
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time: {{ $value }}s"
+          
+      - alert: DatabaseSlowQueries
+        expr: rate(database_slow_queries_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: medium
+          category: performance
+          team: infrastructure
+        annotations:
+          summary: "Database slow queries detected"
+          description: "{{ $value }} slow queries per second"
+          
+      # Capacity monitoring
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: medium
+          category: capacity
+          team: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage: {{ $value }}%"
+          
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 10m
+        labels:
+          severity: medium
+          category: capacity
+          team: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage: {{ $value }}%"
+          
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 20
+        for: 5m
+        labels:
+          severity: high
+          category: capacity
+          team: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space remaining: {{ $value }}%"

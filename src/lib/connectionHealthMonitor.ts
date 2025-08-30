@@ -6,6 +6,7 @@ import { redis } from './redis';
 import { locationScheduler } from './locationScheduler';
 import { emergencyAlertService } from './emergencyAlerts';
 import { locationBatchingService } from './locationBatching';
+import { logger } from '@/lib/security/productionLogger';
 
 interface ServiceStatus {
   name: string;
@@ -54,11 +55,11 @@ class ConnectionHealthMonitorService {
   // Start monitoring
   start(): void {
     if (this.isRunning) {
-      console.log('🔍 Health monitor is already running');
+      logger.info('Health monitor is already running');
       return;
     }
 
-    console.log('🚀 Starting connection health monitoring...');
+    logger.info('Starting connection health monitoring');
     this.isRunning = true;
     
     // Initial health check
@@ -69,14 +70,14 @@ class ConnectionHealthMonitorService {
       this.performHealthCheck();
     }, this.CHECK_INTERVAL);
 
-    console.log(`✅ Health monitoring active (${this.CHECK_INTERVAL / 1000}s intervals)`);
+    logger.info(`Health monitoring active (${this.CHECK_INTERVAL / 1000}s intervals)`);
   }
 
   // Stop monitoring
   stop(): void {
     if (!this.isRunning) return;
     
-    console.log('⏹️ Stopping health monitoring...');
+    logger.info('Stopping health monitoring');
     
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
@@ -165,7 +166,7 @@ class ConnectionHealthMonitorService {
       return report;
 
     } catch (error) {
-      console.error('❌ Health check failed:', error);
+      logger.error('Health check failed', error instanceof Error ? error.message : error);
       throw error;
     }
   }
@@ -422,25 +423,25 @@ class ConnectionHealthMonitorService {
     const previousReport = this.healthHistory[this.healthHistory.length - 2];
     
     if (!previousReport) {
-      console.log(`🔍 Health Monitor: System status: ${report.overallStatus} (Score: ${report.overallScore})`);
+      logger.info(`Health Monitor: System status: ${report.overallStatus} (Score: ${report.overallScore})`);
       return;
     }
 
     // Check for status changes
     if (report.overallStatus !== previousReport.overallStatus) {
-      console.log(`🔄 Health Monitor: System status changed from ${previousReport.overallStatus} to ${report.overallStatus}`);
+      logger.info(`Health Monitor: System status changed from ${previousReport.overallStatus} to ${report.overallStatus}`);
     }
 
     // Check for new critical issues
     const newIssues = report.criticalIssues.filter(issue => !previousReport.criticalIssues.includes(issue));
     newIssues.forEach(issue => {
-      console.error(`🚨 Health Monitor: New critical issue: ${issue}`);
+      logger.error(`Health Monitor: New critical issue: ${issue}`);
     });
 
     // Check for resolved issues
     const resolvedIssues = previousReport.criticalIssues.filter(issue => !report.criticalIssues.includes(issue));
     resolvedIssues.forEach(issue => {
-      console.log(`✅ Health Monitor: Resolved: ${issue}`);
+      logger.info(`Health Monitor: Resolved: ${issue}`);
     });
   }
 
@@ -465,7 +466,7 @@ class ConnectionHealthMonitorService {
 
   // Manual health check trigger
   async triggerHealthCheck(): Promise<SystemHealthReport> {
-    console.log('🔍 Manual health check triggered');
+    logger.info('Manual health check triggered');
     return await this.performHealthCheck();
   }
 

@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { WebSocketEvents } from '@/lib/websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 interface DashboardMetrics {
   drivers: {
@@ -62,6 +63,17 @@ interface RealtimeAlert {
   acknowledged?: boolean;
   source?: string;
   regionId?: string;
+}
+
+interface DriverLocationUpdate {
+  driverId: string;
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+  heading?: number;
+  speed?: number;
+  accuracy?: number;
+  lastUpdate?: Date;
 }
 
 interface DashboardConfig {
@@ -136,7 +148,7 @@ export const useRealtimeDashboard = (config: DashboardConfig = {}) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Driver locations for map integration
-  const [driverLocations, setDriverLocations] = useState<Map<string, any>>(new Map());
+  const [driverLocations, setDriverLocations] = useState<Map<string, DriverLocationUpdate>>(new Map());
 
   // Notification helpers
   const notificationPermissionRef = useRef<boolean>(false);
@@ -185,9 +197,9 @@ export const useRealtimeDashboard = (config: DashboardConfig = {}) => {
     try {
       const audio = new Audio(soundFile);
       audio.volume = priority === 'critical' ? 0.8 : 0.5;
-      audio.play().catch(console.warn);
+      audio.play().catch(error => logger.warn('Failed to play audio', { error }));
     } catch (error) {
-      console.warn('Failed to play alert sound:', error);
+      logger.warn('Failed to play alert sound', { error, priority });
     }
   }, []);
 
@@ -410,7 +422,7 @@ export const useRealtimeDashboard = (config: DashboardConfig = {}) => {
 
     // If it's an emergency incident, send acknowledgment
     if (alertId.includes('incident') || alertId.includes('emergency')) {
-      emit('incident:acknowledge', { incidentId: alertId } as any);
+      emit('incident:acknowledge', { incidentId: alertId } as WebSocketEvents['incident:acknowledge']);
     }
   }, [emit]);
 

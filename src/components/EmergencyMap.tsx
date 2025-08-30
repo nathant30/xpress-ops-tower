@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Car, Building2, MapPin, Signal, Zap } from 'lucide-react';
 import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
+import { logger } from '@/lib/security/productionLogger';
 
 interface EmergencyMapProps {
   incident: {
@@ -131,7 +132,7 @@ export default function EmergencyMap({ incident }: EmergencyMapProps) {
         setIsLoaded(true);
         setError(null);
       } catch (err) {
-        console.error('Error initializing map:', err);
+        logger.error('Error initializing emergency map', { component: 'EmergencyMap' });
         setError('Failed to initialize Google Maps');
       }
     };

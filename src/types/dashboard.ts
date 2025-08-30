@@ -2,6 +2,12 @@
 
 import { BaseEntity, TimeRange, OperationalStatus } from './common';
 
+// Live Map specific types
+export type UserRole = 'dispatcher' | 'ops_manager';
+export type ViewMode = 'compact' | 'detailed';
+export type KPIStatus = 'optimal' | 'caution' | 'critical';
+export type SafetyStage = 'banner' | 'modal' | 'drawer' | 'history';
+
 // Dashboard configuration
 export interface Dashboard extends BaseEntity {
   name: string;
@@ -319,4 +325,86 @@ export interface DashboardSnapshot {
   createdBy: string;
   createdAt: Date;
   expiresAt?: Date;
+}
+
+// Live Map Dashboard Specific Types
+export type UserRole = 'dispatcher' | 'ops_manager';
+export type ViewMode = 'compact' | 'detailed';
+export type KPIStatus = 'optimal' | 'caution' | 'critical';
+export type SafetyStage = 'banner' | 'modal' | 'drawer' | 'history';
+export type ZoomLevel = 'city' | 'district' | 'street';
+
+export interface EmergencyIncident {
+  id: string;
+  type: 'sos' | 'accident' | 'breakdown' | 'safety' | 'medical';
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  location: { lat: number; lng: number; address: string };
+  timestamp: Date;
+  status: 'active' | 'responding' | 'resolved' | 'escalated';
+  description: string;
+  notes: Array<{ timestamp: Date; message: string; author: string }>;
+  responseTeam?: string;
+  eta?: number;
+}
+
+export interface KPITile {
+  id: string;
+  title: string;
+  value: number | string;
+  status: KPIStatus;
+  trend: 'up' | 'down' | 'stable';
+  unit: string;
+  description: string;
+  drillDownData?: any;
+}
+
+export interface HeatmapZone {
+  id: string;
+  name: string;
+  level: ZoomLevel;
+  coordinates: Array<{lat: number, lng: number}>;
+  supplyDemandRatio: number;
+  activeDrivers: number;
+  activeRequests: number;
+  averageETA: number;
+  surgeFactor: number;
+  color: 'green' | 'yellow' | 'red' | 'blue';
+}
+
+export interface ExceptionFilters {
+  sosActive: boolean;
+  idleDrivers: boolean;
+  highCancellations: boolean;
+  offlineAfterLogin: boolean;
+  laborAttendance: boolean;
+  ltfrbCompliance: boolean;
+  cancellationClusters: boolean;
+}
+
+export interface AIAnomalies {
+  idleDriversOver20Min: number;
+  highCancellationClusters: number;
+  offlineAfterLogin: number;
+  predictedHotspots: string[];
+  complianceAlerts: number;
+}
+
+export interface LiveMapDashboardState {
+  isLoading: boolean;
+  userRole: UserRole;
+  viewMode: ViewMode;
+  currentZoomLevel: ZoomLevel;
+  autoRefresh: boolean;
+  refreshInterval: number;
+  lastUpdate: Date;
+  safetyStage: SafetyStage;
+  selectedIncident: EmergencyIncident | null;
+  modalLocked: boolean;
+  safetyDrawerOpen: boolean;
+  sidebarCollapsed: boolean;
+  isMobile: boolean;
+  kpiDrillDown: string | null;
 }

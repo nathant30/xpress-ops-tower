@@ -11,6 +11,7 @@ import {
 import { authManager } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { secureLog, validateInput } from '@/lib/security/securityUtils';
 
 interface LoginRequest {
   email: string;
@@ -234,7 +235,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       { resource: 'auth', action: 'login', ipAddress: clientIP }
     );
 
-    console.error('Login error:', error);
+    secureLog.error('Login error:', error);
     
     return createApiError(
       'Login failed',

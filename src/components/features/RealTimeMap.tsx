@@ -3,11 +3,15 @@
 
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import { MapPin, Zap, AlertTriangle, Users, Activity, Settings, Filter, RefreshCw } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 import { RealTimeMapController, createMapConfig } from '@/lib/maps';
 import { useWebSocketMap } from '@/hooks/useWebSocketMap';
+import { locationIntegrationManager } from '@/lib/realtime/locationIntegrationManager';
+import { philippinesGeofencingService } from '@/lib/geofencing/philippinesGeofencing';
+import { routeOptimizer } from '@/lib/routing/routeOptimizer';
 import { XpressCard, Button, Badge } from '@/components/xpress';
 import { DriverMarker, MapViewState, HeatmapData } from '@/types/maps';
 
@@ -101,9 +105,9 @@ export const RealTimeMap: React.FC<RealTimeMapProps> = ({
         setIsLoading(false);
         setMapError(null);
         
-        console.log('✅ Real-time map initialized successfully');
+        logger.info('Real-time map initialized successfully', undefined, { component: 'RealTimeMap' });
       } catch (error) {
-        console.error('❌ Map initialization error:', error);
+        logger.error('Map initialization error', { component: 'RealTimeMap' });
         setMapError(`Failed to initialize map: ${error}`);
         setIsLoading(false);
       }
@@ -487,4 +491,7 @@ export const RealTimeMap: React.FC<RealTimeMapProps> = ({
   );
 };
 
-export default RealTimeMap;
+// Add displayName for debugging
+RealTimeMap.displayName = 'RealTimeMap';
+
+export default memo(RealTimeMap);

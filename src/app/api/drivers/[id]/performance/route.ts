@@ -2,6 +2,7 @@
 // Comprehensive driver performance metrics and analytics
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError,
@@ -357,7 +358,7 @@ export const GET = asyncHandler(async (request: NextRequest, { params }: { param
     return createApiResponse(responseData, 'Driver performance retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving driver performance:', error);
+    logger.error('Error retrieving driver performance', { driverId, timeframe: queryParams.timeframe, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve driver performance',
       'PERFORMANCE_ERROR',
@@ -427,7 +428,7 @@ async function getRegionalComparisons(regionId: string, driverMetrics: any, days
     };
 
   } catch (error) {
-    console.error('Error getting regional comparisons:', error);
+    logger.error('Error getting regional comparisons', { regionId, days, error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

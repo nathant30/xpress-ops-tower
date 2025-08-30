@@ -3,7 +3,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { 
   Search, Filter, Download, Plus, MoreVertical, Edit, Trash2, 
   Phone, Mail, MapPin, Star, TrendingUp, TrendingDown, Clock, 
@@ -788,4 +788,7 @@ export const DriverManagement: React.FC<DriverManagementProps> = ({
   );
 };
 
-export default DriverManagement;
+// Add displayName for debugging
+DriverManagement.displayName = 'DriverManagement';
+
+export default memo(DriverManagement);

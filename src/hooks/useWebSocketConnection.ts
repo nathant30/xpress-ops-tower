@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { WebSocketEvents } from '@/lib/websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 interface ConnectionConfig {
   url?: string;
@@ -119,7 +120,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
   const setupEventHandlers = useCallback((socket: Socket) => {
     // Connection events
     socket.on('connect', () => {
-      console.log('✅ WebSocket connected:', socket.id);
+      logger.info('WebSocket connected', { socketId: socket.id });
       connectionStartTimeRef.current = Date.now();
       
       setState(prev => ({
@@ -138,7 +139,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('❌ WebSocket disconnected:', reason);
+      logger.warn('WebSocket disconnected', { reason });
       setState(prev => ({
         ...prev,
         connected: false,
@@ -152,7 +153,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🚨 WebSocket connection error:', error.message);
+      logger.error('WebSocket connection error', { error: error.message });
       setState(prev => ({
         ...prev,
         connected: false,
@@ -180,13 +181,13 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
     // Event counting and logging
     const originalOn = socket.on.bind(socket);
     socket.on = function(event: string, handler: Function) {
-      return originalOn(event, (...args: any[]) => {
+      return originalOn(event, (...args: unknown[]) => {
         eventCounterRef.current++;
         setState(prev => ({ ...prev, eventCount: eventCounterRef.current }));
         setStats(prev => ({ ...prev, totalEvents: eventCounterRef.current }));
         
         if (enableEventLogging) {
-          console.log(`📨 WebSocket event [${event}]:`, args);
+          logger.debug(`WebSocket event [${event}]`, { args });
         }
 
         // Estimate data transferred (rough calculation)
@@ -202,11 +203,11 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
 
     // Handle subscription confirmations
     socket.on('subscribed', (data) => {
-      console.log('✅ Subscribed to channels:', data.channels);
+      logger.info('Subscribed to channels', { channels: data.channels });
     });
 
     socket.on('subscription_error', (data) => {
-      console.warn('⚠️ Subscription error:', data);
+      logger.warn('Subscription error', { data });
     });
 
     // Connection quality monitoring
@@ -226,7 +227,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
   const attemptReconnection = useCallback(() => {
     setState(prev => {
       if (prev.reconnectCount >= maxReconnectAttempts) {
-        console.error('❌ Max reconnection attempts reached');
+        logger.error('Max reconnection attempts reached', { maxAttempts: maxReconnectAttempts });
         return {
           ...prev,
           error: 'Maximum reconnection attempts exceeded'
@@ -236,7 +237,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
       const newCount = prev.reconnectCount + 1;
       const delay = Math.min(reconnectInterval * Math.pow(2, newCount - 1), 30000);
       
-      console.log(`🔄 Attempting reconnection ${newCount}/${maxReconnectAttempts} in ${delay}ms...`);
+      logger.info('Attempting reconnection', { attempt: newCount, maxAttempts: maxReconnectAttempts, delayMs: delay });
       
       reconnectTimeoutRef.current = setTimeout(() => {
         connect();
@@ -259,7 +260,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
   // Connect to WebSocket
   const connect = useCallback(() => {
     if (socketRef.current?.connected) {
-      console.log('Already connected to WebSocket');
+      logger.debug('Already connected to WebSocket');
       return;
     }
 
@@ -300,7 +301,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
 
       return cleanup;
     } catch (error) {
-      console.error('Failed to create socket connection:', error);
+      logger.error('Failed to create socket connection', { error });
       setState(prev => ({
         ...prev,
         connecting: false,
@@ -382,7 +383,7 @@ export const useWebSocketConnection = (config: ConnectionConfig = {}) => {
 
   // Force reconnection
   const forceReconnect = useCallback(() => {
-    console.log('🔄 Forcing reconnection...');
+    logger.info('Forcing reconnection');
     disconnect();
     setTimeout(() => {
       setState(prev => ({ ...prev, reconnectCount: 0 }));

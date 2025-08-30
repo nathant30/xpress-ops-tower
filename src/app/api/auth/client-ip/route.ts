@@ -6,6 +6,7 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
+import { logger } from '@/lib/security/productionLogger';
 
 interface ClientIPResponse {
   ip: string;
@@ -73,7 +74,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     );
 
   } catch (error) {
-    console.error('Client IP detection error:', error);
+    logger.error('Client IP detection error', { error });
     
     return createApiError(
       'Failed to detect client IP',

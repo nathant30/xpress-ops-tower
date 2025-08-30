@@ -8,6 +8,7 @@ import {
 } from '@/lib/api-utils';
 import { authManager, getUserFromRequest } from '@/lib/auth';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 // POST /api/auth/logout - Logout user and invalidate session
 export const POST = asyncHandler(async (request: NextRequest) => {
@@ -66,7 +67,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       { resource: 'auth', action: 'logout', ipAddress: clientIP }
     );
 
-    console.error('Logout error:', error);
+    logger.error('Logout error', { error });
     
     return createApiError(
       'Logout failed',

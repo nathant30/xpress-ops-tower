@@ -29,6 +29,13 @@ export interface DriverMarker {
   speed?: number;
   lastUpdate: Date;
   address?: string;
+  // Enhanced fields from location integration
+  regionInfo?: {
+    name: string;
+    type: string;
+  };
+  trafficCondition?: 'light' | 'moderate' | 'heavy' | 'severe';
+  recommendations?: string[];
 }
 
 export interface MarkerClusterOptions {

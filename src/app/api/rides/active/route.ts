@@ -2,6 +2,7 @@
 // Real-time active ride monitoring for operations dashboard
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   parseQueryParams,
@@ -245,7 +246,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Active rides retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving active rides:', error);
+    logger.error('Error retrieving active rides', { regionId: queryParams.regionId, serviceType: queryParams.serviceType, error: error instanceof Error ? error.message : String(error) });
     
     // Return cached data if available on error
     const emergencyCache = await redis.get(`${cacheKey}:emergency`);

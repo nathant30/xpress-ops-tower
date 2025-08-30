@@ -8,6 +8,7 @@ import {
   DriverStatus,
   RidesharingKPIs 
 } from '../types/ridesharing';
+import { logger } from '@/lib/security/productionLogger';
 
 // Session data structure
 interface SessionData {
@@ -62,12 +63,12 @@ class MockRedisManager {
 
   constructor(config?: any) {
     // Mock constructor - config ignored for demo
-    console.log('Mock Redis Manager initialized (in-memory storage)');
+    logger.info('Mock Redis Manager initialized (in-memory storage)');
   }
 
   async initialize(): Promise<void> {
     this.isConnected = true;
-    console.log('Mock Redis connections established');
+    logger.info('Mock Redis connections established');
   }
 
   async healthCheck(): Promise<{
@@ -229,16 +230,16 @@ class MockRedisManager {
   }
 
   async publish(channel: string, message: any): Promise<number> {
-    console.log(`Mock Redis publish to ${channel}:`, message);
+    logger.debug(`Mock Redis publish to ${channel}`, message);
     return 1;
   }
 
   async subscribe(channel: string | string[], callback: (channel: string, message: any) => void): Promise<void> {
-    console.log(`Mock Redis subscribe to ${Array.isArray(channel) ? channel.join(', ') : channel}`);
+    logger.debug(`Mock Redis subscribe to ${Array.isArray(channel) ? channel.join(', ') : channel}`);
   }
 
   async unsubscribe(channel?: string | string[]): Promise<void> {
-    console.log(`Mock Redis unsubscribe from ${channel}`);
+    logger.debug(`Mock Redis unsubscribe from ${channel}`);
   }
 
   async checkRateLimit(key: string, limit: number, windowSeconds: number): Promise<{
@@ -363,7 +364,7 @@ rejected_connections:0`
 
   async close(): Promise<void> {
     this.isConnected = false;
-    console.log('Mock Redis connections closed');
+    logger.info('Mock Redis connections closed');
   }
 }
 
@@ -383,10 +384,10 @@ export const initializeRedis = async (): Promise<void> => {
     await redis.initialize();
     
     const healthCheck = await redis.healthCheck();
-    console.log('Mock Redis initialized successfully', healthCheck);
+    logger.info('Mock Redis initialized successfully', healthCheck);
 
   } catch (error) {
-    console.error('Failed to initialize Mock Redis:', error);
+    logger.error('Failed to initialize Mock Redis', error instanceof Error ? error.message : error);
     throw error;
   }
 };

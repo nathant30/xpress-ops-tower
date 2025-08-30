@@ -9,6 +9,7 @@ import { initializeWebSocketServer } from './lib/websocket';
 import { locationScheduler } from './lib/locationScheduler';
 import { connectionHealthMonitor } from './lib/connectionHealthMonitor';
 import { metricsCollector } from './lib/metricsCollector';
+import { logger } from './lib/security/productionLogger';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
@@ -43,23 +44,23 @@ class XpressOpsServer {
 
   // Initialize all server components
   async initialize(): Promise<void> {
-    console.log('🚀 Starting Xpress Ops Tower Backend...');
+    logger.info('🚀 Starting Xpress Ops Tower Backend...');
 
     try {
       // 1. Initialize database connections
-      console.log('📊 Initializing database connections...');
+      logger.info('📊 Initializing database connections...');
       await initializeDatabase();
-      console.log('✅ Database connected successfully');
+      logger.info('✅ Database connected successfully');
 
       // 2. Initialize Redis cache and pub/sub
-      console.log('🔄 Initializing Redis cache layer...');
+      logger.info('🔄 Initializing Redis cache layer...');
       await initializeRedis();
-      console.log('✅ Redis cache layer ready');
+      logger.info('✅ Redis cache layer ready');
 
       // 3. Prepare Next.js application
-      console.log('⚡ Preparing Next.js application...');
+      logger.info('⚡ Preparing Next.js application...');
       await app.prepare();
-      console.log('✅ Next.js application ready');
+      logger.info('✅ Next.js application ready');
 
       // 4. Create HTTP server
       this.httpServer = createServer(async (req, res) => {
@@ -89,7 +90,7 @@ class XpressOpsServer {
           // Handle request
           await handle(req, res);
         } catch (error) {
-          console.error('Request handling error:', error);
+          logger.error('Request handling error:', error);
           if (!res.headersSent) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
@@ -105,24 +106,24 @@ class XpressOpsServer {
       });
 
       // 5. Initialize WebSocket server
-      console.log('🔌 Initializing WebSocket server...');
+      logger.info('🔌 Initializing WebSocket server...');
       const wsManager = initializeWebSocketServer(this.httpServer);
-      console.log('✅ WebSocket server ready for real-time communications');
+      logger.info('✅ WebSocket server ready for real-time communications');
 
       // 6. Start location broadcasting scheduler
-      console.log('📍 Starting location broadcast scheduler...');
+      logger.info('📍 Starting location broadcast scheduler...');
       locationScheduler.start();
-      console.log('✅ Location scheduler ready for 30-second broadcasts');
+      logger.info('✅ Location scheduler ready for 30-second broadcasts');
 
       // 7. Start health monitoring
-      console.log('🔍 Starting connection health monitoring...');
+      logger.info('🔍 Starting connection health monitoring...');
       connectionHealthMonitor.start();
-      console.log('✅ Health monitoring active');
+      logger.info('✅ Health monitoring active');
 
       // 8. Start metrics collection
-      console.log('📊 Starting real-time metrics collection...');
+      logger.info('📊 Starting real-time metrics collection...');
       metricsCollector.start();
-      console.log('✅ Metrics collection active');
+      logger.info('✅ Metrics collection active');
 
       // 9. Setup server monitoring
       this.setupMonitoring();
@@ -130,10 +131,10 @@ class XpressOpsServer {
       // 10. Setup graceful shutdown
       this.setupGracefulShutdown();
 
-      console.log('🎯 All systems initialized successfully!');
+      logger.info('🎯 All systems initialized successfully!');
 
     } catch (error) {
-      console.error('❌ Failed to initialize server:', error);
+      logger.error('❌ Failed to initialize server:', error);
       process.exit(1);
     }
   }
@@ -147,7 +148,7 @@ class XpressOpsServer {
           return;
         }
 
-        console.log(`
+        logger.info(`
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                    🚀 XPRESS OPS TOWER BACKEND                      ║
 ║                         Real-time Fleet Operations                   ║
@@ -203,7 +204,7 @@ class XpressOpsServer {
     // Log performance metrics every 5 minutes
     setInterval(() => {
       const memoryMB = Math.round(this.stats.memoryUsage.heapUsed / 1024 / 1024);
-      console.log(`📊 Performance: ${this.stats.totalRequests} requests, ${this.stats.activeConnections} active connections, ${memoryMB}MB memory`);
+      logger.info(`📊 Performance: ${this.stats.totalRequests} requests, ${this.stats.activeConnections} active connections, ${memoryMB}MB memory`);
     }, 300000);
   }
 
@@ -213,44 +214,44 @@ class XpressOpsServer {
       if (this.isShuttingDown) return;
       this.isShuttingDown = true;
 
-      console.log(`\n🔄 Received ${signal}, starting graceful shutdown...`);
+      logger.info(`\n🔄 Received ${signal}, starting graceful shutdown...`);
 
       try {
         // 1. Stop accepting new requests
-        console.log('🚫 Stopping HTTP server...');
+        logger.info('🚫 Stopping HTTP server...');
         this.httpServer.close();
 
         // 2. Stop health monitoring
-        console.log('🔍 Stopping health monitoring...');
+        logger.info('🔍 Stopping health monitoring...');
         connectionHealthMonitor.stop();
 
         // 3. Stop metrics collection
-        console.log('📊 Stopping metrics collection...');
+        logger.info('📊 Stopping metrics collection...');
         metricsCollector.stop();
 
         // 4. Stop location scheduler
-        console.log('📍 Stopping location scheduler...');
+        logger.info('📍 Stopping location scheduler...');
         locationScheduler.stop();
 
         // 5. Close WebSocket connections
-        console.log('🔌 Closing WebSocket connections...');
+        logger.info('🔌 Closing WebSocket connections...');
         const wsManager = require('./lib/websocket').getWebSocketManager();
         if (wsManager) {
           await wsManager.close();
         }
 
         // 6. Close database connections
-        console.log('📊 Closing database connections...');
+        logger.info('📊 Closing database connections...');
         await closeDatabaseConnection();
 
         // 7. Close Redis connections
-        console.log('🔄 Closing Redis connections...');
+        logger.info('🔄 Closing Redis connections...');
         await closeRedisConnection();
 
-        console.log('✅ Graceful shutdown completed');
+        logger.info('✅ Graceful shutdown completed');
         process.exit(0);
       } catch (error) {
-        console.error('❌ Error during shutdown:', error);
+        logger.error('❌ Error during shutdown:', error);
         process.exit(1);
       }
     };
@@ -261,12 +262,12 @@ class XpressOpsServer {
     
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      console.error('💥 Uncaught Exception:', error);
+      logger.error('💥 Uncaught Exception:', error);
       shutdown('uncaughtException');
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
       shutdown('unhandledRejection');
     });
   }
@@ -288,7 +289,7 @@ async function main() {
     await server.initialize();
     await server.start();
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }
@@ -296,7 +297,7 @@ async function main() {
 // Start the server
 if (require.main === module) {
   main().catch(error => {
-    console.error('❌ Server startup failed:', error);
+    logger.error('❌ Server startup failed:', error);
     process.exit(1);
   });
 }

@@ -3,6 +3,7 @@
 
 import { redis } from './redis';
 import { getWebSocketManager } from './websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface LocationBatch {
   batchId: string;
@@ -242,7 +243,7 @@ export class LocationBatchingService {
         this.updateMetrics(batch);
         
       } catch (error) {
-        console.error(`Error processing batch ${batch.batchId}:`, error);
+        logger.error(`Error processing batch ${batch.batchId}`, error instanceof Error ? error.message : error);
         this.metrics.errorCount++;
         
         // Retry logic
@@ -461,7 +462,7 @@ export class LocationBatchingService {
   private async checkGeofenceEvents(batch: LocationBatch): Promise<void> {
     // This would integrate with the geofence service
     // For now, just log that we would check
-    console.log(`Checking geofence events for batch ${batch.batchId} with ${batch.updates.length} updates`);
+    logger.debug(`Checking geofence events for batch ${batch.batchId} with ${batch.updates.length} updates`);
   }
 
   /**
@@ -516,7 +517,7 @@ export class LocationBatchingService {
    */
   private async retryBatch(batch: LocationBatch, attempt = 1): Promise<void> {
     if (attempt > this.config.retryAttempts) {
-      console.error(`Batch ${batch.batchId} failed after ${this.config.retryAttempts} attempts`);
+      logger.error(`Batch ${batch.batchId} failed after ${this.config.retryAttempts} attempts`);
       return;
     }
 
@@ -524,9 +525,9 @@ export class LocationBatchingService {
     
     try {
       await this.processSingleBatch(batch);
-      console.log(`Batch ${batch.batchId} succeeded on retry ${attempt}`);
+      logger.info(`Batch ${batch.batchId} succeeded on retry ${attempt}`);
     } catch (error) {
-      console.error(`Batch ${batch.batchId} retry ${attempt} failed:`, error);
+      logger.error(`Batch ${batch.batchId} retry ${attempt} failed`, error instanceof Error ? error.message : error);
       await this.retryBatch(batch, attempt + 1);
     }
   }
@@ -609,7 +610,7 @@ export class LocationBatchingService {
   private startMetricsCollection(): void {
     setInterval(() => {
       // Log metrics periodically
-      console.log('Location Batching Metrics:', {
+      logger.debug('Location Batching Metrics', {
         ...this.metrics,
         pendingBatches: this.pendingBatches.size,
         processingQueueLength: this.processingQueue.length,

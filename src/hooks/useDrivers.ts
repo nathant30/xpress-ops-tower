@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface Driver {
   id: string;
@@ -96,7 +97,7 @@ export function useDrivers(options: UseDriversOptions = {}) {
       const result = await response.json();
       setData(result.data);
     } catch (err) {
-      console.error('Error fetching drivers:', err);
+      logger.error('Error fetching drivers', { error: err instanceof Error ? err.message : err });
       setError(err instanceof Error ? err.message : 'Failed to fetch drivers data');
     } finally {
       setLoading(false);
@@ -125,7 +126,7 @@ export function useDrivers(options: UseDriversOptions = {}) {
       // Refresh the data after successful update
       await fetchDrivers();
     } catch (err) {
-      console.error('Error updating driver status:', err);
+      logger.error('Error updating driver status', { error: err instanceof Error ? err.message : err, driverId, newStatus });
       throw err;
     }
   };

@@ -9,6 +9,7 @@ import {
 import { withAuth } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface MFASetupResponse {
   qrCode: string;
@@ -98,7 +99,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       { userId: user.userId, resource: 'auth', action: 'mfa_enable', ipAddress: clientIP }
     );
 
-    console.error('MFA setup error:', error);
+    logger.error('MFA setup error', { error });
     
     return createApiError(
       'MFA setup failed',

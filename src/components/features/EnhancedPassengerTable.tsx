@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
+import { EnhancedPassenger } from '@/types/fraud';
 
 const EnhancedPassengerTable = () => {
   const router = useRouter();
@@ -38,7 +40,7 @@ const EnhancedPassengerTable = () => {
         const parsedWidths = JSON.parse(savedWidths);
         setColumnWidths({ ...defaultColumnWidths, ...parsedWidths });
       } catch (error) {
-        console.warn('Failed to parse saved column widths:', error);
+        logger.warn('Failed to parse saved column widths', { component: 'EnhancedPassengerTable' });
       }
     }
   }, []);
@@ -651,8 +653,8 @@ const EnhancedPassengerTable = () => {
     }
   };
 
-  const handleRowClick = (passenger: any) => {
-    router.push('/passenger-profile');
+  const handleRowClick = (passenger: EnhancedPassenger) => {
+    router.push(`/passenger-profile?id=${passenger.id}&passengerId=${passenger.passengerId}`);
   };
 
   const isRecentlyChanged = (id: number) => {
@@ -1107,4 +1109,7 @@ const EnhancedPassengerTable = () => {
   );
 };
 
-export default EnhancedPassengerTable;
+// Add displayName for debugging
+EnhancedPassengerTable.displayName = 'EnhancedPassengerTable';
+
+export default memo(EnhancedPassengerTable);

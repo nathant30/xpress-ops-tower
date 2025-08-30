@@ -37,7 +37,8 @@ services:
       - app_logs:/app/logs
       - app_uploads:/app/uploads
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -55,13 +56,35 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+      # Security: Enable SSL and configure encryption
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_WALDIR=/var/lib/postgresql/wal
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - postgres_wal:/var/lib/postgresql/wal
       - ./database/schemas:/docker-entrypoint-initdb.d
+      - ./database/security:/docker-entrypoint-initdb.d/security
+      - ./database/ssl:/var/lib/postgresql/ssl:ro
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # Security: Bind to localhost only
     networks:
-      - xpress-network
+      - xpress-backend-network  # Backend-only network
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt
+      -c ssl_key_file=/var/lib/postgresql/ssl/server.key
+      -c ssl_ca_file=/var/lib/postgresql/ssl/ca.crt
+      -c ssl_ciphers='ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384'
+      -c ssl_prefer_server_ciphers=on
+      -c ssl_min_protocol_version='TLSv1.2'
+      -c log_connections=on
+      -c log_disconnections=on
+      -c log_statement=all
+      -c shared_preload_libraries='pg_stat_statements'
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d xpress_ops_tower"]
       interval: 30s
@@ -79,9 +102,9 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"  # Security: Bind to localhost only
     networks:
-      - xpress-network
+      - xpress-backend-network  # Backend-only network
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 30s
@@ -104,7 +127,8 @@ services:
     depends_on:
       - xpress-ops-tower
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
@@ -120,6 +144,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/security-monitoring.yml:/etc/prometheus/rules/security.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -127,8 +152,15 @@ services:
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Grafana Dashboard
   grafana:
@@ -138,16 +170,50 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_INSTALL_PLUGINS=grafana-worldmap-panel,grafana-clock-panel
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
     depends_on:
       - prometheus
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AlertManager for alert routing
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: xpress-alertmanager
+    restart: unless-stopped
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+      - '--log.level=info'
+    networks:
+      - xpress-frontend-network
+      - xpress-backend-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Log aggregation with Loki
   loki:
@@ -161,7 +227,8 @@ services:
       - ./monitoring/loki-config.yml:/etc/loki/loki-config.yml
     command: -config.file=/etc/loki/loki-config.yml
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
 
   # Promtail log collector
   promtail:
@@ -176,14 +243,29 @@ services:
     depends_on:
       - loki
     networks:
-      - xpress-network
+      - xpress-frontend-network
+      - xpress-backend-network
 
 # Volumes
 volumes:
   postgres_data:
     driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/postgres
+      o: bind
+  postgres_wal:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/postgres_wal
+      o: bind
   redis_data:
     driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/redis
+      o: bind
   app_logs:
     driver: local
   app_uploads:
@@ -196,9 +278,33 @@ volumes:
     driver: local
   loki_data:
     driver: local
+  alertmanager_data:
+    driver: local
 
 # Networks
 networks:
+  # Public-facing network for web traffic
+  xpress-frontend-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: xpress-frontend
+      
+  # Private backend network for database and cache
+  xpress-backend-network:
+    driver: bridge
+    internal: true  # No external internet access
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+          gateway: 172.21.0.1
+    driver_opts:
+      com.docker.network.bridge.name: xpress-backend
+      
+  # Legacy network for compatibility (will be deprecated)
   xpress-network:
     driver: bridge
     ipam:

@@ -11,6 +11,7 @@ import {
 import { authManager } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface RefreshTokenRequest {
   refreshToken: string;
@@ -155,7 +156,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       { resource: 'auth', action: 'refresh', ipAddress: clientIP }
     );
 
-    console.error('Token refresh error:', error);
+    logger.error('Token refresh error', { error });
     
     return createApiError(
       'Token refresh failed',

@@ -1,10 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    // TODO: Fix TypeScript errors identified in hardening assessment
+    // Primary issues: Playwright deps, Google Maps types, export conflicts
+    ignoreBuildErrors: process.env.NODE_ENV === 'production',
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: process.env.NODE_ENV === 'production',
   },
   // Security headers for production
   async headers() {

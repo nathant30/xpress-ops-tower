@@ -36,7 +36,13 @@ export interface RidesharingWebSocketEvents {
       name: string;
       phone: string;
       rating: number;
-      vehicleInfo: any;
+      vehicleInfo: {
+        type: string;
+        model: string;
+        plateNumber: string;
+        color: string;
+        year?: number;
+      };
       currentLocation: {
         latitude: number;
         longitude: number;
@@ -63,7 +69,13 @@ export interface RidesharingWebSocketEvents {
     timestamp: string;
     metadata?: {
       cancellationReason?: string;
-      completionDetails?: any;
+      completionDetails?: {
+        distance: number;
+        duration: number;
+        actualFare: number;
+        rating?: number;
+        review?: string;
+      };
       eta?: string;
     };
   };
@@ -393,7 +405,7 @@ export interface RidesharingWebSocketEvents {
     sourceSystem: string;
     externalBookingId: string;
     rideId: string;
-    mappedData: any;
+    mappedData: Record<string, unknown>;
     syncStatus: 'synced' | 'failed' | 'partial';
     timestamp: string;
   };

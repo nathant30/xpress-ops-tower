@@ -1,5 +1,6 @@
 // /api/bookings - Booking Management API
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError, 
@@ -28,7 +29,7 @@ async function broadcastBookingUpdate(bookingId: string, status: string, data: a
       data
     };
     
-    console.log('Broadcasting booking update:', update);
+    logger.info('Broadcasting booking update', { bookingId: update.id, status: update.status, driverId: update.driverId });
     
     // Store update for WebSocket connections to pick up
     // In real implementation, send to all connected clients

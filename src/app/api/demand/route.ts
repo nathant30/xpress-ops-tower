@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-utils';
 import { getDatabase } from '@/lib/database';
 import { redis } from '@/lib/redis';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -239,7 +240,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Demand overview retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving demand overview:', error);
+    logger.error(`Error retrieving demand overview: ${error instanceof Error ? error.message : error}`);
     return createApiError(
       'Failed to retrieve demand overview',
       'DEMAND_OVERVIEW_ERROR',

@@ -1,29 +1,27 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { 
-  TrendingUp, Users, CheckCircle, XCircle, AlertCircle, Eye, Download,
-  Smartphone, Shield, Camera, Crop, RotateCcw, ShoppingBag, AlertTriangle,
-  MessageCircle, History, GraduationCap, DollarSign, Send, Search, Filter,
-  BarChart3, Target, BookOpen, Video, Ban, AlertOctagon, Phone, Mail, MapPin,
-  Calendar, Clock, Award, Upload, Edit3, ChevronLeft, MoreHorizontal, Star
+  TrendingUp, 
+  Users, 
+  FileText, 
+  Car,
+  DollarSign,
+  Shield,
+  GraduationCap,
+  X,
+  ChevronLeft
 } from 'lucide-react';
 
-const Car = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-          d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-          d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
-  </svg>
-);
+// Import extracted components
+import DriverInsightsPanel from '@/components/driver-admin/DriverInsightsPanel';
+import DriverDocumentsPanel from '@/components/driver-admin/DriverDocumentsPanel';
+import DriverTripsPanel from '@/components/driver-admin/DriverTripsPanel';
 
-const CreditCard = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-  </svg>
-);
+// Import production logger
+import { productionLogger } from '@/lib/security/productionLogger';
+
+// Types
 
 interface DriverData {
   id: string;

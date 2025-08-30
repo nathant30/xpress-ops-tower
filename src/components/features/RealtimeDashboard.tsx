@@ -3,11 +3,12 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { 
   Activity, AlertTriangle, Users, MapPin, Clock, TrendingUp, 
   Wifi, WifiOff, Zap, Shield, Navigation, AlertCircle, CheckCircle
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 import { XpressCard as Card, Button, Badge } from '@/components/xpress';
 import { useAuth } from '@/hooks/useAuth';
@@ -168,7 +169,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
         setLastUpdate(new Date());
 
       } catch (error) {
-        console.error('Failed to update metrics:', error);
+        logger.error('Failed to update metrics', { component: 'RealtimeDashboard' });
       }
     };
 
@@ -488,7 +489,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
               showControls={true}
               showStats={true}
               onEmergencyAlert={(incidentId) => {
-                console.log('Emergency alert:', incidentId);
+                logger.info('Emergency alert clicked', { incidentId }, { component: 'RealtimeDashboard' });
                 // Handle emergency alert click
               }}
               className="h-full"
@@ -671,4 +672,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
   );
 };
 
-export default RealtimeDashboard;
+// Add displayName for debugging
+RealtimeDashboard.displayName = 'RealtimeDashboard';
+
+export default memo(RealtimeDashboard);

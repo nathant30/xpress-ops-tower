@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { Shield, AlertTriangle, TrendingUp, TrendingDown, Eye, Users, CreditCard, Activity, Clock, DollarSign, UserX, FileText, BarChart3, PieChart } from 'lucide-react';
 
 interface FraudDashboardProps {
@@ -399,4 +399,7 @@ const FraudDashboard = ({ userType = 'drivers', timeRange = '24h', dateRange }: 
   );
 };
 
-export default FraudDashboard;
+// Add displayName for debugging
+FraudDashboard.displayName = 'FraudDashboard';
+
+export default memo(FraudDashboard);

@@ -2,6 +2,7 @@
 // Handle driver status transitions and availability updates
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError,
@@ -267,7 +268,7 @@ export const POST = asyncHandler(async (request: NextRequest, { params }: { para
     }, `Driver status updated to ${body.status}`);
 
   } catch (error) {
-    console.error('Error updating driver status:', error);
+    logger.error('Error updating driver status', { driverId, error: error instanceof Error ? error.message : String(error) });
     
     const errorMessage = (error as Error).message;
     
@@ -454,7 +455,7 @@ export const GET = asyncHandler(async (request: NextRequest, { params }: { param
     }, 'Driver status retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving driver status:', error);
+    logger.error('Error retrieving driver status', { driverId, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve driver status',
       'STATUS_FETCH_ERROR',
@@ -502,7 +503,7 @@ async function updateDriverStatusCaches(driverId: string, driver: any, locationR
     }
 
   } catch (error) {
-    console.error('Error updating driver status caches:', error);
+    logger.error('Error updating driver status caches', { driverId, error: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -541,7 +542,7 @@ async function broadcastStatusChange(driver: any, statusChange: any, locationRec
     }
 
   } catch (error) {
-    console.error('Error broadcasting status change:', error);
+    logger.error('Error broadcasting status change', { driverId: driver.id, statusChange: statusChange.to, error: error instanceof Error ? error.message : String(error) });
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface AnalyticsData {
   metrics: {
@@ -96,7 +97,7 @@ export function useAnalytics(options: UseAnalyticsOptions = {}) {
       const result = await response.json();
       setData(result.data);
     } catch (err) {
-      console.error('Error fetching analytics:', err);
+      logger.error('Error fetching analytics', { error: err instanceof Error ? err.message : err });
       setError(err instanceof Error ? err.message : 'Failed to fetch analytics data');
     } finally {
       setLoading(false);

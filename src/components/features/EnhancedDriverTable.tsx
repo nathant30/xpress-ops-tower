@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, ArrowLeft, X, Star, Shield, ShieldAlert, ShieldCheck, Eye, Brain, Users, Flag } from 'lucide-react';
 import { fraudMockData, getFraudRiskColor, getFraudRiskBadge, getInvestigationStatusBadge } from '@/lib/fraudMockData';
+import { logger } from '@/lib/security/productionLogger';
+import { EnhancedDriver } from '@/types/fraud';
 
 const EnhancedDriverTable = () => {
   const router = useRouter();
@@ -10,7 +12,7 @@ const EnhancedDriverTable = () => {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
-  const [selectedDriver, setSelectedDriver] = useState<any>(null);
+  const [selectedDriver, setSelectedDriver] = useState<EnhancedDriver | null>(null);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [recentChanges, setRecentChanges] = useState<{[key: number]: number}>({});
 
@@ -25,9 +27,11 @@ const EnhancedDriverTable = () => {
     total: 100,
     rate: 100,
     service: 80,
+    location: 160, // New location column
     alerts: 70,
     investigation: 90,
-    actions: 140
+    actions: 140,
+    risk: 100
   };
 
   const [columnWidths, setColumnWidths] = useState(defaultColumnWidths);
@@ -43,7 +47,7 @@ const EnhancedDriverTable = () => {
         const parsedWidths = JSON.parse(savedWidths);
         setColumnWidths({ ...defaultColumnWidths, ...parsedWidths });
       } catch (error) {
-        console.warn('Failed to parse saved column widths:', error);
+        logger.warn('Failed to parse saved column widths', { component: 'EnhancedDriverTable' });
       }
     }
   }, []);
@@ -87,7 +91,13 @@ const EnhancedDriverTable = () => {
       fraudDetails: 'Multiple payment disputes',
       tripsToday: 12,
       currentActivity: 'Available',
-      issues: ['Payment Dispute']
+      issues: ['Payment Dispute'],
+      // Enhanced location data
+      currentLocation: 'Makati CBD',
+      trafficCondition: 'moderate',
+      geofenceZone: 'Business District',
+      lastLocationUpdate: '2 mins ago',
+      routeRecommendation: 'Avoid EDSA - use Ayala Ave'
     },
     {
       id: 2,
@@ -109,7 +119,13 @@ const EnhancedDriverTable = () => {
       fraudDetails: 'Suspicious location patterns',
       tripsToday: 8,
       currentActivity: 'On trip (12m)',
-      issues: []
+      issues: [],
+      // Enhanced location data
+      currentLocation: 'Davao City Center',
+      trafficCondition: 'light',
+      geofenceZone: 'City Center',
+      lastLocationUpdate: '30 secs ago',
+      routeRecommendation: 'MacArthur Highway clear'
     },
     {
       id: 3,
@@ -1050,8 +1066,8 @@ const EnhancedDriverTable = () => {
     }
   };
 
-  const handleRowClick = (driver: any) => {
-    router.push('/driver-profile');
+  const handleRowClick = (driver: EnhancedDriver) => {
+    router.push(`/driver-profile?id=${driver.id}&driverId=${driver.driverId}`);
   };
 
   const isRecentlyChanged = (id: number) => {
@@ -1239,7 +1255,7 @@ const EnhancedDriverTable = () => {
       return 0;
     });
 
-  const DriverProfile = ({ driver, onClose }: { driver: any, onClose: () => void }) => (
+  const DriverProfile = ({ driver, onClose }: { driver: EnhancedDriver, onClose: () => void }) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex">
       {/* Left Sidebar */}
       <div className="w-80 bg-white p-6 overflow-y-auto">
@@ -1606,6 +1622,7 @@ const EnhancedDriverTable = () => {
                   { key: 'total', label: 'Total', tooltip: 'Total completed trips since joining' },
                   { key: 'rate', label: 'Rate %', tooltip: 'Trip completion rate percentage with trend indicator' },
                   { key: 'service', label: 'Service', tooltip: 'Type of service provided (TNVS, TAXI, 4W)' },
+                  { key: 'location', label: 'Location', tooltip: 'Real-time location and traffic conditions' },
                   { key: 'risk', label: 'Risk', tooltip: 'Fraud risk assessment level' },
                   { key: 'actions', label: 'Actions', tooltip: 'Quick actions available for this driver' }
                 ].map((column) => (
@@ -1682,6 +1699,30 @@ const EnhancedDriverTable = () => {
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-xs" style={{ width: columnWidths.service }}>
                     {driver.service}
                   </td>
+                  <td className="py-2 px-3 border-r border-gray-100 last:border-r-0 text-xs" style={{ width: columnWidths.location }}>
+                    {driver.currentLocation ? (
+                      <div className="space-y-1">
+                        <div className="font-medium text-gray-900">{driver.currentLocation}</div>
+                        <div className="flex items-center gap-1">
+                          <div className={`w-2 h-2 rounded-full ${
+                            driver.trafficCondition === 'light' ? 'bg-green-500' :
+                            driver.trafficCondition === 'moderate' ? 'bg-yellow-500' :
+                            driver.trafficCondition === 'heavy' ? 'bg-orange-500' :
+                            'bg-red-500'
+                          }`}></div>
+                          <span className="text-xs text-gray-600">{driver.trafficCondition}</span>
+                        </div>
+                        {driver.routeRecommendation && (
+                          <div className="text-xs text-blue-600 truncate" title={driver.routeRecommendation}>
+                            💡 {driver.routeRecommendation}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500">{driver.lastLocationUpdate}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-xs">No data</span>
+                    )}
+                  </td>
                   <td className="py-2 px-3 border-r border-gray-100 last:border-r-0" style={{ width: columnWidths.risk }}>
                     <span 
                       className={`px-2 py-1 rounded text-xs cursor-help truncate ${getFraudRiskColor(driver.fraudRisk)}`}
@@ -1710,4 +1751,7 @@ const EnhancedDriverTable = () => {
   );
 };
 
-export default EnhancedDriverTable;
+// Add displayName for debugging
+EnhancedDriverTable.displayName = 'EnhancedDriverTable';
+
+export default memo(EnhancedDriverTable);

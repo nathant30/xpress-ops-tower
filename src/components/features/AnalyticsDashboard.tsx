@@ -3,7 +3,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Users, Car, Clock, 
   Star, Target, BarChart3, PieChart, Activity, MapPin,
@@ -707,4 +707,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   );
 };
 
-export default AnalyticsDashboard;
+// Add displayName for debugging
+AnalyticsDashboard.displayName = 'AnalyticsDashboard';
+
+export default memo(AnalyticsDashboard);

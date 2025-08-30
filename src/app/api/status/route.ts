@@ -6,6 +6,7 @@ import { getWebSocketManager } from '@/lib/websocket';
 import { connectionHealthMonitor } from '@/lib/connectionHealthMonitor';
 import { locationScheduler } from '@/lib/locationScheduler';
 import { metricsCollector } from '@/lib/metricsCollector';
+import { logger } from '@/lib/security/productionLogger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     try {
       healthReport = await connectionHealthMonitor.getCurrentHealth();
     } catch (error) {
-      console.warn('Health monitor not available:', error);
+      logger.warn(`Health monitor not available: ${error instanceof Error ? error.message : error}`);
       healthReport = null;
     }
 
@@ -144,7 +145,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Status endpoint error:', error);
+    logger.error(`Status endpoint error: ${error instanceof Error ? error.message : error}`);
 
     return NextResponse.json({
       success: false,
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Force health check error:', error);
+    logger.error(`Force health check error: ${error instanceof Error ? error.message : error}`);
     
     return NextResponse.json({
       success: false,

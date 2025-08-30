@@ -1,0 +1,146 @@
+# Emergency Docker Compose Configuration
+# Minimal configuration for emergency/disaster recovery scenarios
+
+version: '3.8'
+
+services:
+  # Emergency application with minimal dependencies
+  xpress-emergency:
+    build:
+      context: .
+      dockerfile: Dockerfile.emergency
+      args:
+        NODE_ENV: emergency
+    container_name: xpress-emergency
+    restart: always
+    ports:
+      - "80:3000"
+      - "443:3000"
+    environment:
+      - NODE_ENV=emergency
+      - EMERGENCY_MODE=true
+      - DATABASE_URL=${EMERGENCY_DATABASE_URL}
+      - REDIS_URL=${EMERGENCY_REDIS_URL}
+      - EMERGENCY_AUTH_BYPASS=true
+      - EMERGENCY_API_KEY=${EMERGENCY_API_KEY}
+    volumes:
+      - emergency_logs:/app/logs
+      - /etc/ssl/certs:/etc/ssl/certs:ro
+    networks:
+      - emergency-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/emergency/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Emergency database (simplified configuration)
+  postgres-emergency:
+    image: postgres:15-alpine
+    container_name: xpress-postgres-emergency
+    restart: always
+    environment:
+      - POSTGRES_DB=xpress_emergency
+      - POSTGRES_USER=emergency_admin
+      - POSTGRES_PASSWORD=${EMERGENCY_DB_PASSWORD}
+    volumes:
+      - emergency_db_data:/var/lib/postgresql/data
+      - ./database/emergency:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - emergency-network
+    command: >
+      postgres
+      -c max_connections=100
+      -c shared_buffers=128MB
+      -c effective_cache_size=512MB
+      -c log_statement=all
+      -c log_connections=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U emergency_admin -d xpress_emergency"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Emergency Redis cache
+  redis-emergency:
+    image: redis:7-alpine
+    container_name: xpress-redis-emergency
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - emergency_redis_data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - emergency-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Emergency monitoring
+  emergency-monitor:
+    image: prom/prometheus:latest
+    container_name: xpress-emergency-monitor
+    restart: always
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/emergency-prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - emergency_prometheus_data:/prometheus
+    networks:
+      - emergency-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=24h'
+      - '--web.enable-lifecycle'
+
+  # Emergency notification service
+  emergency-notifier:
+    build:
+      context: .
+      dockerfile: Dockerfile.notifier
+    container_name: xpress-emergency-notifier
+    restart: always
+    environment:
+      - EMERGENCY_CONTACTS=${EMERGENCY_CONTACTS}
+      - TWILIO_EMERGENCY_SID=${TWILIO_EMERGENCY_SID}
+      - TWILIO_EMERGENCY_TOKEN=${TWILIO_EMERGENCY_TOKEN}
+      - SENDGRID_EMERGENCY_API_KEY=${SENDGRID_EMERGENCY_API_KEY}
+    volumes:
+      - emergency_logs:/app/logs
+    networks:
+      - emergency-network
+    depends_on:
+      - postgres-emergency
+
+volumes:
+  emergency_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${PWD}/data/emergency/postgres
+      o: bind
+  emergency_redis_data:
+    driver: local
+  emergency_logs:
+    driver: local
+  emergency_prometheus_data:
+    driver: local
+
+networks:
+  emergency-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
+    driver_opts:
+      com.docker.network.bridge.name: xpress-emergency

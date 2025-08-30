@@ -1,5 +1,6 @@
 // /api/analytics - KPI Dashboard Analytics API
 import { NextRequest } from 'next/server';
+import { Booking, Driver, Incident, DriverLocation } from '@/types/fleet';
 import { 
   createApiResponse, 
   createApiError,
@@ -170,7 +171,7 @@ function generateTimeBasedMetrics(timeRange: string) {
   return variations[timeRange as keyof typeof variations] || variations['24h'];
 }
 
-function calculateAverageResponseTime(bookings: any[]): number {
+function calculateAverageResponseTime(bookings: Booking[]): number {
   const completedBookings = bookings.filter(b => b.completedAt && b.requestedAt);
   if (completedBookings.length === 0) return 0;
   
@@ -183,7 +184,7 @@ function calculateAverageResponseTime(bookings: any[]): number {
   return Math.round(totalResponseTime / completedBookings.length / 1000); // Return in seconds
 }
 
-function calculateAverageRating(drivers: any[]): number {
+function calculateAverageRating(drivers: Driver[]): number {
   const ratedDrivers = drivers.filter(d => d.rating > 0);
   if (ratedDrivers.length === 0) return 0;
   
@@ -212,7 +213,16 @@ function generateHourlyChartData() {
 }
 
 // Enhanced KPI calculation functions
-function calculateRideshareKPIs(bookings: any[], drivers: any[], incidents: any[]) {
+function calculateRideshareKPIs(bookings: Booking[], drivers: Driver[], incidents: Incident[]): {
+  averageWaitTime: number;
+  averageDriverOnlineTime: number;
+  demandSupplyRatio: number;
+  averageTripDuration: number;
+  totalRevenue: number;
+  revenuePerDriver: number;
+  completionRate: number;
+  cancellationRate: number;
+} {
   const completedBookings = bookings.filter(b => b.status === 'completed');
   const activeBookings = bookings.filter(b => 
     ['requested', 'searching', 'assigned', 'accepted', 'en_route', 'arrived', 'in_progress'].includes(b.status)
@@ -260,7 +270,14 @@ function calculateRideshareKPIs(bookings: any[], drivers: any[], incidents: any[
   };
 }
 
-function calculateServicePerformance(bookings: any[]) {
+function calculateServicePerformance(bookings: Booking[]): Array<{
+  service: string;
+  totalBookings: number;
+  completedBookings: number;
+  completionRate: number;
+  averageRating: number;
+  revenue: number;
+}> {
   const services = ['ride_4w', 'ride_2w', 'send_delivery', 'eats_delivery', 'mart_delivery'];
   
   return services.map(service => {
@@ -279,7 +296,19 @@ function calculateServicePerformance(bookings: any[]) {
   });
 }
 
-function calculatePeakHours(bookings: any[]) {
+function calculatePeakHours(bookings: Booking[]): {
+  hourlyStats: Array<{
+    hour: number;
+    bookings: number;
+    completedBookings: number;
+    averageWaitTime: number;
+  }>;
+  peakHours: Array<{
+    hour: number;
+    label: string;
+    multiplier: number;
+  }>;
+} {
   const hourlyStats = Array.from({ length: 24 }, (_, hour) => ({
     hour,
     bookings: 0,
@@ -307,7 +336,23 @@ function calculatePeakHours(bookings: any[]) {
   };
 }
 
-function calculateGeographicDistribution(bookings: any[], drivers: any[]) {
+function calculateGeographicDistribution(bookings: Booking[], drivers: Driver[]): {
+  regions: Array<{
+    id: string;
+    name: string;
+    bookings: number;
+    drivers: number;
+    coverage: number;
+  }>;
+  totalCoverage: number;
+  bestPerforming: {
+    id: string;
+    name: string;
+    bookings: number;
+    drivers: number;
+    coverage: number;
+  };
+} {
   // Mock geographic distribution for Philippine regions
   const regions = [
     { id: 'reg-001', name: 'Metro Manila', bookings: 0, drivers: 0, coverage: 0 },

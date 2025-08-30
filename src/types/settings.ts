@@ -88,7 +88,7 @@ export interface UserActivity {
   userId: string;
   action: string;
   resource: string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   ipAddress: string;
   userAgent: string;
   timestamp: Date;
@@ -119,7 +119,7 @@ export interface ApiIntegration {
   lastSync: Date;
   syncStatus: 'SUCCESS' | 'FAILED' | 'PENDING';
   errorMessage?: string;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   healthCheck: {
     endpoint: string;
     method: string;
@@ -203,7 +203,7 @@ export interface NotificationRule {
   name: string;
   description: string;
   eventType: string;
-  conditions: Record<string, any>;
+  conditions: Record<string, unknown>;
   channels: NotificationChannel[];
   recipients: {
     roles: string[];
@@ -326,7 +326,7 @@ export interface SystemConfiguration {
   id: string;
   category: 'PERFORMANCE' | 'SECURITY' | 'INTEGRATION' | 'UI' | 'BUSINESS';
   key: string;
-  value: any;
+  value: string | number | boolean | Record<string, unknown> | unknown[];
   dataType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'JSON' | 'ARRAY';
   description: string;
   isPublic: boolean;
@@ -349,7 +349,7 @@ export interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   };
   pagination?: {
     page: number;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface Booking {
   id: string;
@@ -121,7 +122,7 @@ export function useBookings(options: UseBookingsOptions = {}) {
       const result = await response.json();
       setData(result.data);
     } catch (err) {
-      console.error('Error fetching bookings:', err);
+      logger.error('Error fetching bookings', { error: err instanceof Error ? err.message : err });
       setError(err instanceof Error ? err.message : 'Failed to fetch bookings data');
     } finally {
       setLoading(false);
@@ -153,7 +154,7 @@ export function useBookings(options: UseBookingsOptions = {}) {
       // Refresh the data after successful update
       await fetchBookings();
     } catch (err) {
-      console.error('Error updating booking status:', err);
+      logger.error('Error updating booking status', { error: err instanceof Error ? err.message : err, bookingId, newStatus });
       throw err;
     }
   };
@@ -180,7 +181,7 @@ export function useBookings(options: UseBookingsOptions = {}) {
       // Refresh the data after successful assignment
       await fetchBookings();
     } catch (err) {
-      console.error('Error assigning driver:', err);
+      logger.error('Error assigning driver', { error: err instanceof Error ? err.message : err, bookingId, driverId });
       throw err;
     }
   };

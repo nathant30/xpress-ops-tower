@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-utils';
 import { getDatabase } from '@/lib/database';
 import { redis } from '@/lib/redis';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -373,7 +374,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Demand analytics retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving demand analytics:', error);
+    logger.error(`Error retrieving demand analytics: ${error instanceof Error ? error.message : error}`);
     return createApiError(
       'Failed to retrieve demand analytics',
       'ANALYTICS_ERROR',

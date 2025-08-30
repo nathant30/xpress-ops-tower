@@ -2,6 +2,7 @@
 // Core ride request management with passenger matching and driver assignment
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError, 
@@ -394,7 +395,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     }, 'Ride request created successfully', 201);
 
   } catch (error) {
-    console.error('Error creating ride request:', error);
+    logger.error('Error creating ride request', { customerId: body.customerId, serviceType: body.serviceType, regionId: body.regionId, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to create ride request',
       'RIDE_CREATION_ERROR',
@@ -463,7 +464,7 @@ async function tryAutoAssignRide(rideId: string): Promise<void> {
       await redis.del(`ride:${rideId}`);
     }
   } catch (error) {
-    console.error('Error in auto-assignment:', error);
+    logger.error('Error in auto-assignment', { rideId, error: error instanceof Error ? error.message : String(error) });
   }
 }
 

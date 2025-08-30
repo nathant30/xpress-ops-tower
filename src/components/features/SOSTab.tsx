@@ -22,6 +22,7 @@ import {
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { Card, CardContent } from '@/components/ui/card';
 import SafetyAlertMap from '@/components/SafetyAlertMap';
+import { logger } from '@/lib/security/productionLogger';
 
 interface SafetyMetrics {
   activeAlerts: number;
@@ -262,7 +263,7 @@ const SOSTab: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       // Simulate real-time updates every 30 seconds
-      console.log('Updating safety metrics and ERT status...');
+      logger.info('Updating safety metrics and ERT status', undefined, { component: 'SOSTab' });
       // In a real implementation, this would update state from WebSocket messages
     }, 30000);
 

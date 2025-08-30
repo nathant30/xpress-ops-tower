@@ -4,6 +4,7 @@ import * as React from "react"
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subWeeks, subMonths, subYears } from "date-fns"
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker, DateRange } from "react-day-picker"
+import { logger } from '@/lib/security/productionLogger';
 
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
@@ -125,7 +126,7 @@ export function DatePicker({
         setIsOpen(false)
       }
     } catch (error) {
-      console.error("Error applying preset:", error)
+      logger.error('Error applying date preset', { component: 'DatePicker' });
     }
   }
 

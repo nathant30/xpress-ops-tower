@@ -4,6 +4,7 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import type { PoolClient, QueryResult } from 'pg';
+import { logger } from './security/productionLogger';
 
 // Mock database for development when PostgreSQL is not available
 class MockDatabasePool {
@@ -143,21 +144,21 @@ class DatabasePool {
 
     // Handle pool errors
     this.pool.on('error', (err, client) => {
-      console.error('Unexpected error on idle client', err);
+      logger.error('Unexpected error on idle database client', { error: err.message, client: 'idle' }, { component: 'DatabasePool', action: 'poolError' });
       process.exit(-1);
     });
 
     // Connection event handlers for monitoring
     this.pool.on('connect', (client) => {
-      console.log('New client connected to database');
+      logger.debug('New database client connected', { totalConnections: this.pool.totalCount }, { component: 'DatabasePool', action: 'clientConnect' });
     });
 
     this.pool.on('acquire', (client) => {
-      console.log('Client acquired from pool');
+      logger.debug('Database client acquired from pool', { idleCount: this.pool.idleCount, waitingCount: this.pool.waitingCount }, { component: 'DatabasePool', action: 'clientAcquire' });
     });
 
     this.pool.on('release', (client) => {
-      console.log('Client released back to pool');
+      logger.debug('Database client released back to pool', { idleCount: this.pool.idleCount }, { component: 'DatabasePool', action: 'clientRelease' });
     });
   }
 
@@ -183,17 +184,17 @@ class DatabasePool {
       
       // Log slow queries (over 2 seconds)
       if (duration > 2000) {
-        console.warn(`Slow query detected: ${duration}ms - ${text}`);
+        logger.warn('Slow database query detected', { duration, query: text.substring(0, 100) }, { component: 'DatabasePool', action: 'query' });
       }
       
       return result;
     } catch (error) {
-      console.error('Database query error:', {
-        query: text,
-        params,
+      logger.error('Database query failed', {
         error: (error as Error).message,
-        duration: Date.now() - start
-      });
+        query: text.substring(0, 100),
+        duration: Date.now() - start,
+        paramCount: params?.length || 0
+      }, { component: 'DatabasePool', action: 'query' });
       throw error;
     }
   }
@@ -301,7 +302,7 @@ export const getDatabase = (): DatabasePool | MockDatabasePool => {
         // Try to create real connection first
         dbInstance = new DatabasePool(config);
       } catch (error) {
-        console.log('PostgreSQL not available, using mock database for development');
+        logger.info('PostgreSQL not available, using mock database for development', {}, { component: 'DatabaseFactory', action: 'getDatabase' });
         dbInstance = new MockDatabasePool(config);
       }
     } else {
@@ -486,7 +487,7 @@ export const initializeDatabase = async (): Promise<void> => {
     if (healthCheck.status === 'unhealthy') {
       // In development, fall back to mock if health check fails
       if (process.env.NODE_ENV === 'development') {
-        console.log('Database health check failed, using mock database for development');
+        logger.warn('Database health check failed, using mock database for development', { responseTime: healthCheck.responseTime, connections: healthCheck.connections }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
         // Force recreation with mock
         dbInstance = new MockDatabasePool(getDatabaseConfig());
         return;
@@ -494,10 +495,10 @@ export const initializeDatabase = async (): Promise<void> => {
       throw new Error('Database health check failed');
     }
 
-    console.log('Database connection established successfully', {
+    logger.info('Database connection established successfully', {
       responseTime: healthCheck.responseTime,
       connections: healthCheck.connections
-    });
+    }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
 
     // Set up any required database configurations (skip for mock)
     if (!(currentDb instanceof MockDatabasePool)) {
@@ -510,24 +511,24 @@ export const initializeDatabase = async (): Promise<void> => {
 
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('Failed to initialize database, using mock database for development');
+      logger.warn('Failed to initialize database, using mock database for development', { error: (error as Error).message }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
       dbInstance = new MockDatabasePool(getDatabaseConfig());
       return;
     }
-    console.error('Failed to initialize database connection:', error);
+    logger.error('Failed to initialize database connection', { error: (error as Error).message }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
     throw error;
   }
 };
 
 // Graceful shutdown handler
 process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM, closing database connections...');
+  logger.info('Received SIGTERM signal, closing database connections', {}, { component: 'DatabaseFactory', action: 'gracefulShutdown' });
   await closeDatabaseConnection();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('Received SIGINT, closing database connections...');
+  logger.info('Received SIGINT signal, closing database connections', {}, { component: 'DatabaseFactory', action: 'gracefulShutdown' });
   await closeDatabaseConnection();
   process.exit(0);
 });

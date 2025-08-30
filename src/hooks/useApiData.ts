@@ -4,6 +4,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { driversApi, bookingsApi, analyticsApi, alertsApi, locationsApi, apiUtils } from '@/lib/api-client';
 import { ApiResponse } from '@/types/api';
+import { Driver } from '@/hooks/useDrivers';
+import { Booking } from '@/hooks/useBookings';
+import { EmergencyAlert } from '@/lib/emergencyAlerts';
+
+type CreateDriverData = Omit<Driver, 'id' | 'createdAt' | 'rating' | 'totalRides' | 'onlineHours' | 'earnings'>;
+type UpdateDriverData = Partial<Omit<Driver, 'id' | 'createdAt'>>;
+type CreateBookingData = Omit<Booking, 'id' | 'createdAt' | 'status'>;
+type UpdateBookingData = Partial<Omit<Booking, 'id' | 'createdAt'>>;
+type CreateAlertData = Omit<EmergencyAlert, 'id' | 'createdAt' | 'status'>;
+type UpdateAlertData = Partial<Omit<EmergencyAlert, 'id' | 'createdAt'>>;
 
 interface UseApiDataOptions {
   autoRefresh?: boolean;
@@ -241,7 +251,7 @@ export function useDriverMutations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createDriver = async (driver: any) => {
+  const createDriver = async (driver: CreateDriverData) => {
     setLoading(true);
     setError(null);
     try {
@@ -260,7 +270,7 @@ export function useDriverMutations() {
     }
   };
 
-  const updateDriver = async (id: string, updates: any) => {
+  const updateDriver = async (id: string, updates: UpdateDriverData) => {
     setLoading(true);
     setError(null);
     try {
@@ -311,7 +321,7 @@ export function useBookingMutations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createBooking = async (booking: any) => {
+  const createBooking = async (booking: CreateBookingData) => {
     setLoading(true);
     setError(null);
     try {
@@ -330,7 +340,7 @@ export function useBookingMutations() {
     }
   };
 
-  const updateBooking = async (id: string, updates: any) => {
+  const updateBooking = async (id: string, updates: UpdateBookingData) => {
     setLoading(true);
     setError(null);
     try {
@@ -381,7 +391,7 @@ export function useAlertMutations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createAlert = async (alert: any) => {
+  const createAlert = async (alert: CreateAlertData) => {
     setLoading(true);
     setError(null);
     try {
@@ -400,7 +410,7 @@ export function useAlertMutations() {
     }
   };
 
-  const updateAlert = async (id: string, updates: any) => {
+  const updateAlert = async (id: string, updates: UpdateAlertData) => {
     setLoading(true);
     setError(null);
     try {

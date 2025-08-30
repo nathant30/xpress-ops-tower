@@ -1,0 +1,216 @@
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'localhost:587'
+  smtp_from: 'alerts@xpress-ops.com'
+  smtp_auth_username: 'alerts@xpress-ops.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+  # Slack webhook configuration
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+# Template files
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# The root route matches all alerts and sends them to a default receiver
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default-receiver'
+  routes:
+    # Emergency alerts (SOS system, critical security)
+    - match:
+        severity: critical
+      receiver: 'emergency-team'
+      group_wait: 0s
+      group_interval: 5s
+      repeat_interval: 5m
+      routes:
+        - match:
+            category: emergency
+          receiver: 'sos-emergency'
+          group_wait: 0s
+          repeat_interval: 1m
+
+    # High priority security alerts
+    - match:
+        severity: high
+      receiver: 'security-team'
+      group_wait: 30s
+      group_interval: 2m
+      repeat_interval: 1h
+
+    # Medium priority operational alerts
+    - match:
+        severity: medium
+      receiver: 'operations-team'
+      group_wait: 2m
+      group_interval: 5m
+      repeat_interval: 4h
+
+    # Compliance and legal alerts
+    - match:
+        category: compliance
+      receiver: 'compliance-team'
+      group_wait: 1m
+      group_interval: 10m
+      repeat_interval: 8h
+
+receivers:
+  # Default fallback receiver
+  - name: 'default-receiver'
+    email_configs:
+      - to: 'ops-team@xpress.com'
+        subject: 'Xpress Ops Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+
+  # Emergency response team (immediate alerts)
+  - name: 'emergency-team'
+    email_configs:
+      - to: 'emergency-response@xpress.com'
+        subject: '🚨 EMERGENCY: {{ .GroupLabels.alertname }}'
+        body: |
+          EMERGENCY ALERT - IMMEDIATE ACTION REQUIRED
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Category: {{ .Labels.category }}
+          Time: {{ .StartsAt }}
+          
+          {{ if .Annotations.runbook_url }}
+          Runbook: {{ .Annotations.runbook_url }}
+          {{ end }}
+          {{ end }}
+    slack_configs:
+      - api_url: '${EMERGENCY_SLACK_WEBHOOK}'
+        channel: '#emergency-alerts'
+        title: '🚨 EMERGENCY ALERT'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          Severity: `{{ .Labels.severity }}`
+          {{ end }}
+        send_resolved: true
+
+  # SOS-specific emergency alerts
+  - name: 'sos-emergency'
+    email_configs:
+      - to: 'sos-response@xpress.com,emergency-coordinator@xpress.com'
+        subject: '🚨 SOS SYSTEM ALERT: {{ .GroupLabels.alertname }}'
+        body: |
+          CRITICAL SOS SYSTEM ALERT
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt }}
+          
+          ACTION REQUIRED:
+          1. Check SOS system status immediately
+          2. Verify emergency response procedures
+          3. Contact system administrator if needed
+          {{ end }}
+    slack_configs:
+      - api_url: '${SOS_SLACK_WEBHOOK}'
+        channel: '#sos-alerts'
+        title: '🚨 SOS SYSTEM ALERT'
+        text: |
+          {{ range .Alerts }}
+          **CRITICAL SOS ALERT**
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+    # SMS alerts for SOS emergencies (using webhook)
+    webhook_configs:
+      - url: 'https://api.xpress.com/alerts/sms'
+        send_resolved: true
+
+  # Security team alerts
+  - name: 'security-team'
+    email_configs:
+      - to: 'security-team@xpress.com'
+        subject: '🔒 Security Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Security Alert Detected
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Category: {{ .Labels.category }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+    slack_configs:
+      - api_url: '${SECURITY_SLACK_WEBHOOK}'
+        channel: '#security-alerts'
+        title: '🔒 Security Alert'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          Severity: `{{ .Labels.severity }}`
+          {{ end }}
+
+  # Operations team alerts
+  - name: 'operations-team'
+    email_configs:
+      - to: 'operations@xpress.com'
+        subject: 'Xpress Ops Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Operational Alert
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt }}
+          {{ end }}
+    slack_configs:
+      - api_url: '${OPS_SLACK_WEBHOOK}'
+        channel: '#ops-alerts'
+        title: 'Operational Alert'
+
+  # Compliance and legal team
+  - name: 'compliance-team'
+    email_configs:
+      - to: 'compliance@xpress.com,legal@xpress.com'
+        subject: '📋 Compliance Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          Compliance Alert - Review Required
+          
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Category: {{ .Labels.category }}
+          Time: {{ .StartsAt }}
+          
+          Please review for regulatory compliance implications.
+          {{ end }}
+
+# Inhibition rules (prevent certain alerts when others are firing)
+inhibit_rules:
+  # Inhibit low priority alerts when critical alerts are firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'medium'
+    equal: ['alertname', 'instance']
+
+  # Inhibit individual service alerts when entire system is down
+  - source_match:
+      alertname: 'SystemDown'
+    target_match_re:
+      alertname: '.*ServiceDown'
+    equal: ['instance']

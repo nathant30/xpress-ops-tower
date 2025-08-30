@@ -6,9 +6,10 @@ import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { redis } from './redis';
 import { AuthPayload, authManager } from './auth';
+import { logger } from '@/lib/security/productionLogger';
 
 // Import ridesharing-specific event types and configurations
-import { RidesharingWebSocketEvents, RIDESHARING_EVENT_ROUTING, EventPriority } from '../types/ridesharing';
+import { RidesharingWebSocketEvents, RIDESHARING_EVENT_ROUTING, EventPriority } from '@/types/ridesharing';
 
 // Combined WebSocket event types for ridesharing platform
 export interface WebSocketEvents extends RidesharingWebSocketEvents {
@@ -226,7 +227,7 @@ export class WebSocketManager {
         socket.data = { user };
         next();
       } catch (error) {
-        console.error('WebSocket authentication error:', error);
+        logger.error('WebSocket authentication error', error instanceof Error ? error.message : error);
         next(new Error('Authentication failed'));
       }
     });
@@ -237,7 +238,7 @@ export class WebSocketManager {
     this.io.on('connection', (socket) => {
       const user: AuthPayload = socket.data.user;
       
-      console.log(`WebSocket connection established for user: ${user.userId} (${user.role})`);
+      logger.info(`WebSocket connection established for user: ${user.userId} (${user.role})`);
       
       // Store authenticated socket
       const authSocket: AuthenticatedSocket = {
@@ -285,7 +286,7 @@ export class WebSocketManager {
 
       // Handle disconnection
       socket.on('disconnect', (reason) => {
-        console.log(`WebSocket disconnected: ${user.userId} (${reason})`);
+        logger.info(`WebSocket disconnected: ${user.userId} (${reason})`);
         this.handleDisconnection(socket.id);
       });
 
@@ -434,7 +435,7 @@ export class WebSocketManager {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error handling driver location update:', error);
+      logger.error('Error handling driver location update', error instanceof Error ? error.message : error);
     }
   }
 
@@ -470,7 +471,7 @@ export class WebSocketManager {
       this.broadcastToRole('safety_monitor', 'emergency:alert', emergencyEvent);
 
     } catch (error) {
-      console.error('Error handling emergency trigger:', error);
+      logger.error('Error handling emergency trigger', error instanceof Error ? error.message : error);
     }
   }
 
@@ -537,7 +538,7 @@ export class WebSocketManager {
           }
       }
     } catch (error) {
-      console.error(`Error handling Redis message for channel ${channel}:`, error);
+      logger.error(`Error handling Redis message for channel ${channel}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -1085,13 +1086,13 @@ export class WebSocketManager {
     // Execute auto-implementations
     autoImplementable.forEach(rec => {
       // Implementation logic here
-      console.log(`Auto-implementing optimization: ${rec.description}`);
+      logger.info(`Auto-implementing optimization: ${rec.description}`);
     });
   }
 
   private triggerEmergencyServices(incident: WebSocketEvents['safety:incident_reported']): void {
     // Integration with emergency services APIs
-    console.log(`EMERGENCY TRIGGERED: ${incident.incident.incidentId} - ${incident.severity}`);
+    logger.error(`EMERGENCY TRIGGERED: ${incident.incident.incidentId} - ${incident.severity}`);
     
     // This would integrate with:
     // - Local emergency services APIs
@@ -1101,7 +1102,7 @@ export class WebSocketManager {
 
   private triggerEmergencyResponse(alert: WebSocketEvents['safety:emergency_alert']): void {
     // Automated emergency response protocols
-    console.log(`EMERGENCY RESPONSE ACTIVATED: ${alert.type} at ${alert.location}`);
+    logger.error(`EMERGENCY RESPONSE ACTIVATED: ${alert.type} at ${alert.location}`);
     
     // This would trigger:
     // - Automated emergency service calls
@@ -1127,7 +1128,7 @@ export class WebSocketManager {
     // Execute automated actions based on predictions
     prediction.autoActions.forEach(action => {
       if (action.autoImplement) {
-        console.log(`Auto-executing prediction action: ${action.description}`);
+        logger.info(`Auto-executing prediction action: ${action.description}`);
         // Implementation logic here
       }
     });
@@ -1219,7 +1220,7 @@ export class WebSocketManager {
   close(): Promise<void> {
     return new Promise((resolve) => {
       this.io.close(() => {
-        console.log('WebSocket server closed');
+        logger.info('WebSocket server closed');
         resolve();
       });
     });
@@ -1483,7 +1484,7 @@ export class WebSocketManager {
       });
 
     } catch (error) {
-      console.error('Error broadcasting to nearby drivers:', error);
+      logger.error('Error broadcasting to nearby drivers', error instanceof Error ? error.message : error);
     }
   }
 
@@ -1507,7 +1508,7 @@ export class WebSocketManager {
         }
         
         if (currentCount > routing.rateLimited.maxPerMinute) {
-          console.warn(`Rate limit exceeded for event ${event} to ${target}`);
+          logger.warn(`Rate limit exceeded for event ${event} to ${target}`);
           return false;
         }
       }
@@ -1537,7 +1538,7 @@ export class WebSocketManager {
       return true;
 
     } catch (error) {
-      console.error('Error routing event with priority:', error);
+      logger.error('Error routing event with priority', error instanceof Error ? error.message : error);
       return false;
     }
   }
@@ -1568,7 +1569,7 @@ export class WebSocketManager {
       this.broadcastToRole('admin', 'system:driver_utilization', metrics);
 
     } catch (error) {
-      console.error('Error collecting event metrics:', error);
+      logger.error('Error collecting event metrics', error instanceof Error ? error.message : error);
     }
   }
 }

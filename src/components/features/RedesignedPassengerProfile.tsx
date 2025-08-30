@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle, X, Upload, Edit3, Download, MessageSquare, Shield, MapPin, CreditCard, Calendar, FileText, Star, Activity, Eye } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface PassengerData {
   name: string;
@@ -155,7 +156,7 @@ const RedesignedPassengerProfile = () => {
         onClick={() => showConfirmDialog(
           'Suspend Customer', 
           'Are you sure you want to suspend this customer?',
-          () => console.log('Customer suspended')
+          () => logger.info('Customer suspended', undefined, { component: 'RedesignedPassengerProfile' })
         )}
         className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
       >

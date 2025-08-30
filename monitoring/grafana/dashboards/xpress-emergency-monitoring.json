@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🚨 Xpress Emergency Monitoring",
+    "tags": ["xpress", "emergency", "sos", "safety"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "5s",
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "🚨 CRITICAL: SOS System Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=\"sos-service\"}",
+            "legendFormat": "SOS Service Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "value": "1",
+                "text": "🟢 OPERATIONAL"
+              },
+              {
+                "type": "value", 
+                "value": "0",
+                "text": "🔴 SYSTEM DOWN"
+              }
+            ],
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 12, "w": 8, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "⏱️ Emergency Response Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sos_response_time_seconds",
+            "legendFormat": "Response Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 12, "w": 8, "x": 8, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "📞 Active Emergency Calls",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "emergency_calls_active_total",
+            "legendFormat": "Active Calls"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "orange", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 12, "w": 8, "x": 16, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "📊 Emergency Call Volume (Last Hour)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(emergency_calls_total[5m])",
+            "legendFormat": "Emergency Calls"
+          },
+          {
+            "expr": "increase(panic_button_pressed_total[5m])",
+            "legendFormat": "Panic Button Activations"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 12}
+      },
+      {
+        "id": 5,
+        "title": "🚑 Emergency Response Team Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "emergency_responders_available",
+            "legendFormat": "Available Responders"
+          },
+          {
+            "expr": "emergency_responders_dispatched", 
+            "legendFormat": "Dispatched Responders"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 6,
+        "title": "📍 Emergency Locations (Heat Map)",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "increase(emergency_calls_by_location[1h])",
+            "legendFormat": "{{location}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Emergency Events",
+          "datasource": "prometheus",
+          "enable": true,
+          "expr": "ALERTS{alertname=~\"SOSSystemDown|EmergencyResponseDelay\"}",
+          "iconColor": "red",
+          "textColor": "red"
+        }
+      ]
+    }
+  }
+}

@@ -2,6 +2,7 @@
 // Handle ride status transitions and notifications
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError, 
@@ -340,7 +341,7 @@ export const PATCH = asyncHandler(async (request: NextRequest, { params }: { par
     }, `Ride status updated to ${body.status}`);
 
   } catch (error) {
-    console.error('Error updating ride status:', error);
+    logger.error('Error updating ride status', { rideId, newStatus: body.status, updatedBy: body.updatedBy, error: error instanceof Error ? error.message : String(error) });
     
     const errorMessage = (error as Error).message;
     
@@ -435,7 +436,7 @@ export const GET = asyncHandler(async (request: NextRequest, { params }: { param
     }, 'Ride status retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving ride status:', error);
+    logger.error('Error retrieving ride status', { rideId, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve ride status',
       'STATUS_FETCH_ERROR',

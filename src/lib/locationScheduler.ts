@@ -4,6 +4,7 @@
 import { getWebSocketManager } from './websocket';
 import { redis } from './redis';
 import { locationBatchingService } from './locationBatching';
+import { logger } from '@/lib/security/productionLogger';
 
 interface LocationUpdate {
   driverId: string;
@@ -39,12 +40,12 @@ class LocationSchedulerService {
   // Start the location broadcast scheduler
   start(): void {
     if (this.isRunning) {
-      console.log('📍 Location scheduler is already running');
+      logger.info('Location scheduler is already running');
       return;
     }
 
-    console.log('🚀 Starting real-time location broadcast scheduler...');
-    console.log(`📡 Broadcasting driver locations every ${this.BROADCAST_INTERVAL / 1000} seconds`);
+    logger.info('Starting real-time location broadcast scheduler');
+    logger.info(`Broadcasting driver locations every ${this.BROADCAST_INTERVAL / 1000} seconds`);
     
     this.isRunning = true;
     this.schedulerInterval = setInterval(() => {
@@ -59,7 +60,7 @@ class LocationSchedulerService {
   stop(): void {
     if (!this.isRunning) return;
 
-    console.log('⏹️ Stopping location broadcast scheduler...');
+    logger.info('Stopping location broadcast scheduler');
     
     if (this.schedulerInterval) {
       clearInterval(this.schedulerInterval);
@@ -76,7 +77,7 @@ class LocationSchedulerService {
     try {
       const wsManager = getWebSocketManager();
       if (!wsManager) {
-        console.warn('⚠️ WebSocket manager not available for location broadcast');
+        logger.warn('WebSocket manager not available for location broadcast');
         return;
       }
 
@@ -84,7 +85,7 @@ class LocationSchedulerService {
       const activeDrivers = await this.getActiveDriverLocations();
       
       if (activeDrivers.length === 0) {
-        console.log('📍 No active drivers to broadcast');
+        logger.debug('No active drivers to broadcast');
         return;
       }
 
@@ -99,14 +100,14 @@ class LocationSchedulerService {
       // Update metrics
       this.updateMetrics(activeDrivers.length, Date.now() - startTime);
       
-      console.log(
-        `📡 Location broadcast completed: ${activeDrivers.length} drivers, ` +
+      logger.info(
+        `Location broadcast completed: ${activeDrivers.length} drivers, ` +
         `${Object.keys(driversByRegion).length} regions, ` +
         `${Date.now() - startTime}ms`
       );
 
     } catch (error) {
-      console.error('❌ Error in location broadcast:', error);
+      logger.error('Error in location broadcast', error instanceof Error ? error.message : error);
       this.metrics.errors++;
     }
   }
@@ -155,7 +156,7 @@ class LocationSchedulerService {
                 });
               }
             } catch (parseError) {
-              console.warn(`⚠️ Failed to parse location data for ${batch[j]}:`, parseError);
+              logger.warn(`Failed to parse location data for ${batch[j]}`, parseError instanceof Error ? parseError.message : parseError);
             }
           }
         }
@@ -163,7 +164,7 @@ class LocationSchedulerService {
 
       return locations;
     } catch (error) {
-      console.error('❌ Error fetching driver locations:', error);
+      logger.error('Error fetching driver locations', error instanceof Error ? error.message : error);
       return [];
     }
   }
@@ -234,7 +235,7 @@ class LocationSchedulerService {
 
   // Force immediate broadcast (for manual triggers)
   async forceBroadcast(): Promise<void> {
-    console.log('🚀 Force broadcasting location updates...');
+    logger.info('Force broadcasting location updates');
     await this.broadcastLocationUpdates();
   }
 

@@ -17,6 +17,7 @@ import {
   MoreVertical,
   RefreshCw
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface Trip {
   id: string;
@@ -263,7 +264,7 @@ export const LiveRidesPanel: React.FC<LiveRidesPanelProps> = ({
       setLastUpdated(new Date());
     } catch (err) {
       setError('Failed to fetch trip data');
-      console.error('Error fetching trips:', err);
+      logger.error('Error fetching live trips', { component: 'LiveRidesPanel' });
     } finally {
       setLoading(false);
     }

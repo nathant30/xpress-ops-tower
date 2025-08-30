@@ -6,6 +6,7 @@ import { redis } from './redis';
 import { locationBatchingService } from './locationBatching';
 import { emergencyAlertService } from './emergencyAlerts';
 import { connectionHealthMonitor } from './connectionHealthMonitor';
+import { logger } from '@/lib/security/productionLogger';
 
 interface KPIMetrics {
   totalTrips: number;
@@ -63,11 +64,11 @@ class MetricsCollectorService {
   // Start metrics collection
   start(): void {
     if (this.isRunning) {
-      console.log('📊 Metrics collector is already running');
+      logger.info('Metrics collector is already running');
       return;
     }
 
-    console.log('🚀 Starting real-time metrics collection...');
+    logger.info('Starting real-time metrics collection');
     this.isRunning = true;
 
     // Initial collection
@@ -83,14 +84,14 @@ class MetricsCollectorService {
       this.collectAndBroadcastKPIMetrics();
     }, this.KPI_METRICS_INTERVAL);
 
-    console.log(`✅ Metrics collection active (System: ${this.SYSTEM_METRICS_INTERVAL/1000}s, KPI: ${this.KPI_METRICS_INTERVAL/1000}s)`);
+    logger.info(`Metrics collection active (System: ${this.SYSTEM_METRICS_INTERVAL/1000}s, KPI: ${this.KPI_METRICS_INTERVAL/1000}s)`);
   }
 
   // Stop metrics collection
   stop(): void {
     if (!this.isRunning) return;
 
-    console.log('⏹️ Stopping metrics collection...');
+    logger.info('Stopping metrics collection');
 
     if (this.collectionInterval) {
       clearInterval(this.collectionInterval);
@@ -128,10 +129,10 @@ class MetricsCollectorService {
         
         this.lastSystemMetrics = metrics;
         
-        console.log(`📊 System metrics updated: ${metrics.activeDrivers} drivers, ${metrics.activeBookings} bookings`);
+        logger.info(`System metrics updated: ${metrics.activeDrivers} drivers, ${metrics.activeBookings} bookings`);
       }
     } catch (error) {
-      console.error('❌ Failed to collect system metrics:', error);
+      logger.error('Failed to collect system metrics', error instanceof Error ? error.message : error);
       connectionHealthMonitor.incrementErrors();
     }
   }
@@ -162,10 +163,10 @@ class MetricsCollectorService {
         
         this.lastKPIMetrics = metrics;
         
-        console.log(`💰 KPI metrics updated: ${metrics.totalTrips} trips, $${metrics.totalRevenue.toFixed(2)} revenue`);
+        logger.info(`KPI metrics updated: ${metrics.totalTrips} trips, $${metrics.totalRevenue.toFixed(2)} revenue`);
       }
     } catch (error) {
-      console.error('❌ Failed to collect KPI metrics:', error);
+      logger.error('Failed to collect KPI metrics', error instanceof Error ? error.message : error);
       connectionHealthMonitor.incrementErrors();
     }
   }
@@ -248,7 +249,7 @@ class MetricsCollectorService {
         this.regionalMetricsCache.set(regionId, regionalMetrics);
         
       } catch (error) {
-        console.warn(`⚠️ Failed to collect metrics for region ${regionId}:`, error);
+        logger.warn(`Failed to collect metrics for region ${regionId}`, error instanceof Error ? error.message : error);
       }
     }
   }
@@ -279,7 +280,7 @@ class MetricsCollectorService {
       
       return activeCount;
     } catch (error) {
-      console.error('Error getting active drivers count:', error);
+      logger.error('Error getting active drivers count', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -291,7 +292,7 @@ class MetricsCollectorService {
       const bookingKeys = await redis.keys('booking:active:*');
       return bookingKeys.length;
     } catch (error) {
-      console.error('Error getting active bookings count:', error);
+      logger.error('Error getting active bookings count', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -303,7 +304,7 @@ class MetricsCollectorService {
       const cachedCount = await redis.get('metrics:daily:completed_trips');
       return cachedCount ? parseInt(cachedCount) : Math.floor(Math.random() * 1000) + 500;
     } catch (error) {
-      console.error('Error getting completed trips count:', error);
+      logger.error('Error getting completed trips count', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -313,7 +314,7 @@ class MetricsCollectorService {
       const cachedRevenue = await redis.get('metrics:daily:total_revenue');
       return cachedRevenue ? parseFloat(cachedRevenue) : Math.floor(Math.random() * 50000) + 25000;
     } catch (error) {
-      console.error('Error getting total revenue:', error);
+      logger.error('Error getting total revenue', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -323,7 +324,7 @@ class MetricsCollectorService {
       const cachedRating = await redis.get('metrics:daily:average_rating');
       return cachedRating ? parseFloat(cachedRating) : 4.2 + (Math.random() * 0.6);
     } catch (error) {
-      console.error('Error getting average rating:', error);
+      logger.error('Error getting average rating', error instanceof Error ? error.message : error);
       return 4.5;
     }
   }
@@ -334,7 +335,7 @@ class MetricsCollectorService {
       const totalDrivers = activeDrivers + Math.floor(activeDrivers * 0.3); // Estimate total
       return totalDrivers > 0 ? (activeDrivers / totalDrivers) : 0;
     } catch (error) {
-      console.error('Error calculating driver utilization:', error);
+      logger.error('Error calculating driver utilization', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -344,7 +345,7 @@ class MetricsCollectorService {
       const cachedSatisfaction = await redis.get('metrics:daily:customer_satisfaction');
       return cachedSatisfaction ? parseFloat(cachedSatisfaction) : 0.8 + (Math.random() * 0.15);
     } catch (error) {
-      console.error('Error getting customer satisfaction:', error);
+      logger.error('Error getting customer satisfaction', error instanceof Error ? error.message : error);
       return 0.85;
     }
   }
@@ -354,7 +355,7 @@ class MetricsCollectorService {
       const regionKeys = await redis.keys('region:*:drivers');
       return regionKeys.map(key => key.split(':')[1]).slice(0, 10); // Limit regions
     } catch (error) {
-      console.error('Error getting active region IDs:', error);
+      logger.error('Error getting active region IDs', error instanceof Error ? error.message : error);
       return ['region_1', 'region_2', 'region_3']; // Default regions
     }
   }
@@ -426,7 +427,7 @@ class MetricsCollectorService {
 
   // Force metrics collection
   async forceCollection(): Promise<void> {
-    console.log('📊 Force collecting metrics...');
+    logger.info('Force collecting metrics');
     await Promise.all([
       this.collectAndBroadcastSystemMetrics(),
       this.collectAndBroadcastKPIMetrics()

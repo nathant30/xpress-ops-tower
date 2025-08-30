@@ -2,6 +2,7 @@
 // Stream live driver availability and locations for matching and dispatching
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError,
@@ -276,7 +277,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Available drivers retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving available drivers:', error);
+    logger.error('Error retrieving available drivers', { regionId: queryParams.regionId, serviceType: queryParams.serviceType, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve available drivers',
       'AVAILABLE_DRIVERS_ERROR',
@@ -344,7 +345,7 @@ async function getDriverPerformanceMetrics(driverIds: string[]): Promise<Record<
     }, {} as Record<string, any>);
 
   } catch (error) {
-    console.error('Error getting driver performance metrics:', error);
+    logger.error('Error getting driver performance metrics', { driverCount: driverIds.length, error: error instanceof Error ? error.message : String(error) });
     return {};
   }
 }
@@ -391,7 +392,7 @@ async function getNearbyDemandDensity(latitude: number, longitude: number, radiu
     };
 
   } catch (error) {
-    console.error('Error getting demand density:', error);
+    logger.error('Error getting demand density', { latitude, longitude, radiusKm, error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

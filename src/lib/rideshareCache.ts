@@ -3,6 +3,7 @@
 
 import { redis } from './redis';
 import { getDatabase } from './database';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -114,7 +115,7 @@ export class RidesharingCache {
       await pipeline.exec();
       
     } catch (error) {
-      console.error('Error updating driver location cache:', error);
+      logger.error('Error updating driver location cache', error instanceof Error ? error.message : error);
     }
   }
 
@@ -202,7 +203,7 @@ export class RidesharingCache {
       return driverData;
 
     } catch (error) {
-      console.error('Error getting nearby drivers:', error);
+      logger.error('Error getting nearby drivers', error instanceof Error ? error.message : error);
       return [];
     }
   }
@@ -236,7 +237,7 @@ export class RidesharingCache {
       await pipeline.exec();
 
     } catch (error) {
-      console.error('Error caching active rides:', error);
+      logger.error('Error caching active rides', error instanceof Error ? error.message : error);
     }
   }
 
@@ -276,7 +277,7 @@ export class RidesharingCache {
       await pipeline.exec();
 
     } catch (error) {
-      console.error('Error caching demand hotspots:', error);
+      logger.error('Error caching demand hotspots', error instanceof Error ? error.message : error);
     }
   }
 
@@ -311,7 +312,7 @@ export class RidesharingCache {
       await redis.setex(overviewKey, CACHE_TTL.SURGE_STATUS, JSON.stringify(overviewData));
 
     } catch (error) {
-      console.error('Error caching surge status:', error);
+      logger.error('Error caching surge status', error instanceof Error ? error.message : error);
     }
   }
 
@@ -340,7 +341,7 @@ export class RidesharingCache {
       await redis.expire(timeSeriesKey, 3600 * 24); // 24 hours
 
     } catch (error) {
-      console.error('Error caching regional KPIs:', error);
+      logger.error('Error caching regional KPIs', error instanceof Error ? error.message : error);
     }
   }
 
@@ -368,7 +369,7 @@ export class RidesharingCache {
       }));
 
     } catch (error) {
-      console.error('Error caching matching candidates:', error);
+      logger.error('Error caching matching candidates', error instanceof Error ? error.message : error);
     }
   }
 
@@ -394,7 +395,7 @@ export class RidesharingCache {
       return null;
 
     } catch (error) {
-      console.error('Error getting matching candidates:', error);
+      logger.error('Error getting matching candidates', error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -406,7 +407,7 @@ export class RidesharingCache {
   // Warm up critical caches for high-traffic regions
   async warmCriticalCaches(regionIds: string[]): Promise<void> {
     try {
-      console.log('Warming up critical caches for regions:', regionIds);
+      logger.info('Warming up critical caches for regions', regionIds);
 
       const pipeline = redis.pipeline();
       
@@ -424,10 +425,10 @@ export class RidesharingCache {
         this.preloadSurgeStatus(regionId);
       }
 
-      console.log('Cache warming completed');
+      logger.info('Cache warming completed');
 
     } catch (error) {
-      console.error('Error warming caches:', error);
+      logger.error('Error warming caches', error instanceof Error ? error.message : error);
     }
   }
 
@@ -468,7 +469,7 @@ export class RidesharingCache {
       }
 
     } catch (error) {
-      console.error(`Error preloading drivers for region ${regionId}:`, error);
+      logger.error(`Error preloading drivers for region ${regionId}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -490,7 +491,7 @@ export class RidesharingCache {
       }
 
     } catch (error) {
-      console.error(`Error preloading active rides for region ${regionId}:`, error);
+      logger.error(`Error preloading active rides for region ${regionId}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -521,7 +522,7 @@ export class RidesharingCache {
       }));
 
     } catch (error) {
-      console.error(`Error preloading demand metrics for region ${regionId}:`, error);
+      logger.error(`Error preloading demand metrics for region ${regionId}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -551,7 +552,7 @@ export class RidesharingCache {
       }
 
     } catch (error) {
-      console.error(`Error preloading surge status for region ${regionId}:`, error);
+      logger.error(`Error preloading surge status for region ${regionId}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -595,7 +596,7 @@ export class RidesharingCache {
       return cleanedCount;
 
     } catch (error) {
-      console.error('Error cleaning up expired driver data:', error);
+      logger.error('Error cleaning up expired driver data', error instanceof Error ? error.message : error);
       return 0;
     }
   }
@@ -632,7 +633,7 @@ export class RidesharingCache {
       };
 
     } catch (error) {
-      console.error('Error getting cache stats:', error);
+      logger.error('Error getting cache stats', error instanceof Error ? error.message : error);
       return {};
     }
   }

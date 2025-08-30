@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface SafetyAlert {
   id: string;
@@ -53,7 +54,7 @@ export default function SafetyAlertMap({
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      console.error('Google Maps API key not found');
+      logger.error('Google Maps API key not found', undefined, { component: 'SafetyAlertMap' });
       setIsLoaded(true);
       return;
     }
@@ -63,7 +64,7 @@ export default function SafetyAlertMap({
     script.async = true;
     script.onload = () => setIsLoaded(true);
     script.onerror = () => {
-      console.error('Failed to load Google Maps script');
+      logger.error('Failed to load Google Maps script', undefined, { component: 'SafetyAlertMap' });
       setIsLoaded(true);
     };
     document.head.appendChild(script);
@@ -101,9 +102,9 @@ export default function SafetyAlertMap({
         fullscreenControl: true
       });
 
-      console.log('✅ Safety Alert Map initialized successfully');
+      logger.info('Safety Alert Map initialized successfully', undefined, { component: 'SafetyAlertMap' });
     } catch (error) {
-      console.error('❌ Failed to initialize Safety Alert Map:', error);
+      logger.error('Failed to initialize Safety Alert Map', { component: 'SafetyAlertMap' });
     }
   }, [isLoaded]);
 

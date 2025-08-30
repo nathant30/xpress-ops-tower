@@ -10,6 +10,7 @@ import {
 import { withAuth } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 // GET /api/auth/profile - Get current user profile
 export const GET = withAuth(async (request: NextRequest, user) => {
@@ -48,7 +49,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     );
 
   } catch (error) {
-    console.error('Profile retrieval error:', error);
+    logger.error('Profile retrieval error', { error });
     
     return createApiError(
       'Failed to retrieve profile',
@@ -145,7 +146,7 @@ export const PATCH = withAuth(async (request: NextRequest, user) => {
       { userId: user.userId, resource: 'auth', action: 'profile_update', ipAddress: clientIP }
     );
 
-    console.error('Profile update error:', error);
+    logger.error('Profile update error', { error });
     
     return createApiError(
       'Failed to update profile',

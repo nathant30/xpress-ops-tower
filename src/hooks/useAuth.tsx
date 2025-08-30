@@ -5,6 +5,16 @@
 
 import { useState, useEffect, useContext, createContext, ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { secureLog, validateInput } from '@/lib/security/securityUtils';
+
+interface JWTPayload {
+  sub: string;
+  exp: number;
+  iat: number;
+  role: string;
+  permissions: string[];
+  sessionId: string;
+}
 // Import types only, not the implementation
 export enum AuditEventType {
   LOGIN = 'LOGIN',
@@ -80,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const decoded = jwtDecode<any>(token);
+      const decoded = jwtDecode<JWTPayload>(token);
       const isExpired = decoded.exp * 1000 < Date.now();
 
       if (isExpired) {
@@ -89,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await validateToken(token);
       }
     } catch (error) {
-      console.error('Auth initialization failed:', error);
+      secureLog.error('Auth initialization failed:', error);
       clearTokens();
       setAuthState(prev => ({ 
         ...prev, 
@@ -115,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data } = await response.json();
       const { user, permissions } = data;
-      const decoded = jwtDecode<any>(token);
+      const decoded = jwtDecode<JWTPayload>(token);
 
       setAuthState({
         user: { ...user, permissions },
@@ -126,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       // Client-side audit logging
-      console.log('AUTH_EVENT:', {
+      secureLog.info('AUTH_EVENT:', {
         type: AuditEventType.LOGIN,
         level: SecurityLevel.LOW,
         outcome: 'SUCCESS',
@@ -165,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(REFRESH_KEY, refresh);
 
-      const decoded = jwtDecode<any>(token);
+      const decoded = jwtDecode<JWTPayload>(token);
 
       setAuthState({
         user: { ...user, permissions },
@@ -175,21 +185,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionExpiry: decoded.exp * 1000
       });
 
-      console.log(
-        AuditEventType.LOGIN,
-        SecurityLevel.LOW,
-        'SUCCESS',
-        { 
-          method: mfaCode ? 'password_mfa' : 'password',
-          userAgent: navigator.userAgent
-        },
-        { 
-          userId: user.id, 
-          resource: 'auth', 
-          action: 'login',
-          ipAddress: await getClientIP()
-        }
-      );
+      secureLog.info('Login successful', {
+        type: AuditEventType.LOGIN,
+        level: SecurityLevel.LOW,
+        method: mfaCode ? 'password_mfa' : 'password',
+        userId: user.id
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
       setAuthState(prev => ({ 
@@ -198,21 +199,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: errorMessage 
       }));
 
-      console.log(
-        AuditEventType.LOGIN,
-        SecurityLevel.MEDIUM,
-        'FAILURE',
-        { 
-          error: errorMessage,
-          email,
-          userAgent: navigator.userAgent
-        },
-        { 
-          resource: 'auth', 
-          action: 'login',
-          ipAddress: await getClientIP()
-        }
-      );
+      secureLog.warn('Login failed', {
+        type: AuditEventType.LOGIN,
+        level: SecurityLevel.MEDIUM,
+        error: errorMessage,
+        email: email
+      });
       
       throw error;
     }
@@ -231,13 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (userId) {
-      console.log(
-        AuditEventType.LOGOUT,
-        SecurityLevel.LOW,
-        'SUCCESS',
-        { method: 'manual' },
-        { userId, resource: 'auth', action: 'logout' }
-      );
+      secureLog.info('Logout successful', {
+        type: AuditEventType.LOGOUT,
+        level: SecurityLevel.LOW,
+        method: 'manual',
+        userId: userId
+      });
     }
   };
 
@@ -264,7 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(REFRESH_KEY, newRefresh);
 
-      const decoded = jwtDecode<any>(token);
+      const decoded = jwtDecode<JWTPayload>(token);
 
       setAuthState(prev => ({
         ...prev,
@@ -273,7 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: null
       }));
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      secureLog.error('Token refresh failed:', error);
       logout();
     }
   };
@@ -302,7 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: { ...prev.user!, ...updatedUser }
       }));
     } catch (error) {
-      console.error('Profile update failed:', error);
+      secureLog.error('Profile update failed:', error);
       throw error;
     }
   };

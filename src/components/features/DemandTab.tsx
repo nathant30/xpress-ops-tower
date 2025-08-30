@@ -13,6 +13,7 @@ import {
   Activity,
   ChevronRight
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 
 interface DemandArea {
@@ -144,7 +145,7 @@ const DemandTab: React.FC = () => {
     // Set up auto-refresh every 30 seconds
     const interval = setInterval(() => {
       // In real app, would refresh data here
-      console.log('Refreshing demand data...');
+      logger.info('Refreshing demand data', undefined, { component: 'DemandTab' });
     }, 30000);
 
     setRefreshInterval(interval);

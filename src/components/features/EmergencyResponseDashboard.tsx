@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/xpress/ca
 import { Badge } from '@/components/xpress/badge';
 import { Button } from '@/components/xpress/button';
 import { AlertCircle, Phone, MapPin, Clock, Users, Activity, CheckCircle, XCircle, AlertTriangle, Radio, Ambulance, Shield, Flame, Car } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface SOSAlert {
   id: string;
@@ -159,7 +160,7 @@ const EmergencyResponseDashboard: React.FC = () => {
       updateMetrics(sosData.data || [], responseData.data || [], safetyData.data || []);
       
     } catch (error) {
-      console.error('Failed to load emergency dashboard data:', error);
+      logger.error('Failed to load emergency dashboard data', { component: 'EmergencyResponseDashboard' });
     } finally {
       setIsLoading(false);
       setLastUpdate(new Date());
@@ -171,7 +172,7 @@ const EmergencyResponseDashboard: React.FC = () => {
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
-      console.log('Emergency WebSocket connected');
+      logger.info('Emergency WebSocket connected', undefined, { component: 'EmergencyResponseDashboard' });
     };
 
     wsRef.current.onmessage = (event) => {
@@ -180,12 +181,12 @@ const EmergencyResponseDashboard: React.FC = () => {
     };
 
     wsRef.current.onclose = () => {
-      console.log('Emergency WebSocket disconnected. Attempting to reconnect...');
+      logger.warn('Emergency WebSocket disconnected. Attempting to reconnect...', undefined, { component: 'EmergencyResponseDashboard' });
       setTimeout(setupWebSocketConnection, 5000);
     };
 
     wsRef.current.onerror = (error) => {
-      console.error('Emergency WebSocket error:', error);
+      logger.error('Emergency WebSocket error', { component: 'EmergencyResponseDashboard' });
     };
   };
 
@@ -307,7 +308,7 @@ const EmergencyResponseDashboard: React.FC = () => {
   const playEmergencySound = () => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(console.error);
+      audioRef.current.play().catch((error) => logger.error('Failed to play emergency sound', { component: 'EmergencyResponseDashboard' }));
     }
   };
 
@@ -315,7 +316,7 @@ const EmergencyResponseDashboard: React.FC = () => {
     // Play a less intense sound for safety alerts
     const audio = new Audio('/sounds/alert-beep.mp3');
     audio.volume = 0.5;
-    audio.play().catch(console.error);
+    audio.play().catch((error) => logger.error('Failed to play alert sound', { component: 'EmergencyResponseDashboard' }));
   };
 
   const flashScreen = () => {
@@ -404,7 +405,7 @@ const EmergencyResponseDashboard: React.FC = () => {
         })
       });
     } catch (error) {
-      console.error('Failed to acknowledge SOS:', error);
+      logger.error('Failed to acknowledge SOS', { component: 'EmergencyResponseDashboard' });
     }
   };
 
@@ -419,7 +420,7 @@ const EmergencyResponseDashboard: React.FC = () => {
         })
       });
     } catch (error) {
-      console.error('Failed to acknowledge response:', error);
+      logger.error('Failed to acknowledge response', { component: 'EmergencyResponseDashboard' });
     }
   };
 

@@ -14,6 +14,7 @@ import {
 import { getDatabase } from '@/lib/database';
 import { redis } from '@/lib/redis';
 import { getWebSocketManager } from '@/lib/websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -219,7 +220,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Surge status retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving surge status:', error);
+    logger.error(`Error retrieving surge status: ${error instanceof Error ? error.message : error}`);
     return createApiError(
       'Failed to retrieve surge status',
       'SURGE_STATUS_ERROR',
@@ -380,7 +381,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     }, actionDescription);
 
   } catch (error) {
-    console.error('Error controlling surge pricing:', error);
+    logger.error(`Error controlling surge pricing: ${error instanceof Error ? error.message : error}`);
     return createApiError(
       'Failed to control surge pricing',
       'SURGE_CONTROL_ERROR',
@@ -408,7 +409,7 @@ async function getSurgeControlsFromRedis(regionId?: string): Promise<Record<stri
       }
     }
   } catch (error) {
-    console.error('Error getting surge controls from Redis:', error);
+    logger.error(`Error getting surge controls from Redis: ${error instanceof Error ? error.message : error}`);
   }
   
   return controls;

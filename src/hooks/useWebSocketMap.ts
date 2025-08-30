@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { logger } from '@/lib/security/productionLogger';
 
 import { 
   DriverMarker, 
@@ -14,6 +15,8 @@ import {
   MapWebSocketEvents,
   DriverLocationEvent
 } from '@/types/maps';
+import { locationIntegrationManager } from '@/lib/realtime/locationIntegrationManager';
+import { DriverLocationData } from '@/lib/realtime/realtimeLocationTracker';
 
 interface WebSocketMapHookConfig {
   url?: string;
@@ -139,28 +142,82 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
 
   // WebSocket event handlers
   const setupEventHandlers = useCallback((socket: Socket) => {
-    // Driver location updates - high frequency
-    socket.on('driver:location_updated', (event: DriverLocationEvent) => {
-      const driverMarker: DriverMarker = {
+    // Driver location updates - high frequency with integrated processing
+    socket.on('driver:location_updated', async (event: DriverLocationEvent) => {
+      // Process through location integration manager for enhanced data
+      const locationData: DriverLocationData = {
         driverId: event.driverId,
-        position: event.location,
-        status: event.status as any,
-        isAvailable: event.metadata?.isAvailable ?? true,
-        services: event.metadata?.services ?? [],
-        rating: event.metadata?.rating ?? 5.0,
-        bearing: event.metadata?.bearing,
-        speed: event.metadata?.speed,
-        lastUpdate: new Date(event.timestamp)
+        latitude: event.location.lat,
+        longitude: event.location.lng,
+        accuracy: event.metadata?.accuracy ?? 10,
+        bearing: event.metadata?.bearing ?? 0,
+        speed: event.metadata?.speed ?? 0,
+        timestamp: event.timestamp,
+        regionId: event.metadata?.regionId ?? 'unknown',
+        status: event.status,
+        isAvailable: event.metadata?.isAvailable ?? true
       };
 
-      if (batchUpdates) {
-        pendingUpdatesRef.current.drivers.set(event.driverId, driverMarker);
-      } else {
-        setState(prev => ({
-          ...prev,
-          drivers: new Map([...prev.drivers, [event.driverId, driverMarker]]),
-          lastUpdate: new Date()
-        }));
+      try {
+        // Process location through integration manager for enhanced insights
+        const integratedResult = await locationIntegrationManager.processLocationUpdate(locationData);
+        
+        const driverMarker: DriverMarker = {
+          driverId: event.driverId,
+          position: event.location,
+          status: event.status,
+          isAvailable: event.metadata?.isAvailable ?? true,
+          services: event.metadata?.services ?? [],
+          rating: event.metadata?.rating ?? 5.0,
+          bearing: event.metadata?.bearing,
+          speed: event.metadata?.speed,
+          lastUpdate: new Date(event.timestamp),
+          // Add enhanced data from integration manager
+          address: integratedResult.geoData?.address,
+          regionInfo: integratedResult.geoData?.region,
+          trafficCondition: integratedResult.trafficData?.condition,
+          recommendations: integratedResult.recommendations?.map(r => r.message)
+        };
+        
+        // Log anomalies for debugging
+        if (integratedResult.anomalyData && integratedResult.anomalyData.anomalies.length > 0) {
+          logger.warn('Location anomalies detected', { anomalies: integratedResult.anomalyData.anomalies });
+        }
+        
+        if (batchUpdates) {
+          pendingUpdatesRef.current.drivers.set(event.driverId, driverMarker);
+        } else {
+          setState(prev => ({
+            ...prev,
+            drivers: new Map([...prev.drivers, [event.driverId, driverMarker]]),
+            lastUpdate: new Date()
+          }));
+        }
+      } catch (error) {
+        logger.error('Error processing location update', { error, driverId: event.driverId });
+        
+        // Fallback to basic driver marker without integration
+        const driverMarker: DriverMarker = {
+          driverId: event.driverId,
+          position: event.location,
+          status: event.status,
+          isAvailable: event.metadata?.isAvailable ?? true,
+          services: event.metadata?.services ?? [],
+          rating: event.metadata?.rating ?? 5.0,
+          bearing: event.metadata?.bearing,
+          speed: event.metadata?.speed,
+          lastUpdate: new Date(event.timestamp)
+        };
+
+        if (batchUpdates) {
+          pendingUpdatesRef.current.drivers.set(event.driverId, driverMarker);
+        } else {
+          setState(prev => ({
+            ...prev,
+            drivers: new Map([...prev.drivers, [event.driverId, driverMarker]]),
+            lastUpdate: new Date()
+          }));
+        }
       }
 
       // Update connection stats
@@ -182,7 +239,7 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
         if (existingDriver) {
           updatedDrivers.set(event.driverId, {
             ...existingDriver,
-            status: event.status as any,
+            status: event.status,
             lastUpdate: new Date(event.timestamp)
           });
         }
@@ -197,7 +254,7 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
 
     // Emergency alerts - immediate processing (bypass batching)
     socket.on('emergency:alert', (alert: EmergencyMarker) => {
-      console.log('🚨 Emergency Alert Received:', alert);
+      logger.error('Emergency Alert Received', { alert });
       
       setState(prev => ({
         ...prev,
@@ -263,13 +320,13 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
 
     // Geofence events
     socket.on('geofence:event', (event: GeofenceEvent) => {
-      console.log('📍 Geofence Event:', event);
+      logger.debug('Geofence Event', { event });
       // Could be handled by a separate geofence manager
     });
 
     // Connection events
     socket.on('connect', () => {
-      console.log('✅ WebSocket Map Connected');
+      logger.info('WebSocket Map Connected');
       setState(prev => ({
         ...prev,
         connected: true,
@@ -284,7 +341,7 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('❌ WebSocket Map Disconnected:', reason);
+      logger.warn('WebSocket Map Disconnected', { reason });
       setState(prev => ({
         ...prev,
         connected: false,
@@ -293,7 +350,7 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🚨 WebSocket Map Connection Error:', error);
+      logger.error('WebSocket Map Connection Error', { error: error.message });
       setState(prev => ({
         ...prev,
         connected: false,
@@ -430,9 +487,9 @@ export const useWebSocketMap = (config: WebSocketMapHookConfig = {}) => {
     try {
       const audio = new Audio('/sounds/emergency-alert.mp3');
       audio.volume = 0.7;
-      audio.play().catch(console.error);
+      audio.play().catch(error => logger.error('Failed to play emergency sound', { error }));
     } catch (error) {
-      console.warn('Emergency notification sound failed:', error);
+      logger.warn('Emergency notification sound failed', { error });
     }
   }, []);
 

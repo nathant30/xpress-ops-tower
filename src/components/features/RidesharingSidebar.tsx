@@ -19,7 +19,8 @@ import {
   ChevronDown,
   Activity,
   MapPin,
-  MoreHorizontal
+  MoreHorizontal,
+  Bell
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -134,7 +135,40 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
     }
   };
 
-  const moreMenuStructure = {};
+  const moreMenuStructure = {
+    Monitoring: {
+      id: 'monitoring',
+      icon: Activity,
+      description: 'System metrics & alerts',
+      badge: 'LIVE',
+      badgeColor: 'green',
+      tabs: ['Overview', 'Security', 'Emergency', 'Performance']
+    },
+    'Fraud Review': {
+      id: 'fraud-review',
+      icon: Shield,
+      description: 'Advanced fraud detection',
+      badge: 'NEW',
+      badgeColor: 'red',
+      tabs: ['Alerts', 'Analytics', 'Rules', 'Investigations']
+    },
+    'Fraud Config': {
+      id: 'fraud-config',
+      icon: Settings,
+      description: 'Detection thresholds & rules',
+      badge: '',
+      badgeColor: 'blue',
+      tabs: ['Thresholds', 'Rules', 'Settings', 'Testing']
+    },
+    'Fraud Alerts': {
+      id: 'fraud-notifications',
+      icon: Bell,
+      description: 'Notification channels',
+      badge: '',
+      badgeColor: 'green',
+      tabs: ['Channels', 'Rules', 'Templates', 'Logs']
+    }
+  };
 
   const mainNavigationItems: NavigationItem[] = Object.entries(mainMenuStructure).map(([section, config]) => ({
     id: config.id,

@@ -5,6 +5,7 @@ import { Pool, PoolClient, QueryResult } from 'pg';
 import { z } from 'zod';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
 import { sanitizeInput, validateCoordinates } from '@/lib/security/inputSanitizer';
+import { logger } from '@/lib/security/productionLogger';
 
 // Database configuration schema
 const DatabaseConfigSchema = z.object({
@@ -86,7 +87,7 @@ class DatabaseService {
       });
 
       this.pool.on('error', (err) => {
-        console.error('Database pool error:', err);
+        logger.error('Database pool error', err instanceof Error ? err.message : err);
         auditLogger.logEvent(
           AuditEventType.API_CALL,
           SecurityLevel.HIGH,
@@ -101,9 +102,9 @@ class DatabaseService {
       // Test connection
       await this.testConnection();
       
-      console.log('✅ Database connection pool initialized successfully');
+      logger.info('Database connection pool initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      logger.error('Failed to initialize database', error instanceof Error ? error.message : error);
       auditLogger.logEvent(
         AuditEventType.API_CALL,
         SecurityLevel.CRITICAL,
@@ -379,7 +380,7 @@ class DatabaseService {
     if (this.pool) {
       await this.pool.end();
       this.pool = null;
-      console.log('📦 Database connection pool closed');
+      logger.info('Database connection pool closed');
     }
   }
 }
@@ -398,7 +399,7 @@ process.on('SIGINT', async () => {
 
 // Auto-initialize if environment variables are present
 if (process.env.DATABASE_HOST || process.env.DATABASE_URL) {
-  database.initialize().catch(console.error);
+  database.initialize().catch(err => logger.error('Database auto-initialization failed', err instanceof Error ? err.message : err));
 }
 
 export default database;

@@ -6,6 +6,7 @@ import RidesharingSidebar from '@/components/features/RidesharingSidebar';
 import { RefreshCw, Menu, X, Loader2, User, Bell, ChevronDown, LogOut, Settings, UserCircle } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/security/productionLogger';
 
 interface HealthStatus {
   status: string;
@@ -98,7 +99,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         const healthData = await healthRes.json();
         setHealthStatus(healthData.data);
       } catch (error) {
-        console.error('Error fetching health status:', error);
+        logger.error('Error fetching health status', { component: 'AppLayout' });
       }
     };
 

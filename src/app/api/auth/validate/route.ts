@@ -9,6 +9,7 @@ import {
 import { authManager, getUserFromRequest } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface ValidateTokenResponse {
   user: {
@@ -133,7 +134,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
       { resource: 'auth', action: 'validate', ipAddress: clientIP }
     );
 
-    console.error('Token validation error:', error);
+    logger.error('Token validation error', { error });
     
     return createApiError(
       'Token validation failed',

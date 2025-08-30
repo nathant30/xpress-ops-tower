@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, RotateCw, ArrowUpDown, MessageCircle, UserX, AlertTriangle, TrendingUp, TrendingDown, Shield, Eye, Ban, Clock, DollarSign, Activity } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 const EnhancedPassengerTableWithFraud = () => {
   const router = useRouter();
@@ -42,7 +43,7 @@ const EnhancedPassengerTableWithFraud = () => {
         const parsedWidths = JSON.parse(savedWidths);
         setColumnWidths({ ...defaultColumnWidths, ...parsedWidths });
       } catch (error) {
-        console.warn('Failed to parse saved column widths:', error);
+        logger.warn('Failed to parse saved column widths', { component: 'EnhancedPassengerTableWithFraud' });
       }
     }
   }, []);

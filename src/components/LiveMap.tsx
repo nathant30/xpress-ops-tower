@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { MapPin, Navigation, Users, AlertTriangle } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface Driver {
   id: string;
@@ -14,6 +15,16 @@ interface Driver {
   primary_service: string;
   rating: number;
   last_updated: string;
+}
+
+interface DriverWithTrip extends Driver {
+  currentTrip: {
+    id: string;
+    pickup: { lat: number; lng: number };
+    dropoff: { lat: number; lng: number };
+    status: string;
+    estimatedArrival: string;
+  };
 }
 
 interface Alert {
@@ -51,6 +62,19 @@ interface DemandHeatPoint {
   requestCount: number;
 }
 
+interface HeatmapZone {
+  id: string;
+  name: string;
+  level: 'city' | 'district' | 'street';
+  coordinates: Array<{lat: number, lng: number}>;
+  supplyDemandRatio: number;
+  activeDrivers: number;
+  activeRequests: number;
+  averageETA: number;
+  surgeFactor: number;
+  color: 'green' | 'yellow' | 'red' | 'blue';
+}
+
 interface LiveMapProps {
   drivers?: Driver[];
   alerts?: Alert[];
@@ -68,6 +92,11 @@ interface LiveMapProps {
   className?: string;
   activeStatusFilter?: string | null;
   onStatusFilterChange?: (filter: string | null) => void;
+  // Zone system props
+  metroManilaZones?: HeatmapZone[];
+  selectedZone?: HeatmapZone | null;
+  onZoneSelect?: (zone: HeatmapZone | null) => void;
+  onZoneHover?: (zoneId: string | null) => void;
 }
 
 declare global {
@@ -77,7 +106,7 @@ declare global {
   }
 }
 
-export default function LiveMap({ 
+function LiveMap({ 
   drivers = [], 
   alerts = [], 
   bookings = [], 
@@ -88,7 +117,12 @@ export default function LiveMap({
   showTrips = true,
   className = '',
   activeStatusFilter = null,
-  onStatusFilterChange 
+  onStatusFilterChange,
+  // Zone system props
+  metroManilaZones = [],
+  selectedZone = null,
+  onZoneSelect,
+  onZoneHover
 }: LiveMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
@@ -100,6 +134,7 @@ export default function LiveMap({
   const tripMarkersRef = useRef<Map<string, { pickup: google.maps.Marker, dropoff: google.maps.Marker, route: google.maps.Polyline, progress: google.maps.Polyline }>>(new Map());
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   // Generate realistic fleet data for Metro Manila
   const generateFleetData = useCallback(() => {
@@ -239,38 +274,26 @@ export default function LiveMap({
   // Manila, Philippines coordinates as default center
   const defaultCenter = { lat: 14.5995, lng: 120.9842 };
 
-  // Load Google Maps script
+  // Load Google Maps script using the singleton loader
   useEffect(() => {
+    const loadMaps = async () => {
+      try {
+        const { loadGoogleMapsAPI } = await import('@/utils/googleMapsLoader');
+        await loadGoogleMapsAPI();
+        setIsLoaded(true);
+      } catch (error) {
+        logger.error('Failed to load Google Maps', undefined, { component: 'LiveMap', error: error.message });
+        // Fallback to mock interface
+        setIsLoaded(true);
+      }
+    };
+
     if (window.google?.maps) {
       setIsLoaded(true);
       return;
     }
 
-    // For demo purposes, show a mock map if no API key is provided
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey || apiKey === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
-      // Show fallback map interface
-      setTimeout(() => setIsLoaded(true), 1000);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,visualization,geometry,drawing`;
-    script.async = true;
-    script.onload = () => setIsLoaded(true);
-    script.onerror = () => {
-      console.error('Failed to load Google Maps script');
-      // Fallback to mock interface
-      setIsLoaded(true);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
-    };
+    loadMaps();
   }, []);
 
   // Initialize map
@@ -298,9 +321,9 @@ export default function LiveMap({
         fullscreenControl: true
       });
 
-      console.log('✅ Google Maps initialized successfully');
+      logger.info('Google Maps initialized successfully', undefined, { component: 'LiveMap' });
     } catch (error) {
-      console.error('❌ Failed to initialize Google Maps:', error);
+      logger.error('Failed to initialize Google Maps', { component: 'LiveMap' });
     }
   }, [isLoaded]);
 
@@ -539,7 +562,7 @@ export default function LiveMap({
 
         const infoWindow = new google.maps.InfoWindow();
 
-        polygon.addListener('click', (e: any) => {
+        polygon.addListener('click', (e: google.maps.MapMouseEvent) => {
           infoWindow.setContent(`
             <div style="padding: 8px;">
               <h4 style="margin: 0 0 4px 0; color: ${zone.color}; font-weight: bold;">${zone.name}</h4>
@@ -799,10 +822,10 @@ export default function LiveMap({
       }
     }, 100);
 
-    // Add trip info box similar to reference image
+    // Add trip info box similar to reference image - SECURE VERSION
     const tripInfoDiv = document.createElement('div');
-    tripInfoDiv.innerHTML = `
-      <div style="
+    const tripInfoContainer = document.createElement('div');
+    tripInfoContainer.style.cssText = `
         position: absolute;
         top: 20px;
         left: 20px;
@@ -845,6 +868,17 @@ export default function LiveMap({
       }
     }, 10000);
   }, []);
+
+  // Helper function to get service icon
+  const getServiceIcon = (serviceType: string) => {
+    switch(serviceType) {
+      case 'motorcycle': return '🏍️';
+      case 'car': return '🚗';
+      case 'suv': return '🚙';
+      case 'taxi': return '🚖';
+      default: return '🚗';
+    }
+  };
 
   // Clear all markers
   const clearMarkers = useCallback(() => {
@@ -994,8 +1028,8 @@ export default function LiveMap({
         setSelectedDriver(driver);
         
         // If driver is on trip, show trip details with zoom
-        if (driver.status === 'busy' && (driver as any).currentTrip) {
-          showDriverTripDetails(driver as any);
+        if (driver.status === 'busy' && (driver as DriverWithTrip).currentTrip) {
+          showDriverTripDetails(driver as DriverWithTrip);
         }
       });
 
@@ -1150,7 +1184,7 @@ export default function LiveMap({
 
       markersRef.current.set(`booking_pickup_${booking.id}`, pickupMarker);
       markersRef.current.set(`booking_dropoff_${booking.id}`, dropoffMarker);
-      markersRef.current.set(`booking_route_${booking.id}`, routePath as any);
+      markersRef.current.set(`booking_route_${booking.id}`, routePath);
     });
   }, [bookings, fleetData, showTrips]);
 
@@ -1189,201 +1223,527 @@ export default function LiveMap({
 
   if (showMockMap) {
     return (
-      <div className={`relative bg-gradient-to-br from-blue-100 to-green-100 ${className}`}>
-        {/* Mock Map Interface */}
-        <div className="absolute inset-0 bg-gray-200 bg-opacity-50">
-          <svg className="w-full h-full opacity-20">
+      <div className={`relative bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 overflow-hidden ${className}`}>
+        {/* Subtle Road Network Background */}
+        <div className="absolute inset-0">
+          <svg className="w-full h-full opacity-[0.03]" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#888" strokeWidth="1"/>
+              <pattern id="roadGrid" width="100" height="100" patternUnits="userSpaceOnUse">
+                <circle cx="50" cy="50" r="0.5" fill="#64748b" opacity="0.1" />
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
+            
+            {/* Major Roads - EDSA */}
+            <path d="M58 10 L62 90" stroke="#64748b" strokeWidth="0.3" opacity="0.15" strokeDasharray="2,3"/>
+            
+            {/* C5 */}
+            <path d="M75 15 L78 85" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            {/* Roxas Boulevard */}
+            <path d="M35 25 L38 75" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            {/* Commonwealth/Quezon Ave */}
+            <path d="M30 20 L85 25" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            {/* Shaw/Ortigas */}
+            <path d="M40 35 L80 38" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            {/* Ayala/Makati */}
+            <path d="M45 50 L75 52" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            {/* SLEX */}
+            <path d="M55 55 L50 85" stroke="#64748b" strokeWidth="0.2" opacity="0.1" strokeDasharray="1,2"/>
+            
+            <rect width="100%" height="100%" fill="url(#roadGrid)" />
           </svg>
         </div>
 
-        {/* Driver Markers */}
-        {drivers.map((driver, index) => (
-          <div
-            key={driver.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${20 + index * 25}%`,
-              top: `${30 + (index % 3) * 20}%`,
-            }}
-          >
-            <div className={`w-4 h-4 rounded-full border-2 border-white shadow-lg ${
-              driver.isAvailable ? 'bg-green-500' : 'bg-yellow-500'
-            }`}>
-            </div>
-            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs whitespace-nowrap">
-              {driver.first_name} {driver.last_name}
-            </div>
-          </div>
-        ))}
-
-        {/* Alert Markers */}
-        {alerts.map((alert, index) => (
-          <div
-            key={alert.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2"
-            style={{
-              right: `${20 + index * 15}%`,
-              bottom: `${30 + index * 15}%`,
-            }}
-          >
-            <div className="w-4 h-4 bg-red-500 transform rotate-45 border-2 border-white shadow-lg"></div>
-            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-red-50 px-2 py-1 rounded shadow text-xs whitespace-nowrap border border-red-200">
-              🚨 {alert.priority}
-            </div>
-          </div>
-        ))}
-
-        {/* Booking Routes */}
-        {bookings.map((booking, index) => (
-          <div key={booking.id}>
-            <div
-              className="absolute w-3 h-3 bg-blue-500 rounded-full transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: `${40 + index * 20}%`,
-                top: `${40}%`,
-              }}
-            ></div>
-            <div
-              className="absolute w-3 h-3 bg-purple-500 rounded-full transform -translate-x-1/2 -translate-y-1/2"
-              style={{
-                left: `${60 + index * 15}%`,
-                top: `${60}%`,
-              }}
-            ></div>
-            <svg className="absolute inset-0 pointer-events-none">
-              <line
-                x1={`${40 + index * 20}%`}
-                y1="40%"
-                x2={`${60 + index * 15}%`}
-                y2="60%"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                strokeDasharray="5,5"
-              />
-            </svg>
-          </div>
-        ))}
-
-        {/* Demo Notice */}
-        <div className="absolute bottom-4 left-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 shadow-lg">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-            <span className="text-sm font-medium text-yellow-800">Mock Map View</span>
-          </div>
-          <p className="text-xs text-yellow-700 mt-1">
-            Showing simulated data. Configure Google Maps API for live view.
-          </p>
+        {/* Subtle Geometric Patterns */}
+        <div className="absolute inset-0 opacity-[0.03]">
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 border border-blue-300 rounded-full"></div>
+          <div className="absolute top-3/4 right-1/4 w-24 h-24 border border-indigo-300 rounded-full"></div>
+          <div className="absolute bottom-1/4 left-1/3 w-16 h-16 border border-slate-300 rotate-45"></div>
         </div>
 
-        {/* Manila Label */}
-        <div className="absolute top-4 right-4 bg-white bg-opacity-90 px-3 py-2 rounded-lg shadow">
-          <div className="text-sm font-semibold">📍 Metro Manila, Philippines</div>
-          <div className="text-xs text-gray-600">Fleet Operations Coverage Area</div>
+        {/* Metro Manila Zone Overlay */}
+        {showZones && metroManilaZones && metroManilaZones.length > 0 && (
+          <div className="absolute inset-0">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <pattern id="zonePattern" patternUnits="userSpaceOnUse" width="4" height="4">
+                  <rect width="4" height="4" fill="transparent"/>
+                  <circle cx="2" cy="2" r="0.5" fill="currentColor" opacity="0.1"/>
+                </pattern>
+              </defs>
+              
+              {metroManilaZones.map((zone) => {
+                // Convert real coordinates to SVG coordinates (simplified positioning)
+                const zonePositions = {
+                  'north-metro': { path: 'M20,5 L35,5 L35,20 L20,20 Z' },
+                  'east-metro': { path: 'M35,20 L50,20 L50,35 L35,35 Z' },
+                  'central-business': { path: 'M50,35 L70,35 L70,50 L50,50 Z' },
+                  'manila-core': { path: 'M20,20 L50,20 L50,35 L20,35 Z' },
+                  'south-metro': { path: 'M20,50 L50,50 L50,70 L20,70 Z' },
+                  'west-metro': { path: 'M5,50 L20,50 L20,70 L5,70 Z' },
+                  'airport-zone': { path: 'M50,50 L70,50 L70,70 L50,70 Z' },
+                  'rizal-border': { path: 'M70,5 L85,5 L85,35 L70,35 Z' }
+                };
+                
+                const zonePath = zonePositions[zone.id as keyof typeof zonePositions];
+                if (!zonePath) return null;
+                
+                const zoneColor = zone.color === 'green' ? '#10b981' :
+                                zone.color === 'yellow' ? '#f59e0b' :
+                                zone.color === 'red' ? '#ef4444' : '#3b82f6';
+                
+                return (
+                  <g key={zone.id}>
+                    <path
+                      d={zonePath.path}
+                      fill={zoneColor}
+                      fillOpacity={selectedZone?.id === zone.id ? 0.4 : 0.2}
+                      stroke={zoneColor}
+                      strokeWidth="0.5"
+                      strokeOpacity={0.8}
+                      className="transition-all duration-300 cursor-pointer hover:fill-opacity-30"
+                      onMouseEnter={() => {
+                        setHoveredZone(zone.id);
+                        onZoneHover?.(zone.id);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredZone(null);
+                        onZoneHover?.(null);
+                      }}
+                      onClick={() => onZoneSelect?.(selectedZone?.id === zone.id ? null : zone)}
+                    />
+                    
+                    {/* Zone Label */}
+                    {(selectedZone?.id === zone.id || metroManilaZones.length <= 8) && (
+                      <text
+                        x={zonePath.path.includes('M20,5') ? 27.5 : 
+                           zonePath.path.includes('M35,20') ? 42.5 :
+                           zonePath.path.includes('M50,35') ? 60 :
+                           zonePath.path.includes('M20,20') ? 35 :
+                           zonePath.path.includes('M20,50') ? 35 :
+                           zonePath.path.includes('M5,50') ? 12.5 :
+                           zonePath.path.includes('M50,50') ? 60 : 77.5}
+                        y={zonePath.path.includes('M20,5') ? 14 :
+                           zonePath.path.includes('M35,20') ? 29 :
+                           zonePath.path.includes('M50,35') ? 44 :
+                           zonePath.path.includes('M20,20') ? 29 :
+                           zonePath.path.includes('M20,50') ? 62 :
+                           zonePath.path.includes('M5,50') ? 62 :
+                           zonePath.path.includes('M50,50') ? 62 : 22}
+                        textAnchor="middle"
+                        className="text-xs font-semibold pointer-events-none"
+                        fill={zone.color === 'yellow' ? '#92400e' : '#ffffff'}
+                        stroke={zone.color === 'yellow' ? 'none' : '#00000040'}
+                        strokeWidth="0.5"
+                      >
+                        {zone.name}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+            
+            {/* Zone Hover Tooltip */}
+            {hoveredZone && metroManilaZones.find(z => z.id === hoveredZone) && (
+              <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg pointer-events-none z-10">
+                {(() => {
+                  const hovered = metroManilaZones.find(z => z.id === hoveredZone);
+                  if (!hovered) return null;
+                  
+                  return (
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${
+                          hovered.color === 'green' ? 'bg-green-500' :
+                          hovered.color === 'yellow' ? 'bg-yellow-500' :
+                          hovered.color === 'red' ? 'bg-red-500' : 'bg-blue-500'
+                        }`}></div>
+                        <span className="font-semibold text-slate-900">{hovered.name}</span>
+                      </div>
+                      <div className="text-sm text-slate-600 space-y-1">
+                        <div>Supply/Demand: {Math.round(hovered.supplyDemandRatio * 100)}%</div>
+                        <div>Drivers: {hovered.activeDrivers} • Requests: {hovered.activeRequests}</div>
+                        <div>Avg ETA: {hovered.averageETA}min • Surge: {hovered.surgeFactor}x</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Realistic Driver Markers */}
+        {fleetData.drivers.slice(0, 35).map((driver, index) => {
+          // More realistic, road-based positioning following Manila's street grid
+          const roadPositions = [
+            // EDSA Corridor (Major North-South artery)
+            { left: '58%', top: '20%' }, { left: '59%', top: '35%' }, { left: '60%', top: '50%' }, { left: '61%', top: '65%' },
+            
+            // C5 Corridor (East side)
+            { left: '75%', top: '25%' }, { left: '76%', top: '40%' }, { left: '77%', top: '55%' },
+            
+            // Roxas Boulevard (West coast)
+            { left: '35%', top: '30%' }, { left: '36%', top: '45%' }, { left: '37%', top: '60%' },
+            
+            // BGC Area (clustered around business district)
+            { left: '74%', top: '48%' }, { left: '75%', top: '46%' }, { left: '76%', top: '50%' }, { left: '73%', top: '49%' },
+            
+            // Makati CBD (high density)
+            { left: '65%', top: '52%' }, { left: '67%', top: '54%' }, { left: '66%', top: '50%' }, { left: '64%', top: '53%' },
+            
+            // Ortigas (business district)
+            { left: '70%', top: '35%' }, { left: '72%', top: '33%' }, { left: '71%', top: '37%' },
+            
+            // QC Circle area
+            { left: '52%', top: '22%' }, { left: '54%', top: '20%' }, { left: '50%', top: '24%' },
+            
+            // Manila Bay area
+            { left: '42%', top: '40%' }, { left: '44%', top: '42%' }, { left: '40%', top: '38%' },
+            
+            // Airport area (NAIA)
+            { left: '48%', top: '70%' }, { left: '46%', top: '72%' }, { left: '50%', top: '68%' },
+            
+            // Scattered residential/suburban areas
+            { left: '28%', top: '55%' }, { left: '82%', top: '30%' }, { left: '45%', top: '78%' },
+            { left: '25%', top: '35%' }, { left: '85%', top: '60%' }, { left: '38%', top: '25%' }
+          ];
+          
+          const position = roadPositions[index] || {
+            // Fallback to more realistic grid-based positioning
+            left: `${30 + (index % 6) * 8 + Math.random() * 3}%`,
+            top: `${25 + Math.floor(index / 6) * 12 + Math.random() * 4}%`
+          };
+          
+          // Realistic movement simulation (vehicles move along road directions)
+          const time = Date.now() / 10000; // Slower movement
+          const isMoving = !driver.isAvailable; // Only moving vehicles drift
+          const movementOffset = isMoving ? {
+            // Simulate road-following movement patterns
+            x: Math.sin(time + index * 0.5) * 0.5 + Math.cos(time * 0.3 + index) * 0.2,
+            y: Math.cos(time * 0.7 + index * 0.3) * 0.3 + Math.sin(time + index * 0.8) * 0.1
+          } : {
+            // Stationary vehicles have minimal drift (parking/waiting)
+            x: Math.sin(time * 0.1 + index) * 0.1,
+            y: 0
+          };
+          
+          return (
+            <div
+              key={driver.id}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-transform duration-500"
+              style={{
+                left: `calc(${position.left} + ${movementOffset.x}px)`,
+                top: `calc(${position.top} + ${movementOffset.y}px)`,
+                transform: `translate(-50%, -50%) rotate(${Math.random() * 10 - 5}deg)`
+              }}
+            >
+              {/* Realistic Vehicle Marker */}
+              <div className="relative">
+                {/* Vehicle Body */}
+                <div className={`w-4 h-6 rounded-sm shadow-sm border transition-all duration-300 group-hover:scale-110 ${
+                  driver.isAvailable 
+                    ? 'bg-white border-emerald-500' 
+                    : driver.status === 'busy' 
+                    ? 'bg-yellow-100 border-amber-500'
+                    : 'bg-blue-100 border-blue-500'
+                }`}>
+                  {/* Vehicle Icon inside */}
+                  <div className="absolute inset-0 flex items-center justify-center text-[8px]">
+                    {driver.primary_service === 'motorcycle' ? '🏍' : 
+                     driver.primary_service === 'taxi' ? '🚖' :
+                     driver.primary_service === 'suv' ? '🚙' : '🚗'}
+                  </div>
+                </div>
+                
+                {/* Status indicator dot */}
+                <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white shadow-sm ${
+                  driver.isAvailable 
+                    ? 'bg-emerald-500' 
+                    : driver.status === 'busy' 
+                    ? 'bg-amber-500'
+                    : 'bg-blue-500'
+                }`}>
+                  {/* Subtle pulse for available drivers only */}
+                  {driver.isAvailable && (
+                    <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-40"></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Realistic Tooltip */}
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20">
+                <div className="bg-white px-2 py-1 rounded shadow-lg border text-xs min-w-max">
+                  <div className="font-medium text-gray-800">{driver.first_name} {driver.last_name}</div>
+                  <div className="text-xs text-gray-600 capitalize">
+                    {driver.primary_service} • {driver.isAvailable ? 'Available' : 
+                     driver.status === 'busy' ? 'On Trip' : 'Pickup'}
+                  </div>
+                </div>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                  <div className="w-2 h-2 bg-white rotate-45 border-b border-r border-gray-200"></div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Emergency Alert Markers */}
+        {[
+          { id: 'alert-1', priority: 'critical', left: '65%', top: '40%' },
+          { id: 'alert-2', priority: 'high', left: '30%', top: '60%' }
+        ].map((alert, index) => (
+          <div
+            key={alert.id}
+            className="absolute transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+            style={{ left: alert.left, top: alert.top }}
+          >
+            {/* Alert Marker with Animated Ring */}
+            <div className="relative">
+              <div className="w-4 h-4 bg-red-500 rounded-full shadow-lg shadow-red-500/40 group-hover:scale-110 transition-transform duration-300">
+                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-30"></div>
+                <div className="absolute inset-0.5 bg-white rounded-full flex items-center justify-center">
+                  <div className="text-[8px]">⚠️</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Alert Tooltip */}
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-10">
+              <div className="bg-red-50/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-xl border border-red-200/50 min-w-max">
+                <div className="text-xs font-semibold text-red-800 flex items-center">
+                  <span className="mr-1">🚨</span>
+                  Emergency Alert
+                </div>
+                <div className="text-[10px] text-red-600 capitalize">{alert.priority} Priority</div>
+              </div>
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
+                <div className="w-2 h-2 bg-red-50/95 rotate-45 border-b border-r border-red-200/50"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Realistic Trip Routes */}
+        {fleetData.bookings.slice(0, 6).map((booking, index) => {
+          // More realistic routes following actual Manila road patterns
+          const realRoutes = [
+            { 
+              pickup: { left: '65%', top: '52%' }, // Makati
+              dropoff: { left: '75%', top: '48%' }, // BGC
+              waypoints: [{ left: '70%', top: '50%' }] // Via EDSA
+            },
+            { 
+              pickup: { left: '52%', top: '22%' }, // QC Circle
+              dropoff: { left: '48%', top: '70%' }, // Airport
+              waypoints: [{ left: '58%', top: '45%' }, { left: '55%', top: '60%' }] // Via EDSA-MRT
+            },
+            { 
+              pickup: { left: '42%', top: '40%' }, // Manila Bay
+              dropoff: { left: '70%', top: '35%' }, // Ortigas
+              waypoints: [{ left: '55%', top: '38%' }] // Via Shaw Blvd
+            },
+            { 
+              pickup: { left: '76%', top: '50%' }, // BGC
+              dropoff: { left: '35%', top: '45%' }, // Roxas Blvd
+              waypoints: [{ left: '65%', top: '52%' }, { left: '50%', top: '48%' }] // Via Makati
+            },
+            { 
+              pickup: { left: '38%', top: '25%' }, // Manila North
+              dropoff: { left: '82%', top: '30%' }, // East Metro
+              waypoints: [{ left: '60%', top: '27%' }] // Via Commonwealth
+            },
+            { 
+              pickup: { left: '28%', top: '55%' }, // West suburbs
+              dropoff: { left: '74%', top: '48%' }, // BGC
+              waypoints: [{ left: '50%', top: '52%' }, { left: '65%', top: '50%' }] // Via city center
+            }
+          ];
+          
+          const route = realRoutes[index] || realRoutes[0];
+          
+          // Create curved path points
+          const createCurvedPath = (start, waypoints, end) => {
+            let pathPoints = [start];
+            if (waypoints) pathPoints.push(...waypoints);
+            pathPoints.push(end);
+            return pathPoints;
+          };
+          
+          const pathPoints = createCurvedPath(route.pickup, route.waypoints, route.dropoff);
+
+          return (
+            <div key={booking.id} className="absolute inset-0">
+              {/* Realistic Route Line */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id={`realisticGradient${index}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.8"/>
+                    <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.6"/>
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.4"/>
+                  </linearGradient>
+                </defs>
+                
+                {/* Main route path - curved to follow roads */}
+                <path
+                  d={`M ${parseFloat(route.pickup.left)} ${parseFloat(route.pickup.top)} ${
+                    route.waypoints?.map(wp => `L ${parseFloat(wp.left)} ${parseFloat(wp.top)}`).join(' ') || ''
+                  } L ${parseFloat(route.dropoff.left)} ${parseFloat(route.dropoff.top)}`}
+                  stroke={`url(#realisticGradient${index})`}
+                  strokeWidth="0.3"
+                  strokeDasharray="2,1"
+                  fill="none"
+                  opacity="0.7"
+                />
+                
+                {/* Direction indicators */}
+                {route.waypoints && route.waypoints.map((waypoint, wpIndex) => (
+                  <circle
+                    key={wpIndex}
+                    cx={parseFloat(waypoint.left)}
+                    cy={parseFloat(waypoint.top)}
+                    r="0.2"
+                    fill="#3b82f6"
+                    opacity="0.6"
+                  />
+                ))}
+              </svg>
+
+              {/* Realistic Pickup Point */}
+              <div
+                className="absolute w-2 h-2 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                style={{ left: route.pickup.left, top: route.pickup.top }}
+              >
+                <div className="w-2 h-2 bg-green-500 border border-white rounded-full shadow-sm">
+                  <div className="absolute inset-0 bg-green-500 rounded-full opacity-30 animate-ping"></div>
+                </div>
+                
+                {/* Pickup tooltip */}
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  <div className="bg-green-50 border border-green-200 px-2 py-1 rounded text-xs whitespace-nowrap shadow-sm">
+                    <div className="text-green-800 font-medium">📍 Pickup</div>
+                    <div className="text-green-600 text-xs">{booking.booking_reference}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Realistic Dropoff Point */}
+              <div
+                className="absolute w-2 h-2 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer"
+                style={{ left: route.dropoff.left, top: route.dropoff.top }}
+              >
+                <div className="w-2 h-2 bg-red-500 border border-white rounded-full shadow-sm"></div>
+                
+                {/* Dropoff tooltip */}
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  <div className="bg-red-50 border border-red-200 px-2 py-1 rounded text-xs whitespace-nowrap shadow-sm">
+                    <div className="text-red-800 font-medium">🎯 Dropoff</div>
+                    <div className="text-red-600 text-xs">{booking.booking_reference}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Modern Demo Notice */}
+        <div className="absolute bottom-6 left-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl">
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="relative">
+              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-emerald-400/40"></div>
+              <div className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-20"></div>
+            </div>
+            <span className="text-sm font-semibold text-slate-700">Live Simulation</span>
+          </div>
+          <p className="text-xs text-slate-600 mb-3 leading-relaxed">
+            Real-time fleet operations across Metro Manila
+          </p>
+          <div className="flex items-center space-x-4 text-xs">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+              <span className="text-slate-600">{fleetData.drivers.filter(d => d.isAvailable).length} Available</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+              <span className="text-slate-600">{fleetData.drivers.filter(d => d.status === 'busy').length} On Trip</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+              <span className="text-slate-600">2 Alerts</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Modern Location Label */}
+        <div className="absolute top-6 right-6 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl px-4 py-3 shadow-xl">
+          <div className="flex items-center space-x-2">
+            <div className="text-lg">📍</div>
+            <div>
+              <div className="text-sm font-bold text-slate-800">Metro Manila</div>
+              <div className="text-xs text-slate-600">Philippines Operations</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Action Elements */}
+        <div className="absolute top-6 left-6 space-y-3">
+          {/* Zoom Controls */}
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-2 shadow-xl">
+            <div className="flex flex-col space-y-2">
+              <button className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center text-slate-700 font-bold transition-all duration-200 hover:scale-105">
+                +
+              </button>
+              <button className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center text-slate-700 font-bold transition-all duration-200 hover:scale-105">
+                −
+              </button>
+            </div>
+          </div>
+
+          {/* Layer Toggle */}
+          <button className="w-8 h-8 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl flex items-center justify-center text-slate-700 shadow-xl hover:bg-white/20 transition-all duration-200 hover:scale-105">
+            <div className="text-xs">🗂️</div>
+          </button>
+        </div>
+
+        {/* Modern Status Indicators */}
+        <div className="absolute bottom-6 right-6 space-y-2">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl px-3 py-2 shadow-xl">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+              <span className="text-xs font-medium text-slate-700">Real-time Updates</span>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl px-3 py-2 shadow-xl">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span className="text-xs font-medium text-slate-700">AI Enhanced</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Subtle Animation Overlay */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`relative bg-white rounded-lg shadow-sm overflow-hidden flex flex-col ${className}`}>
-      {/* Map Header */}
-      <div className="bg-white border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-8">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Live Fleet Tracking</h3>
-              <p className="text-sm text-gray-600">Real-time driver locations and alerts</p>
-            </div>
-            <div className="flex items-center space-x-6 text-sm">
-              <button 
-                onClick={() => onStatusFilterChange?.(activeStatusFilter === 'available' ? null : 'available')}
-                className={`flex items-center space-x-2 px-2 py-1 rounded-md transition-colors ${
-                  activeStatusFilter === 'available' ? 'bg-green-100 text-green-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span>Available (89)</span>
-              </button>
-              <button 
-                onClick={() => onStatusFilterChange?.(activeStatusFilter === 'busy' ? null : 'busy')}
-                className={`flex items-center space-x-2 px-2 py-1 rounded-md transition-colors ${
-                  activeStatusFilter === 'busy' ? 'bg-yellow-100 text-yellow-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <span>On Trip (67)</span>
-              </button>
-              <button 
-                onClick={() => onStatusFilterChange?.(activeStatusFilter === 'pickup' ? null : 'pickup')}
-                className={`flex items-center space-x-2 px-2 py-1 rounded-md transition-colors ${
-                  activeStatusFilter === 'pickup' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span>Pickup (24)</span>
-              </button>
-              <button 
-                onClick={() => onStatusFilterChange?.(activeStatusFilter === 'dropoff' ? null : 'dropoff')}
-                className={`flex items-center space-x-2 px-2 py-1 rounded-md transition-colors ${
-                  activeStatusFilter === 'dropoff' ? 'bg-purple-100 text-purple-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                <span>Dropoff (18)</span>
-              </button>
-              <button 
-                onClick={() => onStatusFilterChange?.(activeStatusFilter === 'emergency' ? null : 'emergency')}
-                className={`flex items-center space-x-2 px-2 py-1 rounded-md transition-colors ${
-                  activeStatusFilter === 'emergency' ? 'bg-red-100 text-red-800' : 'hover:bg-gray-100'
-                }`}
-              >
-                <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-red-500"></div>
-                <span>Emergency Alert (2)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className={`relative ${className}`}>
       {/* Map Container */}
-      <div ref={mapRef} className="w-full h-full flex-1"></div>
-
-      {/* Map Legend */}
-      <div className="bg-gray-50 p-3 border-t">
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Available Driver</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span>Busy Driver</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Pickup</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Dropoff</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <AlertTriangle className="w-3 h-3 text-red-500" />
-              <span>Emergency Alert</span>
-            </div>
-          </div>
-          <div className="text-xs">
-            Click markers for details • Updates every 30s
-          </div>
-        </div>
-      </div>
+      <div ref={mapRef} className="w-full h-full"></div>
     </div>
   );
 }
+
+// Add displayName for debugging
+LiveMap.displayName = 'LiveMap';
+
+export default memo(LiveMap);

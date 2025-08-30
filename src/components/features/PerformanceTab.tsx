@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Target, XCircle, TrendingUp, Star, Car, DollarSign, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { Card, CardContent } from '@/components/ui/card';
+import { logger } from '@/lib/security/productionLogger';
 
 interface DriverRanking {
   rank: number;
@@ -214,7 +215,7 @@ const PerformanceTab: React.FC = () => {
   const handleDriverClick = (driver: DriverRanking, index: number) => {
     // Navigate to driver profile page
     const driverId = `DRV${1000 + index}`;
-    console.log(`Opening driver profile for ${driver.name} (${driverId})`);
+    logger.info('Opening driver profile', { driverId }, { component: 'PerformanceTab' });
     // In a real app, this would navigate to the driver profile page
     // router.push(`/drivers/${driverId}`);
     alert(`Opening profile for ${driver.name} (${driverId})\n\nRating: ${driver.rating}⭐\nCompletion Rate: ${driver.completionRate}%\nEarnings: ₱${driver.earnings.toLocaleString()}`);

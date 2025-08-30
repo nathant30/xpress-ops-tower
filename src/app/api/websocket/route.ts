@@ -3,6 +3,7 @@
 
 import { NextRequest } from 'next/server';
 import { getWebSocketManager } from '@/lib/websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 export async function GET(request: NextRequest) {
   // Check if this is a WebSocket upgrade request
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('WebSocket API route error:', error);
+    logger.error(`WebSocket API route error: ${error instanceof Error ? error.message : error}`);
     
     return new Response(
       JSON.stringify({
@@ -134,7 +135,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('WebSocket health check error:', error);
+    logger.error(`WebSocket health check error: ${error instanceof Error ? error.message : error}`);
     
     return new Response(
       JSON.stringify({

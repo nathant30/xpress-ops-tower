@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity,
@@ -31,6 +31,7 @@ import {
 import { XpressCard } from '@/components/xpress/card';
 import { XpressBadge } from '@/components/xpress/badge';
 import { XpressButton } from '@/components/xpress/button';
+import { logger } from '@/lib/security/productionLogger';
 
 interface ServiceHealth {
   id: string;
@@ -263,7 +264,7 @@ const ServiceHealthDashboard: React.FC = () => {
       setAlerts(mockAlerts);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Failed to fetch service health:', error);
+      logger.error('Failed to fetch service health', { component: 'ServiceHealthDashboard' });
     } finally {
       setIsLoading(false);
     }
@@ -710,4 +711,7 @@ const ServiceHealthDashboard: React.FC = () => {
   );
 };
 
-export default ServiceHealthDashboard;
+// Add displayName for debugging
+ServiceHealthDashboard.displayName = 'ServiceHealthDashboard';
+
+export default memo(ServiceHealthDashboard);

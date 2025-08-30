@@ -3,6 +3,7 @@
 
 import { redis } from './redis';
 import { getWebSocketManager } from './websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface TrafficData {
   routeId: string;
@@ -152,9 +153,9 @@ export class TrafficAndRoutingService {
       });
 
       this.directionsService = new google.maps.DirectionsService();
-      console.log('✅ Traffic service initialized');
+      logger.info('Traffic service initialized');
     } catch (error) {
-      console.error('❌ Failed to initialize traffic service:', error);
+      logger.error('Failed to initialize traffic service', error instanceof Error ? error.message : error);
     }
   }
 
@@ -196,7 +197,7 @@ export class TrafficAndRoutingService {
       return response;
 
     } catch (error) {
-      console.error('ETA calculation error:', error);
+      logger.error('ETA calculation error', error instanceof Error ? error.message : error);
       throw new Error(`Failed to calculate ETA: ${error}`);
     }
   }
@@ -464,7 +465,7 @@ export class TrafficAndRoutingService {
       
       return incidents;
     } catch (error) {
-      console.error('Error fetching traffic incidents:', error);
+      logger.error('Error fetching traffic incidents', error instanceof Error ? error.message : error);
       return [];
     }
   }
@@ -758,7 +759,7 @@ export class TrafficAndRoutingService {
 
   private startMetricsCollection(): void {
     setInterval(() => {
-      console.log('Traffic Service Metrics:', {
+      logger.debug('Traffic Service Metrics', {
         ...this.metrics,
         cacheSize: this.etaCache.size,
         batchQueueLength: this.etaBatchQueue.length,

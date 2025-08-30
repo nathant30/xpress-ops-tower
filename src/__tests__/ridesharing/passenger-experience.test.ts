@@ -5,6 +5,7 @@
 import { MockDataService } from '@/lib/mockData';
 import { redis } from '@/lib/redis';
 import { BookingStatus, ServiceType } from '@/types/fleet';
+import { GeoCoordinates } from '@/types/common';
 
 // Mock Redis for testing
 jest.mock('@/lib/redis');
@@ -89,10 +90,176 @@ interface WaitTimeOptimization {
   }>;
 }
 
+// Test data interfaces
+interface MockCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  preferredPayment: string;
+  loyaltyTier: string;
+  totalBookings: number;
+  avgRating: number;
+  joinDate: Date;
+}
+
+interface MockBooking {
+  id: string;
+  customerId: string;
+  serviceType: ServiceType;
+  status: BookingStatus;
+  requestedAt: Date;
+  assignedAt: Date;
+  driverArrivedAt: Date;
+  pickedUpAt: Date;
+  completedAt: Date | null;
+  pickupLocation: {
+    type: string;
+    coordinates: number[];
+  };
+  pickupAddress: string;
+  dropoffLocation: {
+    type: string;
+    coordinates: number[];
+  };
+  dropoffAddress: string;
+  estimatedFare: number;
+  actualFare: number;
+  surgeMultiplier: number;
+  customerRating: number;
+  driverRating: number;
+  feedback: string | null;
+  waitTimeEstimate: number;
+  actualWaitTime: number;
+  regionId: string;
+}
+
+interface MockDriver {
+  id: string;
+  driverCode: string;
+  status: string;
+  rating: number;
+  services: string[];
+  location: {
+    type: string;
+    coordinates: number[];
+  };
+  regionId: string;
+}
+
+interface WaitTimeAnalysisOptions {
+  serviceTypes: string[];
+  timeframe: string;
+  includeTargets: boolean;
+}
+
+interface OptimizationOptions {
+  targetReduction: number;
+  maxDrivers: number;
+  optimizationPeriod: string;
+}
+
+interface EstimationAnalysisOptions {
+  sampleSize: number;
+  timeframe: string;
+}
+
+interface PeakOptimizationOptions {
+  regionId: string;
+  peakPeriods: Array<{
+    start: string;
+    end: string;
+    expectedDemand: number;
+  }>;
+  currentDrivers: number;
+  maxAdditionalDrivers: number;
+}
+
+interface CustomerJourneyOptions {
+  includeRecentTrips: number;
+  analyzePatterns: boolean;
+}
+
+interface SatisfactionAnalysisOptions {
+  timeframe: string;
+  includeComparisons: boolean;
+}
+
+interface CustomerValueOptions {
+  includePredictions: boolean;
+  timeHorizon: number;
+}
+
+interface ExperienceOptimizationOptions {
+  learningPeriod: string;
+  optimizationGoals: string[];
+}
+
+interface CompletionAnalysisOptions {
+  serviceTypes: string[];
+  timeframe: string;
+  includeReasons: boolean;
+}
+
+interface DriverMatchingOptions {
+  regionId: string;
+  optimizationCriteria: string[];
+  learningPeriod: string;
+}
+
+interface QualityMonitoringOptions {
+  realTimeAlerts: boolean;
+  qualityThresholds: {
+    minimumRating: number;
+    maxWaitTime: number;
+    maxCancellationRate: number;
+  };
+}
+
+interface FeedbackAnalysisOptions {
+  timeframe: string;
+  includeTextAnalysis: boolean;
+  languages: string[];
+}
+
+interface FeedbackInsightsOptions {
+  timeframe: string;
+  includeActionPlan: boolean;
+  prioritizeIssues: boolean;
+}
+
+interface IssueTrackingOptions {
+  customerId: string;
+  includeHistory: boolean;
+  trackingPeriod: string;
+}
+
+interface PricingAnalysisOptions {
+  includeCompetitorData: boolean;
+  priceElasticity: boolean;
+  timeframe: string;
+}
+
+interface SurgeOptimizationOptions {
+  maxAcceptableSurge: number;
+  customerRetentionWeight: number;
+  revenueWeight: number;
+}
+
+interface BenchmarkingOptions {
+  includeIndustryComparison: boolean;
+  benchmarkMetrics: string[];
+}
+
+interface BatchAnalysisOptions {
+  metrics: string[];
+  period: string;
+}
+
 describe('Passenger Experience Optimization', () => {
-  let mockCustomer: any;
-  let mockBookings: any[];
-  let mockDrivers: any[];
+  let mockCustomer: MockCustomer;
+  let mockBookings: MockBooking[];
+  let mockDrivers: MockDriver[];
 
   beforeEach(() => {
     mockRedis.get.mockClear();
@@ -221,7 +388,11 @@ describe('Passenger Experience Optimization', () => {
       
       // Should provide actionable recommendations
       expect(optimization.recommendations.length).toBeGreaterThan(0);
-      optimization.recommendations.forEach((rec: any) => {
+      optimization.recommendations.forEach((rec: {
+        action: string;
+        impact: number;
+        cost: number;
+      }) => {
         expect(rec.action).toBeDefined();
         expect(rec.impact).toBeGreaterThan(0);
         expect(rec.cost).toBeGreaterThanOrEqual(0);
@@ -335,7 +506,11 @@ describe('Passenger Experience Optimization', () => {
       expect(experienceOptimization.optimizations).toBeDefined();
       
       // Should provide personalized recommendations
-      experienceOptimization.optimizations.forEach((opt: any) => {
+      experienceOptimization.optimizations.forEach((opt: {
+        area: string;
+        recommendation: string;
+        expectedImpact: number;
+      }) => {
         expect(opt.area).toBeDefined();
         expect(opt.recommendation).toBeDefined();
         expect(opt.expectedImpact).toBeGreaterThan(0);
@@ -433,7 +608,12 @@ describe('Passenger Experience Optimization', () => {
       expect(feedbackInsights.prioritizedIssues).toBeDefined();
       expect(feedbackInsights.actionPlan).toBeDefined();
       
-      feedbackInsights.prioritizedIssues.forEach((issue: any) => {
+      feedbackInsights.prioritizedIssues.forEach((issue: {
+        issue: string;
+        frequency: number;
+        impact: string;
+        suggestedAction: string;
+      }) => {
         expect(issue.issue).toBeDefined();
         expect(issue.frequency).toBeGreaterThan(0);
         expect(issue.impact).toMatch(/high|medium|low/);
@@ -506,7 +686,12 @@ describe('Passenger Experience Optimization', () => {
       expect(benchmarking.industryPosition).toMatch(/leading|above_average|average|below_average/);
       expect(benchmarking.benchmarks).toBeDefined();
       
-      benchmarking.benchmarks.forEach((benchmark: any) => {
+      benchmarking.benchmarks.forEach((benchmark: {
+        metric: string;
+        ourPerformance: number;
+        industryAverage: number;
+        percentileRank: number;
+      }) => {
         expect(benchmark.metric).toBeDefined();
         expect(benchmark.ourPerformance).toBeGreaterThanOrEqual(0);
         expect(benchmark.industryAverage).toBeGreaterThanOrEqual(0);
@@ -550,7 +735,24 @@ function generateMockCustomerFeedback(): string {
   return feedbacks[Math.floor(Math.random() * feedbacks.length)];
 }
 
-async function analyzeWaitTimes(regionId: string, options: any): Promise<any> {
+async function analyzeWaitTimes(regionId: string, options: WaitTimeAnalysisOptions): Promise<{
+  averageWaitTime: number;
+  medianWaitTime: number;
+  p95WaitTime: number;
+  p99WaitTime: number;
+  targets: {
+    averageWaitTime: number;
+    p95WaitTime: number;
+  };
+  performanceAgainstTargets: {
+    average: boolean;
+    p95: boolean;
+  };
+  peakPeriods: Array<{
+    timeRange: string;
+    averageWaitTime: number;
+  }>;
+}> {
   const waitTimes = mockBookings.map(booking => booking.actualWaitTime).filter(time => time > 0);
   
   const sortedTimes = waitTimes.sort((a, b) => a - b);
@@ -579,7 +781,29 @@ async function analyzeWaitTimes(regionId: string, options: any): Promise<any> {
   };
 }
 
-async function optimizeWaitTimes(regionId: string, options: any): Promise<any> {
+async function optimizeWaitTimes(regionId: string, options: OptimizationOptions): Promise<{
+  currentPerformance: {
+    averageWaitTime: number;
+    p95WaitTime: number;
+  };
+  optimizedScenario: {
+    averageWaitTime: number;
+    p95WaitTime: number;
+  };
+  driverPositioning: {
+    additionalDriversNeeded: number;
+    optimalPositions: Array<{
+      location: { lat: number; lng: number };
+      driversNeeded: number;
+    }>;
+  };
+  expectedImprovement: number;
+  recommendations: Array<{
+    action: string;
+    impact: number;
+    cost: number;
+  }>;
+}> {
   const currentAvgWait = 600; // 10 minutes
   const targetReduction = options.targetReduction || 120; // 2 minutes
   
@@ -615,7 +839,15 @@ async function optimizeWaitTimes(regionId: string, options: any): Promise<any> {
   };
 }
 
-async function analyzeWaitTimeAccuracy(regionId: string, options: any): Promise<any> {
+async function analyzeWaitTimeAccuracy(regionId: string, options: EstimationAnalysisOptions): Promise<{
+  overallAccuracy: number;
+  averageError: number;
+  errorDistribution: {
+    underestimated: number;
+    overestimated: number;
+  };
+  recommendedImprovements: string[];
+}> {
   const accuracyData = mockBookings.map(booking => {
     const estimated = booking.waitTimeEstimate * 60; // Convert to seconds
     const actual = booking.actualWaitTime * 60;
@@ -638,7 +870,26 @@ async function analyzeWaitTimeAccuracy(regionId: string, options: any): Promise<
   };
 }
 
-async function optimizePeakPeriodWaitTimes(options: any): Promise<any> {
+async function optimizePeakPeriodWaitTimes(options: PeakOptimizationOptions): Promise<{
+  preOptimization: {
+    averageWaitTime: number;
+    customerSatisfaction: number;
+  };
+  postOptimization: {
+    averageWaitTime: number;
+    customerSatisfaction: number;
+  };
+  driverAllocation: {
+    peakHourDrivers: number;
+    incentiveAmount: number;
+    positioningStrategy: string;
+  };
+  incentiveStrategy: {
+    earlyPositioning: number;
+    peakHourBonus: number;
+    demandZoneBonus: number;
+  };
+}> {
   const currentAvgWait = 720; // 12 minutes during peak
   const optimizedAvgWait = 480; // 8 minutes target
   
@@ -664,7 +915,35 @@ async function optimizePeakPeriodWaitTimes(options: any): Promise<any> {
   };
 }
 
-async function analyzeCustomerJourney(customerId: string, options: any): Promise<any> {
+async function analyzeCustomerJourney(customerId: string, options: CustomerJourneyOptions): Promise<{
+  customerId: string;
+  totalTrips: number;
+  completedTrips: number;
+  averageExperienceScore: number;
+  journeyStages: {
+    booking: {
+      averageTime: number;
+      successRate: number;
+      abandonmentRate: number;
+    };
+    waiting: {
+      averageTime: number;
+      satisfactionScore: number;
+    };
+    riding: {
+      averageRating: number;
+      safetyScore: number;
+    };
+    completion: {
+      completionRate: number;
+      paymentSuccessRate: number;
+    };
+  };
+  trendsAnalysis: {
+    experienceImprovement: number;
+    loyaltyTrend: string;
+  };
+}> {
   const recentBookings = mockBookings.slice(0, options.includeRecentTrips || 10);
   const completedTrips = recentBookings.filter(booking => booking.status === 'completed');
   
@@ -707,7 +986,7 @@ async function analyzeCustomerJourney(customerId: string, options: any): Promise
   };
 }
 
-async function analyzeSatisfactionFactors(customerId: string, options: any): Promise<CustomerSatisfactionAnalysis> {
+async function analyzeSatisfactionFactors(customerId: string, options: SatisfactionAnalysisOptions): Promise<CustomerSatisfactionAnalysis> {
   const customerBookings = mockBookings.filter(b => b.customerId === customerId && b.status === 'completed');
   const avgRating = customerBookings.reduce((sum, b) => sum + (b.customerRating || 0), 0) / customerBookings.length;
   
@@ -733,7 +1012,15 @@ async function analyzeSatisfactionFactors(customerId: string, options: any): Pro
   };
 }
 
-async function calculateCustomerValue(customerId: string, options: any): Promise<any> {
+async function calculateCustomerValue(customerId: string, options: CustomerValueOptions): Promise<{
+  currentLTV: number;
+  predictedLTV: number;
+  monthlyValue: number;
+  retentionProbability: number;
+  churnRisk: 'high' | 'medium' | 'low';
+  valueSegment: 'high_value' | 'medium_value' | 'low_value';
+  retentionStrategies: string[];
+}> {
   const monthlyTrips = mockBookings.length / 3; // Assume 3 months of data
   const avgFare = mockBookings.reduce((sum, b) => sum + b.actualFare, 0) / mockBookings.length;
   const monthlyValue = monthlyTrips * avgFare;
@@ -749,7 +1036,25 @@ async function calculateCustomerValue(customerId: string, options: any): Promise
   };
 }
 
-async function optimizeCustomerExperience(customerId: string, options: any): Promise<any> {
+async function optimizeCustomerExperience(customerId: string, options: ExperienceOptimizationOptions): Promise<{
+  customerProfile: {
+    usagePattern: string;
+    preferredTimes: string[];
+    preferredServiceType: string;
+    pricesensitivity: string;
+  };
+  preferences: {
+    fasterPickup: boolean;
+    premiumDrivers: boolean;
+    quietRides: boolean;
+    specificRoutes: string[];
+  };
+  optimizations: Array<{
+    area: string;
+    recommendation: string;
+    expectedImpact: number;
+  }>;
+}> {
   return {
     customerProfile: {
       usagePattern: 'regular_commuter',
@@ -778,7 +1083,18 @@ async function optimizeCustomerExperience(customerId: string, options: any): Pro
   };
 }
 
-async function analyzeCompletionRates(regionId: string, options: any): Promise<any> {
+async function analyzeCompletionRates(regionId: string, options: CompletionAnalysisOptions): Promise<{
+  overallCompletionRate: number;
+  byServiceType: Record<string, number>;
+  cancellationReasons: Record<string, number>;
+  cancellationTrends: {
+    peakHours: number;
+    normalHours: number;
+    trend: string;
+  };
+  targetCompletionRate: number;
+  improvementPlan: string[];
+}> {
   const totalBookings = mockBookings.length;
   const completedBookings = mockBookings.filter(b => b.status === 'completed').length;
   const overallCompletionRate = completedBookings / totalBookings;
@@ -810,7 +1126,20 @@ async function analyzeCompletionRates(regionId: string, options: any): Promise<a
   };
 }
 
-async function optimizeDriverCustomerMatching(options: any): Promise<any> {
+async function optimizeDriverCustomerMatching(options: DriverMatchingOptions): Promise<{
+  currentMatchingScore: number;
+  optimizedMatchingScore: number;
+  matchingRules: Array<{
+    rule: string;
+    weight: number;
+    description: string;
+  }>;
+  expectedOutcomes: {
+    satisfactionImprovement: number;
+    completionRateImprovement: number;
+    repeatBookingIncrease: number;
+  };
+}> {
   return {
     currentMatchingScore: 0.72,
     optimizedMatchingScore: 0.85,
@@ -839,7 +1168,22 @@ async function optimizeDriverCustomerMatching(options: any): Promise<any> {
   };
 }
 
-async function monitorServiceQuality(regionId: string, options: any): Promise<any> {
+async function monitorServiceQuality(regionId: string, options: QualityMonitoringOptions): Promise<{
+  currentQualityScore: number;
+  alerts: Array<{
+    type: string;
+    severity: string;
+    metric: string;
+    threshold: number;
+    currentValue: number;
+  }>;
+  trends: {
+    satisfaction: string;
+    waitTimes: string;
+    completionRate: string;
+  };
+  correctiveActions: string[];
+}> {
   const currentQualityScore = 78; // Out of 100
   
   return {
@@ -866,7 +1210,18 @@ async function monitorServiceQuality(regionId: string, options: any): Promise<an
   };
 }
 
-async function analyzeFeedbackSentiment(regionId: string, options: any): Promise<any> {
+async function analyzeFeedbackSentiment(regionId: string, options: FeedbackAnalysisOptions): Promise<{
+  overallSentiment: 'positive' | 'neutral' | 'negative';
+  sentimentScore: number;
+  feedbackVolume: number;
+  topics: Array<{
+    topic: string;
+    sentiment: number;
+    frequency: number;
+  }>;
+  commonIssues: string[];
+  positiveHighlights: string[];
+}> {
   return {
     overallSentiment: 'positive',
     sentimentScore: 0.15, // Slightly positive
@@ -882,7 +1237,20 @@ async function analyzeFeedbackSentiment(regionId: string, options: any): Promise
   };
 }
 
-async function generateFeedbackInsights(regionId: string, options: any): Promise<any> {
+async function generateFeedbackInsights(regionId: string, options: FeedbackInsightsOptions): Promise<{
+  keyInsights: string[];
+  prioritizedIssues: Array<{
+    issue: string;
+    frequency: number;
+    impact: 'high' | 'medium' | 'low';
+    suggestedAction: string;
+  }>;
+  actionPlan: {
+    immediate: string[];
+    shortTerm: string[];
+    longTerm: string[];
+  };
+}> {
   return {
     keyInsights: [
       'Wait time is the primary driver of customer dissatisfaction',
@@ -911,7 +1279,18 @@ async function generateFeedbackInsights(regionId: string, options: any): Promise
   };
 }
 
-async function trackIssueResolution(options: any): Promise<any> {
+async function trackIssueResolution(options: IssueTrackingOptions): Promise<{
+  totalIssues: number;
+  resolvedIssues: number;
+  pendingIssues: number;
+  averageResolutionTime: number;
+  resolutionRate: number;
+  customerSatisfactionWithResolution: number;
+  resolutionCategories: Record<string, {
+    total: number;
+    resolved: number;
+  }>;
+}> {
   return {
     totalIssues: 12,
     resolvedIssues: 10,
@@ -927,7 +1306,13 @@ async function trackIssueResolution(options: any): Promise<any> {
   };
 }
 
-async function analyzePricingPerception(regionId: string, options: any): Promise<any> {
+async function analyzePricingPerception(regionId: string, options: PricingAnalysisOptions): Promise<{
+  averageFarePerception: 'expensive' | 'fair' | 'cheap';
+  valueScore: number;
+  priceElasticity: number;
+  competitorComparison: Record<string, string>;
+  optimalPricingRecommendations: string[];
+}> {
   return {
     averageFarePerception: 'fair',
     valueScore: 3.8, // Out of 5
@@ -945,7 +1330,25 @@ async function analyzePricingPerception(regionId: string, options: any): Promise
   };
 }
 
-async function optimizeSurgePricingForExperience(regionId: string, options: any): Promise<any> {
+async function optimizeSurgePricingForExperience(regionId: string, options: SurgeOptimizationOptions): Promise<{
+  currentStrategy: {
+    maxSurgeMultiplier: number;
+    averageCustomerAcceptance: number;
+    averageSatisfactionDuringSurge: number;
+  };
+  optimizedStrategy: {
+    maxSurgeMultiplier: number;
+    gradualPriceIncrease: boolean;
+    transparentCommunication: boolean;
+    alternativeOptions: string[];
+  };
+  experienceImpact: {
+    expectedSatisfactionImprovement: number;
+    expectedAcceptanceIncrease: number;
+  };
+  expectedRevenue: number;
+  expectedSatisfaction: number;
+}> {
   return {
     currentStrategy: {
       maxSurgeMultiplier: 3.0,
@@ -967,7 +1370,17 @@ async function optimizeSurgePricingForExperience(regionId: string, options: any)
   };
 }
 
-async function benchmarkPassengerExperience(regionId: string, options: any): Promise<any> {
+async function benchmarkPassengerExperience(regionId: string, options: BenchmarkingOptions): Promise<{
+  industryPosition: 'leading' | 'above_average' | 'average' | 'below_average';
+  benchmarks: Array<{
+    metric: string;
+    ourPerformance: number;
+    industryAverage: number;
+    percentileRank: number;
+  }>;
+  competitiveAdvantages: string[];
+  improvementOpportunities: string[];
+}> {
   return {
     industryPosition: 'above_average',
     benchmarks: [
@@ -995,7 +1408,21 @@ async function benchmarkPassengerExperience(regionId: string, options: any): Pro
   };
 }
 
-async function analyzeBatchCustomerExperience(customerIds: string[], options: any): Promise<any> {
+async function analyzeBatchCustomerExperience(customerIds: string[], options: BatchAnalysisOptions): Promise<{
+  processedCustomers: number;
+  successRate: number;
+  failedProcessing: number;
+  aggregateMetrics: {
+    averageSatisfaction: number;
+    averageLoyaltyScore: number;
+    churnRiskDistribution: {
+      low: number;
+      medium: number;
+      high: number;
+    };
+  };
+  processingTime: number;
+}> {
   // Mock batch processing
   const processedCustomers = customerIds.length;
   const successRate = 0.98; // 98% success rate

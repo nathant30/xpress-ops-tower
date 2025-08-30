@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { logger } from '@/lib/security/productionLogger';
 
 // Error codes and categories
 export enum ErrorCode {
@@ -577,14 +578,13 @@ export function formatErrorResponse(error: Error | ApiError) {
   if (error instanceof ApiError) {
     // Log error for monitoring (only log high/critical severity errors)
     if (error.severity === ErrorSeverity.HIGH || error.severity === ErrorSeverity.CRITICAL) {
-      console.error('High severity error:', {
+      logger.error('High severity error', {
         requestId,
         code: error.code,
         message: error.message,
         userMessage: error.userMessage,
         severity: error.severity,
-        debugInfo: error.debugInfo,
-        stack: error.stack
+        debugInfo: error.debugInfo
       });
     }
 
@@ -619,10 +619,9 @@ export function formatErrorResponse(error: Error | ApiError) {
   }
 
   // Handle unexpected errors
-  console.error('Unexpected error:', {
+  logger.error('Unexpected error', {
     requestId,
-    message: error.message,
-    stack: error.stack
+    message: error.message
   });
 
   return NextResponse.json(

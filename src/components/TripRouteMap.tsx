@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Car, Navigation, Clock } from 'lucide-react';
 import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
+import { logger } from '@/lib/security/productionLogger';
 
 interface Location {
   lat: number;
@@ -207,7 +208,7 @@ export default function TripRouteMap({
           if (status === window.google.maps.DirectionsStatus.OK) {
             directionsRendererInstance.setDirections(result);
           } else {
-            console.warn('Directions request failed due to ' + status);
+            logger.warn('Directions request failed', { status }, { component: 'TripRouteMap' });
             // Draw a simple polyline if directions fail
             const routePath = new window.google.maps.Polyline({
               path: [pickupLocation, currentLocation, dropoffLocation],
@@ -239,7 +240,7 @@ export default function TripRouteMap({
         setIsLoaded(true);
         setError(null);
       } catch (err) {
-        console.error('Error initializing map:', err);
+        logger.error('Error initializing map', { component: 'TripRouteMap' });
         setError('Failed to initialize Google Maps');
       }
     };

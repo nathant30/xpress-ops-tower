@@ -5,6 +5,7 @@ import { redis } from './redis';
 import { getWebSocketManager } from './websocket';
 import { db } from './database';
 import { LocationUpdate } from './locationBatching';
+import { logger } from './security/productionLogger';
 
 export interface EmergencyAlert {
   id: string;
@@ -241,7 +242,7 @@ export class EmergencyAlertService {
     this.addToPropagationQueue(alert);
     
     // Log critical alert
-    console.log(`🚨 EMERGENCY ALERT TRIGGERED: ${alert.alertCode} - ${alert.title}`);
+    logger.info(`🚨 EMERGENCY ALERT TRIGGERED: ${alert.alertCode} - ${alert.title}`);
     
     return alert;
   }
@@ -287,7 +288,7 @@ export class EmergencyAlertService {
       timestamp: new Date().toISOString()
     });
 
-    console.log(`✅ Emergency alert ${alert.alertCode} acknowledged by ${acknowledgedBy} in ${responseTime}ms`);
+    logger.info(`✅ Emergency alert ${alert.alertCode} acknowledged by ${acknowledgedBy} in ${responseTime}ms`);
   }
 
   /**
@@ -323,7 +324,7 @@ export class EmergencyAlertService {
       estimatedArrival: response.estimatedArrival
     });
 
-    console.log(`🔄 Emergency alert ${alert.alertCode} response: ${response.responseType} by ${response.responderId}`);
+    logger.info(`🔄 Emergency alert ${alert.alertCode} response: ${response.responseType} by ${response.responderId}`);
   }
 
   /**
@@ -365,7 +366,7 @@ export class EmergencyAlertService {
       reason
     });
 
-    console.log(`⚠️ Emergency alert ${alert.alertCode} escalated to level ${alert.escalationLevel}`);
+    logger.info(`⚠️ Emergency alert ${alert.alertCode} escalated to level ${alert.escalationLevel}`);
   }
 
   /**
@@ -412,10 +413,10 @@ export class EmergencyAlertService {
         
         this.updateAveragePropagationTime(propagationTime);
         
-        console.log(`📡 Alert ${alert.alertCode} propagated in ${propagationTime}ms to ${alert.notifiedUsers.length} users`);
+        logger.info(`📡 Alert ${alert.alertCode} propagated in ${propagationTime}ms to ${alert.notifiedUsers.length} users`);
         
       } catch (error) {
-        console.error(`Error propagating alert ${alert.alertCode}:`, error);
+        logger.error(`Error propagating alert ${alert.alertCode}:`, error);
       }
     }
 
@@ -450,7 +451,7 @@ export class EmergencyAlertService {
         alert.notifiedUsers.push(...result.value.notifiedUsers);
       } else {
         failed++;
-        console.error('Notification batch failed:', result.reason);
+        logger.error('Notification batch failed:', result.reason);
       }
     });
 
@@ -557,7 +558,7 @@ export class EmergencyAlertService {
           results.notifiedUsers.push(target.userId);
           return true;
         } catch (error) {
-          console.error(`Failed to send ${method} notification to ${target.userId}:`, error);
+          logger.error(`Failed to send ${method} notification to ${target.userId}:`, error);
           results.failed++;
           return false;
         }
@@ -642,7 +643,7 @@ export class EmergencyAlertService {
    */
   private async sendSMSNotification(target: NotificationTarget, notification: any): Promise<void> {
     // This would integrate with SMS service (Twilio, AWS SNS, etc.)
-    console.log(`📱 SMS notification sent to ${target.userId}: ${notification.title}`);
+    logger.info(`📱 SMS notification sent to ${target.userId}: ${notification.title}`);
   }
 
   /**
@@ -650,7 +651,7 @@ export class EmergencyAlertService {
    */
   private async sendEmailNotification(target: NotificationTarget, notification: any): Promise<void> {
     // This would integrate with email service (SendGrid, AWS SES, etc.)
-    console.log(`📧 Email notification sent to ${target.userId}: ${notification.title}`);
+    logger.info(`📧 Email notification sent to ${target.userId}: ${notification.title}`);
   }
 
   /**
@@ -658,7 +659,7 @@ export class EmergencyAlertService {
    */
   private async sendPushNotification(target: NotificationTarget, notification: any): Promise<void> {
     // This would integrate with push service (FCM, APNS, etc.)
-    console.log(`🔔 Push notification sent to ${target.userId}: ${notification.title}`);
+    logger.info(`🔔 Push notification sent to ${target.userId}: ${notification.title}`);
   }
 
   /**
@@ -666,7 +667,7 @@ export class EmergencyAlertService {
    */
   private async sendPhoneNotification(target: NotificationTarget, notification: any): Promise<void> {
     // This would integrate with voice calling service
-    console.log(`📞 Phone call initiated to ${target.userId}: ${notification.title}`);
+    logger.info(`📞 Phone call initiated to ${target.userId}: ${notification.title}`);
   }
 
   /**
@@ -827,19 +828,19 @@ export class EmergencyAlertService {
 
   private async notifyHighPriorityOperators(alert: EmergencyAlert): Promise<void> {
     // Implementation for higher priority operator notifications
-    console.log(`🔼 Escalating ${alert.alertCode} to high priority operators`);
+    logger.info(`🔼 Escalating ${alert.alertCode} to high priority operators`);
   }
 
   private async notifyManagement(alert: EmergencyAlert): Promise<void> {
     // Implementation for management notifications
-    console.log(`🔼 Escalating ${alert.alertCode} to management`);
+    logger.info(`🔼 Escalating ${alert.alertCode} to management`);
   }
 
   private async notifyExternalServices(alert: EmergencyAlert): Promise<void> {
     if (!this.config.enableExternalServices) return;
     
     // Implementation for external service notifications (police, medical, etc.)
-    console.log(`🔼 Escalating ${alert.alertCode} to external services`);
+    logger.info(`🔼 Escalating ${alert.alertCode} to external services`);
   }
 
   private setupEmergencyChannels(): void {
@@ -867,7 +868,7 @@ export class EmergencyAlertService {
           try {
             await this.escalateAlert(alertId, 'system', 'Auto-escalation due to timeout');
           } catch (error) {
-            console.error(`Failed to auto-escalate alert ${alertId}:`, error);
+            logger.error(`Failed to auto-escalate alert ${alertId}:`, error);
           }
         }
       }
@@ -896,7 +897,7 @@ export class EmergencyAlertService {
 
   private startMetricsCollection(): void {
     setInterval(() => {
-      console.log('Emergency Alert Service Metrics:', {
+      logger.info('Emergency Alert Service Metrics:', {
         ...this.metrics,
         activeAlerts: this.activeAlerts.size,
         propagationQueueLength: this.propagationQueue.length,

@@ -2,6 +2,7 @@
 // Allows operators to manually assign drivers to ride requests
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError, 
@@ -303,7 +304,7 @@ export const PATCH = asyncHandler(async (request: NextRequest, { params }: { par
     }, 'Driver assigned successfully');
 
   } catch (error) {
-    console.error('Error assigning driver to ride:', error);
+    logger.error('Error assigning driver to ride', { rideId, driverId: body.driverId, operatorId: body.operatorId, error: error instanceof Error ? error.message : String(error) });
     
     const errorMessage = (error as Error).message;
     
@@ -443,7 +444,7 @@ export const GET = asyncHandler(async (request: NextRequest, { params }: { param
     }, 'Available drivers retrieved successfully');
 
   } catch (error) {
-    console.error('Error getting available drivers:', error);
+    logger.error('Error getting available drivers for assignment', { rideId, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve available drivers',
       'DRIVERS_FETCH_ERROR',

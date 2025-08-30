@@ -13,6 +13,104 @@ import {
   IncidentStatus
 } from '@/types';
 
+// Filter interfaces
+interface DriverFilters {
+  status?: DriverStatus;
+  region?: string;
+  serviceType?: ServiceType;
+  vehicleType?: string;
+  limit?: number;
+  offset?: number;
+}
+
+interface BookingFilters {
+  status?: BookingStatus;
+  driverId?: string;
+  passengerId?: string;
+  region?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+interface LocationFilters {
+  region?: string;
+  status?: DriverStatus;
+  limit?: number;
+  lastUpdate?: Date;
+}
+
+interface IncidentFilters {
+  priority?: IncidentPriority;
+  status?: IncidentStatus;
+  region?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+// Creation/update data types
+interface CreateDriverData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  licenseNumber: string;
+  vehicleInfo?: Partial<Driver['vehicleInfo']>;
+  regionId: string;
+}
+
+interface UpdateDriverData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  status?: DriverStatus;
+  vehicleInfo?: Partial<Driver['vehicleInfo']>;
+  regionId?: string;
+  performanceMetrics?: Partial<PerformanceMetrics>;
+}
+
+interface CreateBookingData {
+  passengerId: string;
+  pickupLocation: { latitude: number; longitude: number; address: string };
+  dropoffLocation: { latitude: number; longitude: number; address: string };
+  serviceType: ServiceType;
+  scheduledAt?: Date;
+  notes?: string;
+}
+
+interface UpdateBookingData {
+  status?: BookingStatus;
+  driverId?: string;
+  actualPickupTime?: Date;
+  actualDropoffTime?: Date;
+  actualFare?: number;
+  rating?: number;
+  notes?: string;
+}
+
+interface UpdateLocationData {
+  latitude: number;
+  longitude: number;
+  heading?: number;
+  speed?: number;
+  accuracy?: number;
+  status?: DriverStatus;
+}
+
+interface CreateIncidentData {
+  type: string;
+  description: string;
+  driverId?: string;
+  bookingId?: string;
+  location: { latitude: number; longitude: number; address?: string };
+  priority: IncidentPriority;
+  reportedBy: string;
+}
+
 // Mock regions data (Philippines focus)
 export const mockRegions: Region[] = [
   {
@@ -476,7 +574,7 @@ export const mockPerformanceMetrics: PerformanceMetrics = {
 // Helper functions for mock data operations
 export class MockDataService {
   // Driver operations
-  static getDrivers(filters?: any) {
+  static getDrivers(filters?: DriverFilters) {
     let drivers = [...mockDrivers];
     
     if (filters?.status) {
@@ -503,7 +601,7 @@ export class MockDataService {
     return mockDrivers.find(d => d.id === id);
   }
   
-  static createDriver(driverData: any): Driver {
+  static createDriver(driverData: CreateDriverData): Driver {
     const newDriver: Driver = {
       id: `drv-${Date.now()}`,
       ...driverData,
@@ -514,7 +612,7 @@ export class MockDataService {
     return newDriver;
   }
   
-  static updateDriver(id: string, updates: any): Driver | null {
+  static updateDriver(id: string, updates: UpdateDriverData): Driver | null {
     const index = mockDrivers.findIndex(d => d.id === id);
     if (index === -1) return null;
     
@@ -535,7 +633,7 @@ export class MockDataService {
   }
   
   // Booking operations
-  static getBookings(filters?: any) {
+  static getBookings(filters?: BookingFilters) {
     let bookings = [...mockBookings];
     
     if (filters?.status) {
@@ -557,7 +655,7 @@ export class MockDataService {
     return mockBookings.find(b => b.id === id);
   }
   
-  static createBooking(bookingData: any): Booking {
+  static createBooking(bookingData: CreateBookingData): Booking {
     const newBooking: Booking = {
       id: `bkg-${Date.now()}`,
       bookingReference: `XPR-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-3)}`,
@@ -569,7 +667,7 @@ export class MockDataService {
     return newBooking;
   }
   
-  static updateBooking(id: string, updates: any): Booking | null {
+  static updateBooking(id: string, updates: UpdateBookingData): Booking | null {
     const index = mockBookings.findIndex(b => b.id === id);
     if (index === -1) return null;
     
@@ -582,7 +680,7 @@ export class MockDataService {
   }
   
   // Location operations
-  static getDriverLocations(filters?: any) {
+  static getDriverLocations(filters?: LocationFilters) {
     let locations = [...mockDriverLocations];
     
     if (filters?.regionId) {
@@ -600,7 +698,7 @@ export class MockDataService {
     return locations;
   }
   
-  static updateDriverLocation(driverId: string, locationData: any): DriverLocation {
+  static updateDriverLocation(driverId: string, locationData: UpdateLocationData): DriverLocation {
     const index = mockDriverLocations.findIndex(l => l.driverId === driverId);
     
     const updatedLocation: DriverLocation = {
@@ -623,7 +721,7 @@ export class MockDataService {
   }
   
   // Incident/Alert operations
-  static getIncidents(filters?: any) {
+  static getIncidents(filters?: IncidentFilters) {
     let incidents = [...mockIncidents];
     
     if (filters?.priority) {
@@ -645,7 +743,7 @@ export class MockDataService {
     return mockIncidents.find(i => i.id === id);
   }
   
-  static createIncident(incidentData: any): Incident {
+  static createIncident(incidentData: CreateIncidentData): Incident {
     const newIncident: Incident = {
       id: `inc-${Date.now()}`,
       incidentCode: `${incidentData.priority?.toUpperCase() === 'CRITICAL' ? 'SOS' : 'REP'}-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-3)}`,

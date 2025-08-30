@@ -1,6 +1,7 @@
 // API Utilities for Xpress Ops Tower
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse, ApiError } from '@/types';
+import { logger } from '@/lib/security/productionLogger';
 
 // Standard API response wrapper
 export function createApiResponse<T>(
@@ -285,7 +286,7 @@ export function asyncHandler(
       const response = await handler(request, params);
       return setCorsHeaders(response);
     } catch (error: unknown) {
-      console.error('API Error:', error);
+      logger.error('API Error', error instanceof Error ? error.message : error);
       
       if (error instanceof Error) {
         return createApiError(
@@ -330,6 +331,6 @@ export function logApiRequest(request: NextRequest, responseStatus: number, resp
   
   // In production, this would go to a proper logging service
   if (process.env.NODE_ENV === 'development') {
-    console.log('API Request:', logData);
+    logger.debug('API Request', logData);
   }
 }

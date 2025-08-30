@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, memo } from 'react'
 import { useServiceType } from '@/contexts/ServiceTypeContext'
 import DriverAdminPortal from './DriverAdminPortalFixed'
 
@@ -1080,7 +1080,7 @@ interface DriverTableDemoProps {
   description?: string
 }
 
-export default function DriverTableDemo({ 
+function DriverTableDemo({ 
   category: initialCategory = 'ACTIVE',
   title,
   description
@@ -1730,3 +1730,8 @@ export default function DriverTableDemo({
     </div>
   )
 }
+
+// Add displayName for debugging
+DriverTableDemo.displayName = 'DriverTableDemo';
+
+export default memo(DriverTableDemo);

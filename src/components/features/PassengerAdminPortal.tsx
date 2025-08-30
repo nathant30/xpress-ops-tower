@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { 
   TrendingUp, Users, CheckCircle, XCircle, AlertCircle, Eye, Download,
   Smartphone, Shield, MessageCircle, History, DollarSign, Send, Search, 
@@ -757,4 +757,7 @@ const PassengerAdminPortal: React.FC<PassengerAdminPortalProps> = ({
   );
 };
 
-export default PassengerAdminPortal;
+// Add displayName for debugging
+PassengerAdminPortal.displayName = 'PassengerAdminPortal';
+
+export default memo(PassengerAdminPortal);

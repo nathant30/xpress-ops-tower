@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-utils';
 import { getDatabase } from '@/lib/database';
 import { redis } from '@/lib/redis';
+import { logger } from '@/lib/security/productionLogger';
 
 const db = getDatabase();
 
@@ -274,7 +275,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     return createApiResponse(responseData, 'Demand hotspots retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving demand hotspots:', error);
+    logger.error(`Error retrieving demand hotspots: ${error instanceof Error ? error.message : error}`);
     return createApiError(
       'Failed to retrieve demand hotspots',
       'HOTSPOTS_ERROR',

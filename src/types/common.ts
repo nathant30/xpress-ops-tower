@@ -242,3 +242,397 @@ export interface RateLimit {
   reset: Date;
   window: number;
 }
+
+// =============================================================================
+// ENHANCED TYPES FOR FEATURE ENGINEERING AND FRAUD DETECTION
+// =============================================================================
+
+// Device and Network Types
+export interface DeviceInfo {
+  id?: string;
+  fingerprint: string;
+  type: 'mobile' | 'tablet' | 'web' | 'emulator' | 'rooted' | 'unknown';
+  platform: 'ios' | 'android' | 'web' | 'unknown';
+  model?: string;
+  osVersion?: string;
+  appVersion?: string;
+  userAgent?: string;
+  screenResolution?: string;
+  timezone?: string;
+}
+
+export interface NetworkInfo {
+  ipAddress: string;
+  carrier?: string;
+  connectionType?: 'wifi' | 'cellular' | '3g' | '4g' | '5g' | 'unknown';
+  wifiNetworks?: string[];
+  networkLocation?: GeoCoordinates;
+}
+
+export interface GeoCoordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  speed?: number;
+  bearing?: number;
+}
+
+// User Profile and Behavior Types
+export interface UserProfile {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: Address;
+  homeLocation?: GeoCoordinates;
+  frequentLocations?: LocationHistory[];
+  createdAt: Date;
+  updatedAt: Date;
+  lastActivity?: Date;
+  accountType: 'rider' | 'driver' | 'admin';
+  verificationStatus: 'pending' | 'verified' | 'rejected';
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+}
+
+export interface Address {
+  street?: string;
+  barangay?: string;
+  city?: string;
+  province?: string;
+  zipCode?: string;
+  country?: string;
+  coordinates?: GeoCoordinates;
+}
+
+export interface LocationHistory {
+  location: GeoCoordinates;
+  timestamp: Date;
+  duration?: number; // minutes spent at location
+  category?: 'home' | 'work' | 'frequent' | 'transit' | 'other';
+}
+
+export interface UserBehavior {
+  ridePatterns?: RidePattern[];
+  usageTimes?: UsageTime[];
+  appUsage?: AppUsageStats;
+  transactionHistory?: TransactionSummary[];
+  locationHistory?: LocationHistory[];
+  deviceHistory?: string[];
+  preferences?: UserPreferencesExtended;
+}
+
+export interface UserPreferencesExtended extends UserPreferences {
+  paymentMethods?: PaymentMethod[];
+  language?: string;
+  privacySettings?: PrivacySettings;
+}
+
+export interface PrivacySettings {
+  dataSharing: boolean;
+  analytics: boolean;
+  locationTracking: boolean;
+  targetedAds: boolean;
+  thirdPartyIntegrations: boolean;
+}
+
+// Transaction and Payment Types
+export interface Transaction {
+  id: string;
+  amount: number;
+  currency: string;
+  type: 'ride' | 'tip' | 'refund' | 'fee' | 'bonus';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  paymentMethod: PaymentMethod;
+  timestamp: Date;
+  merchantId?: string;
+  merchantCategory?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PaymentMethod {
+  type: 'cash' | 'card' | 'gcash' | 'paymaya' | 'grabpay' | 'bank_transfer' | 'other';
+  provider?: string;
+  lastFourDigits?: string;
+  expiryDate?: string;
+  isDefault: boolean;
+  isVerified: boolean;
+}
+
+export interface TransactionSummary {
+  totalAmount: number;
+  transactionCount: number;
+  avgAmount: number;
+  timeRange: TimeRange;
+  categories: Record<string, number>;
+}
+
+// Ride and Transportation Types
+export interface RidePattern {
+  fromLocation: GeoCoordinates;
+  toLocation: GeoCoordinates;
+  timeOfDay: number; // 0-23 hours
+  dayOfWeek: number; // 0-6, Sunday=0
+  frequency: number;
+  avgDuration: number; // minutes
+  avgDistance: number; // meters
+  preferredVehicleType?: string;
+}
+
+export interface UsageTime {
+  hour: number; // 0-23
+  dayOfWeek: number; // 0-6
+  activityType: 'booking' | 'ride' | 'payment' | 'app_open';
+  frequency: number;
+}
+
+export interface AppUsageStats {
+  sessionCount: number;
+  totalTimeSpent: number; // minutes
+  avgSessionDuration: number; // minutes
+  screensVisited: Record<string, number>;
+  featuresUsed: Record<string, number>;
+  crashCount: number;
+  lastAppVersion: string;
+  installationDate: Date;
+}
+
+// Feature Engineering Types
+export interface FeatureVector {
+  [key: string]: number | boolean | string;
+}
+
+export interface ProcessingMetrics {
+  processingTime: number;
+  featureCount: number;
+  qualityScore: number;
+  missingFeatures: number;
+  timestamp: Date;
+}
+
+export interface StatisticalFeatures {
+  mean: number;
+  std: number;
+  min: number;
+  max: number;
+  percentiles: Record<string, number>;
+}
+
+export interface TimeSeriesFeatures {
+  trend: number;
+  seasonality: number;
+  volatility: number;
+  momentum: number;
+  cyclical_pattern: number;
+}
+
+// Fraud Detection Types
+export interface RiskIndicators {
+  [key: string]: number | boolean;
+}
+
+export interface SimilarityScores {
+  overall: number;
+  device: number;
+  behavioral: number;
+  geographic: number;
+  network: number;
+  personal: number;
+}
+
+export interface AccountComparison {
+  account1Id: string;
+  account2Id: string;
+  similarityScore: number;
+  sharedAttributes: string[];
+  riskFactors: string[];
+  confidence: number;
+}
+
+// Machine Learning Types
+export interface ModelPrediction {
+  prediction: number | string | boolean;
+  confidence: number;
+  probabilities?: Record<string, number>;
+  features?: FeatureVector;
+  modelVersion?: string;
+  timestamp: Date;
+}
+
+export interface ModelTrainingData {
+  features: FeatureVector;
+  label: number | string | boolean;
+  weight?: number;
+  groupId?: string;
+  timestamp: Date;
+}
+
+export interface ModelPerformanceMetrics {
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  auc?: number;
+  confusionMatrix?: number[][];
+  featureImportance?: Record<string, number>;
+}
+
+// Philippines-Specific Types
+export interface PhilippinesContext {
+  region: string;
+  province: string;
+  municipality?: string;
+  barangay?: string;
+  isMetroManila: boolean;
+  trafficCondition?: 'light' | 'moderate' | 'heavy' | 'severe';
+  weatherCondition?: 'clear' | 'cloudy' | 'rainy' | 'stormy' | 'typhoon';
+  isHoliday?: boolean;
+  isPaydayPeriod?: boolean;
+  ltfrbComplianceZone?: boolean;
+  popularPaymentMethods: PaymentMethod[];
+}
+
+export interface GeofenceZone {
+  id: string;
+  name: string;
+  type: 'restricted' | 'allowed' | 'monitored' | 'priority';
+  coordinates: GeoCoordinates[];
+  radius?: number;
+  active: boolean;
+  restrictions?: string[];
+}
+
+// API Response Types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: ApiError;
+  metadata?: {
+    timestamp: Date;
+    requestId: string;
+    pagination?: PaginatedResponse<unknown>['pagination'];
+  };
+}
+
+// Database and Cache Types
+export interface DatabaseRecord extends BaseEntity {
+  version: number;
+}
+
+export interface CacheEntry<T = unknown> {
+  key: string;
+  value: T;
+  expiresAt: Date;
+  hitCount: number;
+  createdAt: Date;
+  lastAccessed: Date;
+}
+
+// Testing and Mock Types
+export interface MockData {
+  users: UserProfile[];
+  transactions: Transaction[];
+  rides: RidePattern[];
+  events: RealTimeEvent[];
+}
+
+export interface TestScenario {
+  name: string;
+  description: string;
+  input: unknown;
+  expectedOutput: unknown;
+  mockData?: MockData;
+  assertions: string[];
+}
+
+// =============================================================================
+// UTILITY TYPES AND TYPE GUARDS
+// =============================================================================
+
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type RequireFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
+export type StringKeys<T> = Extract<keyof T, string>;
+export type NumberKeys<T> = {
+  [K in keyof T]: T[K] extends number ? K : never;
+}[keyof T];
+
+// Type Guards
+export function isUserProfile(obj: unknown): obj is UserProfile {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'name' in obj &&
+    'accountType' in obj
+  );
+}
+
+export function isTransaction(obj: unknown): obj is Transaction {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'id' in obj &&
+    'amount' in obj &&
+    'currency' in obj &&
+    'type' in obj
+  );
+}
+
+export function isGeoCoordinates(obj: unknown): obj is GeoCoordinates {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'latitude' in obj &&
+    'longitude' in obj &&
+    typeof (obj as GeoCoordinates).latitude === 'number' &&
+    typeof (obj as GeoCoordinates).longitude === 'number'
+  );
+}
+
+export function isApiResponse<T>(obj: unknown): obj is ApiResponse<T> {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'success' in obj &&
+    typeof (obj as ApiResponse).success === 'boolean'
+  );
+}
+
+export function isDeviceInfo(obj: unknown): obj is DeviceInfo {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    'fingerprint' in obj &&
+    'type' in obj &&
+    typeof (obj as DeviceInfo).fingerprint === 'string'
+  );
+}
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+export const PHILIPPINES_REGIONS = [
+  'Metro Manila',
+  'Cebu',
+  'Davao',
+  'Baguio',
+  'Iloilo',
+  'Bacolod',
+  'Cagayan de Oro',
+  'Zamboanga'
+] as const;
+
+export const PAYMENT_PROVIDERS = [
+  'gcash',
+  'paymaya',
+  'grabpay',
+  'visa',
+  'mastercard',
+  'unionbank',
+  'bdo',
+  'bpi'
+] as const;
+
+export const RISK_LEVELS = ['low', 'medium', 'high', 'critical'] as const;
+export const ACCOUNT_TYPES = ['rider', 'driver', 'admin'] as const;

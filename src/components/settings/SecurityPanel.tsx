@@ -1,0 +1,327 @@
+'use client';
+
+import React, { memo, useState } from 'react';
+import { 
+  Shield, 
+  Key, 
+  Lock, 
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertTriangle,
+  Settings,
+  Users,
+  Activity
+} from 'lucide-react';
+
+interface SecurityConfig {
+  twoFactorEnabled: boolean;
+  sessionTimeout: number;
+  passwordMinLength: number;
+  passwordRequireSpecialChars: boolean;
+  loginAttemptLimit: number;
+  ipWhitelistEnabled: boolean;
+  auditLoggingEnabled: boolean;
+}
+
+interface SecurityEvent {
+  id: string;
+  type: 'login_failure' | 'password_change' | 'permission_change' | 'suspicious_activity';
+  description: string;
+  timestamp: Date;
+  severity: 'low' | 'medium' | 'high';
+  user: string;
+  ipAddress: string;
+}
+
+interface SecurityPanelProps {
+  securityConfig: SecurityConfig;
+  securityEvents: SecurityEvent[];
+  activeSubTab: string;
+  loading: boolean;
+  onSubTabChange: (tab: string) => void;
+  onUpdateSecurityConfig: (config: SecurityConfig) => void;
+  onAcknowledgeEvent: (eventId: string) => void;
+  onRunSecurityScan: () => void;
+}
+
+const SecurityPanel = memo<SecurityPanelProps>(({
+  securityConfig,
+  securityEvents,
+  activeSubTab,
+  loading,
+  onSubTabChange,
+  onUpdateSecurityConfig,
+  onAcknowledgeEvent,
+  onRunSecurityScan
+}) => {
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [localConfig, setLocalConfig] = useState<SecurityConfig>(securityConfig);
+
+  const subTabs = [
+    { id: 'settings', label: 'Security Settings', icon: Settings },
+    { id: 'events', label: 'Security Events', icon: Activity },
+    { id: 'permissions', label: 'Permissions', icon: Users }
+  ];
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'high': return 'bg-red-100 text-red-800 border-red-200';
+      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case 'login_failure': return <AlertTriangle className="w-4 h-4" />;
+      case 'password_change': return <Key className="w-4 h-4" />;
+      case 'permission_change': return <Shield className="w-4 h-4" />;
+      case 'suspicious_activity': return <Eye className="w-4 h-4" />;
+      default: return <Activity className="w-4 h-4" />;
+    }
+  };
+
+  const handleConfigChange = (key: keyof SecurityConfig, value: any) => {
+    const updatedConfig = { ...localConfig, [key]: value };
+    setLocalConfig(updatedConfig);
+    onUpdateSecurityConfig(updatedConfig);
+  };
+
+  const renderSecuritySettings = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Authentication & Access</h3>
+            <p className="text-sm text-gray-600">Configure login and access security</p>
+          </div>
+          <button
+            onClick={onRunSecurityScan}
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Security Scan
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-gray-900">Two-Factor Authentication</h4>
+              <p className="text-sm text-gray-600">Require 2FA for all user accounts</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={localConfig.twoFactorEnabled}
+                onChange={(e) => handleConfigChange('twoFactorEnabled', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Session Timeout (minutes)
+              </label>
+              <input
+                type="number"
+                value={localConfig.sessionTimeout}
+                onChange={(e) => handleConfigChange('sessionTimeout', parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="5"
+                max="480"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Failed Login Attempt Limit
+              </label>
+              <input
+                type="number"
+                value={localConfig.loginAttemptLimit}
+                onChange={(e) => handleConfigChange('loginAttemptLimit', parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="3"
+                max="10"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-gray-900">Advanced Security Settings</h4>
+              <p className="text-sm text-gray-600">Additional security configurations</p>
+            </div>
+            <button
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              className="flex items-center text-blue-600 hover:text-blue-800"
+            >
+              {showAdvancedSettings ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {showAdvancedSettings && (
+            <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">IP Whitelist Protection</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localConfig.ipWhitelistEnabled}
+                    onChange={(e) => handleConfigChange('ipWhitelistEnabled', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Enhanced Audit Logging</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={localConfig.auditLoggingEnabled}
+                    onChange={(e) => handleConfigChange('auditLoggingEnabled', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSecurityEvents = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Recent Security Events</h3>
+          <p className="text-sm text-gray-600">Monitor and respond to security incidents</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-600">
+            {securityEvents.filter(e => e.severity === 'high').length} high priority events
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {securityEvents.map((event) => (
+          <div
+            key={event.id}
+            className={`p-4 rounded-lg border-2 ${getSeverityColor(event.severity)}`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                <div className="mt-1">
+                  {getEventIcon(event.type)}
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900">{event.description}</h4>
+                  <div className="text-sm text-gray-600 mt-1">
+                    <span>User: {event.user}</span>
+                    <span className="mx-2">•</span>
+                    <span>IP: {event.ipAddress}</span>
+                    <span className="mx-2">•</span>
+                    <span>{event.timestamp.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => onAcknowledgeEvent(event.id)}
+                className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Acknowledge
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderPermissions = () => (
+    <div className="space-y-6">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-center">
+          <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+          <p className="text-sm text-yellow-800">
+            Advanced permission management is available in the User Management section.
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Permission Overview</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <Shield className="w-8 h-8 text-green-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-green-800">12</div>
+            <div className="text-sm text-green-600">Admin Users</div>
+          </div>
+          
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <Users className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-blue-800">47</div>
+            <div className="text-sm text-blue-600">Standard Users</div>
+          </div>
+          
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <Eye className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+            <div className="text-2xl font-bold text-purple-800">8</div>
+            <div className="text-sm text-purple-600">View-Only Users</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="border-b border-gray-200">
+        <nav className="flex space-x-8">
+          {subTabs.map((tab) => {
+            const isActive = activeSubTab === tab.id;
+            const Icon = tab.icon;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onSubTabChange(tab.id)}
+                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  isActive
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div>
+        {activeSubTab === 'settings' && renderSecuritySettings()}
+        {activeSubTab === 'events' && renderSecurityEvents()}
+        {activeSubTab === 'permissions' && renderPermissions()}
+      </div>
+    </div>
+  );
+});
+
+SecurityPanel.displayName = 'SecurityPanel';
+
+export default SecurityPanel;

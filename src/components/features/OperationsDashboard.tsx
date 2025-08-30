@@ -3,12 +3,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { 
   Menu, X, ChevronLeft, ChevronRight, Settings, User, MapPin, Users, 
   Truck, FileText, AlertTriangle, Activity, Clock, TrendingUp, Shield, 
   Navigation, Search, Filter, Calendar, Bell, MoreVertical
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 import { Button, XpressCard as Card, Badge } from '@/components/xpress';
 import { RealTimeMap } from './RealTimeMap';
@@ -120,7 +121,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
       await updateAlert(alertId, { status: 'acknowledged' });
       refreshAlerts();
     } catch (error) {
-      console.error('Failed to acknowledge alert:', error);
+      logger.error('Failed to acknowledge alert', { component: 'OperationsDashboard' });
     }
   }, [updateAlert, refreshAlerts]);
 
@@ -133,7 +134,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
       });
       refreshAlerts();
     } catch (error) {
-      console.error('Failed to dispatch alert:', error);
+      logger.error('Failed to dispatch alert', { component: 'OperationsDashboard' });
     }
   }, [updateAlert, refreshAlerts, userProfile.id]);
 
@@ -146,7 +147,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
         // when they detect focus changes or user interactions
       ]);
     } catch (error) {
-      console.error('Failed to refresh dashboard data:', error);
+      logger.error('Failed to refresh dashboard data', { component: 'OperationsDashboard' });
     }
   }, [refreshAlerts]);
 
@@ -827,7 +828,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
                 showControls={true}
                 showStats={true}
                 onEmergencyAlert={(incidentId) => {
-                  console.log('Emergency alert clicked:', incidentId);
+                  logger.info('Emergency alert clicked', { incidentId }, { component: 'OperationsDashboard' });
                 }}
                 className="h-full w-full"
               />
@@ -855,4 +856,7 @@ export const OperationsDashboard: React.FC<OperationsDashboardProps> = ({
   );
 };
 
-export default OperationsDashboard;
+// Add displayName for debugging
+OperationsDashboard.displayName = 'OperationsDashboard';
+
+export default memo(OperationsDashboard);

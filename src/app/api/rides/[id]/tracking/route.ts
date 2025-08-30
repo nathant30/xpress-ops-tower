@@ -2,6 +2,7 @@
 // Live tracking of driver location, ETA, and trip progress
 
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError,
@@ -223,7 +224,7 @@ export const GET = asyncHandler(async (request: NextRequest, { params }: { param
     return createApiResponse(trackingData, 'Real-time tracking data retrieved successfully');
 
   } catch (error) {
-    console.error('Error retrieving tracking data:', error);
+    logger.error('Error retrieving tracking data', { rideId, error: error instanceof Error ? error.message : String(error) });
     return createApiError(
       'Failed to retrieve tracking data',
       'TRACKING_ERROR',
@@ -305,7 +306,7 @@ async function calculateCurrentETA(ride: any): Promise<any> {
     };
 
   } catch (error) {
-    console.error('Error calculating ETA:', error);
+    logger.error('Error calculating ETA', { rideId: ride.id, status: ride.status, error: error instanceof Error ? error.message : String(error) });
     return {
       estimatedArrival: new Date(Date.now() + 15 * 60000), // Default 15 minutes
       estimatedMinutes: 15,
@@ -345,7 +346,7 @@ async function getRouteData(ride: any): Promise<any> {
     };
 
   } catch (error) {
-    console.error('Error getting route data:', error);
+    logger.error('Error getting route data', { rideStatus: ride.status, hasDriverLocation: !!(ride.driver_longitude && ride.driver_latitude), error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }
@@ -379,7 +380,7 @@ async function getDriverLocationHistory(driverId: string, limitMinutes: number =
     }));
 
   } catch (error) {
-    console.error('Error getting location history:', error);
+    logger.error('Error getting location history', { driverId, limitMinutes, error: error instanceof Error ? error.message : String(error) });
     return [];
   }
 }

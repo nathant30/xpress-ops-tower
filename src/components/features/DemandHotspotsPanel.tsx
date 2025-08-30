@@ -17,6 +17,7 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
+import { logger } from '@/lib/security/productionLogger';
 
 interface HotspotArea {
   id: string;
@@ -193,7 +194,7 @@ export const DemandHotspotsPanel: React.FC<DemandHotspotsPanelProps> = ({
       setLastUpdated(new Date());
     } catch (err) {
       setError('Failed to fetch demand data');
-      console.error('Error fetching hotspots:', err);
+      logger.error('Error fetching demand hotspots', { component: 'DemandHotspotsPanel' });
     } finally {
       setLoading(false);
     }

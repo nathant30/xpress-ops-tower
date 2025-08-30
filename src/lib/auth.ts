@@ -4,6 +4,7 @@
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from './security/productionLogger';
 // Removed Redis dependency for demo - using in-memory session store
 // import { redis } from './redis';
 
@@ -177,10 +178,22 @@ if (process.env.NODE_ENV === 'development') {
   globalThis.__in_memory_sessions = inMemorySessions;
 }
 
-// JWT configuration
+// JWT configuration - SECURITY: No hardcoded secrets in production
 const JWT_CONFIG = {
-  accessTokenSecret: process.env.JWT_ACCESS_SECRET || 'xpress-ops-access-secret-key',
-  refreshTokenSecret: process.env.JWT_REFRESH_SECRET || 'xpress-ops-refresh-secret-key',
+  accessTokenSecret: process.env.JWT_ACCESS_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_ACCESS_SECRET environment variable is required in production');
+    }
+    logger.warn('Using default JWT access secret - only for development');
+    return 'dev-access-secret-' + Math.random().toString(36);
+  })(),
+  refreshTokenSecret: process.env.JWT_REFRESH_SECRET || (() => {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_REFRESH_SECRET environment variable is required in production');
+    }
+    logger.warn('Using default JWT refresh secret - only for development');
+    return 'dev-refresh-secret-' + Math.random().toString(36);
+  })(),
   accessTokenExpiry: process.env.JWT_ACCESS_EXPIRY || '1h',
   refreshTokenExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   issuer: 'xpress-ops-tower',
@@ -232,7 +245,7 @@ export class AuthManager {
         deviceId: payload.deviceId
       });
     } catch (redisError) {
-      console.warn('Redis session creation failed, using in-memory fallback:', redisError);
+      logger.warn('Redis session creation failed, using in-memory fallback', { error: redisError });
       // Fallback to in-memory session storage for demo
       inMemorySessions.set(sessionId, {
         userId: payload.userId,
@@ -292,7 +305,7 @@ export class AuthManager {
 
       return decoded;
     } catch (error) {
-      console.error('Token verification failed:', error);
+      logger.error('Token verification failed', { error });
       return null;
     }
   }
@@ -345,7 +358,7 @@ export class AuthManager {
         expiresIn: Math.floor(expiresIn / 1000)
       };
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      logger.error('Token refresh failed', { error });
       return null;
     }
   }
@@ -458,7 +471,7 @@ export function withAuth(
       // Call the actual handler
       return handler(req, user);
     } catch (error) {
-      console.error('Authentication middleware error:', error);
+      logger.error('Authentication middleware error', { error });
       return NextResponse.json(
         { success: false, error: 'Authentication failed' },
         { status: 500 }
@@ -525,7 +538,7 @@ export function withRateLimit(
 
       return response;
     } catch (error) {
-      console.error('Rate limiting error:', error);
+      logger.error('Rate limiting error', { error });
       return handler(req); // Continue without rate limiting on error
     }
   };

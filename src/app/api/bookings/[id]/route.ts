@@ -1,5 +1,6 @@
 // /api/bookings/[id] - Individual Booking Management API
 import { NextRequest } from 'next/server';
+import { logger } from '@/lib/security/productionLogger';
 import { 
   createApiResponse, 
   createApiError,
@@ -22,7 +23,7 @@ async function broadcastBookingUpdate(bookingId: string, status: string, data: a
       data
     };
     
-    console.log('Broadcasting booking status update:', update);
+    logger.info('Broadcasting booking status update', { bookingId: update.id, status: update.status, driverId: update.driverId });
     
     global.realtimeUpdates = global.realtimeUpdates || [];
     global.realtimeUpdates.push(update);
@@ -31,7 +32,7 @@ async function broadcastBookingUpdate(bookingId: string, status: string, data: a
       global.realtimeUpdates = global.realtimeUpdates.slice(-100);
     }
   } catch (error) {
-    console.error('Failed to broadcast booking update:', error);
+    logger.error('Failed to broadcast booking update', error instanceof Error ? error.message : error);
   }
 }
 

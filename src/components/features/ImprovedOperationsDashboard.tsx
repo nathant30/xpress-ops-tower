@@ -137,33 +137,33 @@ const ImprovedOperationsDashboard = () => {
           </div>
 
           <div className="space-y-1">
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-r-lg mr-4">
+            <a href="/dashboard" className="flex items-center space-x-3 px-4 py-3 bg-blue-600 text-white rounded-r-lg mr-4">
               <BarChart3 className="w-5 h-5" />
               <span>Dashboard</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/live-map" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <MapPin className="w-5 h-5" />
               <span>Live Map</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/drivers" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <Users className="w-5 h-5" />
               <span>Drivers</span>
               <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">2000</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/passengers" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <Users className="w-5 h-5" />
               <span>Passengers</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/safety" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <Shield className="w-5 h-5" />
               <span>Safety</span>
               <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">NEW</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/reports" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <TrendingUp className="w-5 h-5" />
               <span>Analytics</span>
             </a>
-            <a href="#" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
+            <a href="/settings" className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-r-lg mr-4">
               <Settings className="w-5 h-5" />
               <span>Settings</span>
             </a>

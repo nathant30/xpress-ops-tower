@@ -11,6 +11,7 @@ import {
 import { withAuth } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface MFAVerifyRequest {
   code: string;
@@ -132,7 +133,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       { userId: user.userId, resource: 'auth', action: 'mfa_verify', ipAddress: clientIP }
     );
 
-    console.error('MFA verification error:', error);
+    logger.error('MFA verification error', { error });
     
     return createApiError(
       'MFA verification failed',
@@ -146,7 +147,17 @@ export const POST = withAuth(async (request: NextRequest, user) => {
 });
 
 // Helper functions
-function verifyTOTPCode(userData: any, code: string): boolean {
+interface UserDataWithMFA {
+  id: string;
+  mfaEnabled: boolean;
+  mfaSetupPending?: boolean;
+  mfaBackupCodes?: Array<{
+    code: string;
+    used: boolean;
+  }>;
+}
+
+function verifyTOTPCode(userData: UserDataWithMFA, code: string): boolean {
   // Mock TOTP verification - in real implementation, use libraries like speakeasy
   // For demo purposes, accept any 6-digit code that matches simple pattern
   if (!/^\d{6}$/.test(code)) return false;
@@ -159,14 +170,14 @@ function verifyTOTPCode(userData: any, code: string): boolean {
   return codeSuffix === userIdSuffix || code === '123456'; // Allow demo code
 }
 
-function verifyBackupCode(userData: any, backupCode: string): boolean {
+function verifyBackupCode(userData: UserDataWithMFA, backupCode: string): boolean {
   // Check if user has backup codes
   if (!userData.mfaBackupCodes || !Array.isArray(userData.mfaBackupCodes)) {
     return false;
   }
 
   // Find and mark backup code as used
-  const codeIndex = userData.mfaBackupCodes.findIndex((bc: any) => 
+  const codeIndex = userData.mfaBackupCodes.findIndex((bc) => 
     bc.code === backupCode && !bc.used
   );
 

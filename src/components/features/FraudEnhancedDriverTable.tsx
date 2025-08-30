@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { EnhancedDriver, RiskLevel } from '@/types/fraud';
 import { fraudMockData, getFraudRiskColor, getFraudRiskBadge, getInvestigationStatusBadge } from '@/lib/fraudMockData';
+import { logger } from '@/lib/security/productionLogger';
 
 const FraudEnhancedDriverTable = () => {
   const router = useRouter();
@@ -53,7 +54,7 @@ const FraudEnhancedDriverTable = () => {
         const parsedWidths = JSON.parse(savedWidths);
         setColumnWidths({ ...defaultColumnWidths, ...parsedWidths });
       } catch (error) {
-        console.warn('Failed to parse saved column widths:', error);
+        logger.warn('Failed to parse saved column widths', { component: 'FraudEnhancedDriverTable' });
       }
     }
   }, []);

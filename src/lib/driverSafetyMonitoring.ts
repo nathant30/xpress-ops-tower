@@ -7,6 +7,7 @@ import { db } from './database';
 import { emergencyAlertService } from './emergencyAlerts';
 import { sosAlertProcessor } from './sosAlertProcessor';
 import { getWebSocketManager } from './websocket';
+import { logger } from '@/lib/security/productionLogger';
 
 export interface DriverSafetyProfile {
   driverId: string;
@@ -325,7 +326,7 @@ class DriverSafetyMonitoringSystem {
       await this.escalateToEmergencyResponse(safetyAlert);
     }
     
-    console.log(`🔐 Safety alert ${safetyAlert.alertCode} triggered for driver ${driverId}`);
+    logger.info(`Safety alert ${safetyAlert.alertCode} triggered for driver ${driverId}`);
     
     return safetyAlert;
   }
@@ -351,7 +352,7 @@ class DriverSafetyMonitoringSystem {
       message
     });
     
-    console.log(`✅ Safety alert ${alert.alertCode} acknowledged by ${acknowledgedBy}`);
+    logger.info(`Safety alert ${alert.alertCode} acknowledged by ${acknowledgedBy}`);
   }
 
   /**
@@ -384,7 +385,7 @@ class DriverSafetyMonitoringSystem {
       completedActions
     });
     
-    console.log(`✅ Safety alert ${alert.alertCode} resolved by ${resolvedBy}`);
+    logger.info(`Safety alert ${alert.alertCode} resolved by ${resolvedBy}`);
   }
 
   /**
@@ -859,7 +860,7 @@ class DriverSafetyMonitoringSystem {
         JSON.stringify(profile.recommendedActions)
       ]);
     } catch (error) {
-      console.error(`Failed to save safety profile for driver ${profile.driverId}:`, error);
+      logger.error(`Failed to save safety profile for driver ${profile.driverId}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -904,7 +905,7 @@ class DriverSafetyMonitoringSystem {
         recommendedActions: JSON.parse(row.recommended_actions || '[]')
       };
     } catch (error) {
-      console.error(`Failed to get safety profile for driver ${driverId}:`, error);
+      logger.error(`Failed to get safety profile for driver ${driverId}`, error instanceof Error ? error.message : error);
       return null;
     }
   }
@@ -940,7 +941,7 @@ class DriverSafetyMonitoringSystem {
         JSON.stringify(alert.completedActions)
       ]);
     } catch (error) {
-      console.error(`Failed to save safety alert ${alert.alertCode}:`, error);
+      logger.error(`Failed to save safety alert ${alert.alertCode}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -964,7 +965,7 @@ class DriverSafetyMonitoringSystem {
         alert.id
       ]);
     } catch (error) {
-      console.error(`Failed to update safety alert ${alert.alertCode}:`, error);
+      logger.error(`Failed to update safety alert ${alert.alertCode}`, error instanceof Error ? error.message : error);
     }
   }
 
@@ -1105,16 +1106,16 @@ class DriverSafetyMonitoringSystem {
         }
       });
       
-      console.log(`🚨 Safety alert ${alert.alertCode} escalated to emergency response`);
+      logger.error(`Safety alert ${alert.alertCode} escalated to emergency response`);
     } catch (error) {
-      console.error(`Failed to escalate safety alert ${alert.alertCode} to emergency:`, error);
+      logger.error(`Failed to escalate safety alert ${alert.alertCode} to emergency`, error instanceof Error ? error.message : error);
     }
   }
 
   private startSafetyMonitoring(): void {
     // Monitor safety metrics every 5 minutes
     setInterval(async () => {
-      console.log('🔐 Running safety monitoring checks...');
+      logger.debug('Running safety monitoring checks');
       // This would trigger various safety checks
     }, 300000);
   }
@@ -1122,7 +1123,7 @@ class DriverSafetyMonitoringSystem {
   private startBehavioralAnalysis(): void {
     // Analyze behavioral patterns every hour
     setInterval(async () => {
-      console.log('🔍 Running behavioral pattern analysis...');
+      logger.debug('Running behavioral pattern analysis');
       // This would run ML-based behavioral analysis
     }, 3600000);
   }
@@ -1130,7 +1131,7 @@ class DriverSafetyMonitoringSystem {
   private startComplianceMonitoring(): void {
     // Check compliance status daily
     setInterval(async () => {
-      console.log('📋 Running compliance monitoring...');
+      logger.debug('Running compliance monitoring');
       // This would check training, certifications, etc.
     }, 86400000);
   }
@@ -1146,7 +1147,7 @@ class DriverSafetyMonitoringSystem {
           data.details
         );
       } catch (error) {
-        console.error('Error processing safety channel message:', error);
+        logger.error('Error processing safety channel message', error instanceof Error ? error.message : error);
       }
     });
   }
@@ -1154,7 +1155,7 @@ class DriverSafetyMonitoringSystem {
   private initializeMetricsCollection(): void {
     setInterval(async () => {
       const metrics = await this.getSafetyMetrics();
-      console.log('Safety Monitoring Metrics:', {
+      logger.debug('Safety Monitoring Metrics', {
         ...metrics,
         activeAlerts: this.activeAlerts.size,
         cachedProfiles: this.safetyProfiles.size

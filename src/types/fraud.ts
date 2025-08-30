@@ -45,8 +45,20 @@ export interface PassengerFraudProfile {
   // Identity verification
   identityVerificationStatus: VerificationStatus;
   identityVerificationDate?: Date;
-  documentVerification: Record<string, any>;
-  biometricVerification: Record<string, any>;
+  documentVerification: {
+    status: VerificationStatus;
+    documentType: string;
+    verificationDate?: Date;
+    expiryDate?: Date;
+    verified: boolean;
+  };
+  biometricVerification: {
+    faceVerified: boolean;
+    fingerprintVerified: boolean;
+    voiceVerified: boolean;
+    verificationDate?: Date;
+    confidence: number;
+  };
   
   // Fraud risk scoring
   fraudRiskScore: number;
@@ -183,7 +195,7 @@ export interface ChargebackManagement {
   // Investigation
   isFraudulent?: boolean;
   investigationNotes?: string;
-  evidenceProvided: any[];
+  evidenceProvided: Evidence[];
   
   // Outcomes
   resolution?: string;
@@ -570,7 +582,7 @@ export interface EnhancedDriver {
   // Enhanced fraud properties
   fraudRiskScore: number;
   mlConfidenceScore: number;
-  behavioralAnalytics?: any;
+  behavioralAnalytics?: PassengerBehavioralAnalytics;
   investigationStatus: 'clear' | 'monitoring' | 'investigating';
   lastRiskAssessment: Date;
   
@@ -658,12 +670,18 @@ export interface FraudRule {
 export interface RuleCondition {
   field: string;
   operator: 'gt' | 'lt' | 'eq' | 'contains' | 'in';
-  value: any;
+  value: string | number | boolean | string[];
 }
 
 export interface RuleAction {
   type: 'alert' | 'investigate' | 'suspend' | 'notify';
-  parameters: Record<string, any>;
+  parameters: {
+    severity?: string;
+    message?: string;
+    assignTo?: string;
+    escalate?: boolean;
+    [key: string]: unknown;
+  };
 }
 
 export interface WorkflowStep {
