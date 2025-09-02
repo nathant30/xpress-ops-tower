@@ -8,22 +8,14 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
-import { withAuthAndRateLimit } from '@/lib/auth';
+import { withEnhancedAuth } from '@/lib/auth/enhanced-auth';
 import { MockDataService } from '@/lib/mockData';
 
 // GET /api/analytics - Get performance metrics and KPIs
-export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
-  // Check if user has analytics:read permission
-  if (!user.permissions.includes('analytics:read')) {
-    return createApiError(
-      'Insufficient permissions to view analytics',
-      'PERMISSION_DENIED',
-      403,
-      { requiredPermission: 'analytics:read' },
-      '/api/analytics',
-      'GET'
-    );
-  }
+export const GET = withEnhancedAuth({
+  requiredPermissions: ['query_curated_views', 'view_ops_kpis_masked'],
+  dataClass: 'internal'
+})(async (request: NextRequest, user) => {
   const queryParams = parseQueryParams(request);
   const timeRange = queryParams.timeRange || '24h';
   let regionId = queryParams.regionId;

@@ -126,15 +126,12 @@ class WebSocketServer {
 
     this.setupEventHandlers();
     this.setupMonitoringListeners();
-    console.log('🔌 WebSocket server initialized');
-  }
+    }
 
   private setupEventHandlers(): void {
     if (!this.io) return;
 
     this.io.on('connection', (socket) => {
-      console.log(`📱 Client connected: ${socket.id}`);
-
       // Handle client authentication and setup
       socket.on('authenticate', (auth: {
         userId?: string;
@@ -168,8 +165,7 @@ class WebSocketServer {
           if (this.canSubscribeToChannel(client, channel)) {
             socket.join(channel);
             client.subscribedChannels.add(channel);
-            console.log(`📡 Client ${socket.id} subscribed to ${channel}`);
-          }
+            }
         });
 
         socket.emit('subscription_updated', {
@@ -219,7 +215,7 @@ class WebSocketServer {
 
       // Handle disconnection
       socket.on('disconnect', (reason) => {
-        console.log(`📱 Client disconnected: ${socket.id} (${reason})`);
+        `);
         this.clients.delete(socket.id);
       });
     });
@@ -408,8 +404,7 @@ class WebSocketServer {
       this.broadcastSystemHealth();
     }, 30000);
 
-    console.log('🚀 WebSocket server started - real-time updates active');
-  }
+    }
 
   stop(): void {
     if (!this.isRunning) return;
@@ -425,8 +420,7 @@ class WebSocketServer {
       this.metricsInterval = undefined;
     }
 
-    console.log('🛑 WebSocket server stopped');
-  }
+    }
 
   private broadcastMapUpdate(): void {
     const mapUpdate: LiveMapUpdate = {
@@ -542,8 +536,7 @@ class WebSocketServer {
       priority: options.priority || 'medium'
     });
 
-    console.log(`📡 Broadcasted to ${channel}: ${targetClients.length} clients`);
-  }
+    }
 
   private sendPushNotification(notification: {
     title: string;

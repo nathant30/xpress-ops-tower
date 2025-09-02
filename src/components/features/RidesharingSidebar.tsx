@@ -20,7 +20,10 @@ import {
   Activity,
   MapPin,
   MoreHorizontal,
-  Bell
+  Bell,
+  Globe,
+  Check,
+  Brain
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -58,6 +61,17 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
 }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('NCR'); // Default to NCR
+  const [regionDropdownOpen, setRegionDropdownOpen] = useState(false);
+  const [regions] = useState([
+    { id: 'NCR', name: 'NCR', status: 'active' },
+    { id: 'BTN', name: 'Bataan', status: 'active' },
+    { id: 'CAV', name: 'Cavite', status: 'active' },
+    { id: 'BORA', name: 'Boracay', status: 'active' },
+    { id: 'PMP', name: 'Pampanga', status: 'pilot' },
+    { id: 'BUL', name: 'Bulacan', status: 'pilot' },
+    { id: 'LAG', name: 'Laguna', status: 'pilot' }
+  ]);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -82,6 +96,28 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       badge: 'LIVE',
       badgeColor: 'green',
       tabs: ['Map View', 'Driver Locations', 'Trip Routes', 'Heatmap']
+    },
+    Regions: {
+      id: 'regions',
+      icon: Globe,
+      description: 'Regional management',
+      tabs: ['Region Directory', 'Add New Region', 'Coverage Maps', 'Analytics']
+    },
+    Expansion: {
+      id: 'expansion',
+      icon: MapPin,
+      description: 'AI-powered expansion strategy',
+      badge: 'AI',
+      badgeColor: 'purple',
+      tabs: ['Overview', 'Primary Product', 'Secondary Products', 'AI Insights', 'Investment', 'Performance']
+    },
+    'Nexus AI': {
+      id: 'nexus',
+      icon: Brain,
+      description: 'AI/ML Hub with Dual Approvals',
+      badge: 'v1.0',
+      badgeColor: 'purple',
+      tabs: ['Overview', 'Recommendations', 'Forecasts', 'Scenario Builder', 'Cross-Domain', 'Risk & Compliance', 'Ops (AI)', 'Audit & Governance', 'Knowledge']
     },
     Bookings: {
       id: 'bookings',
@@ -121,6 +157,14 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       badgeColor: 'red',
       tabs: ['Overview', 'Active Alerts', 'Patterns', 'Settings']
     },
+    Pricing: {
+      id: 'pricing',
+      icon: DollarSign,
+      description: 'Fares management',
+      badge: 'NEW',
+      badgeColor: 'blue',
+      tabs: ['Pricing Profiles', 'TNVS Fares', 'Taxi Fares', 'Surge Control', 'Tolls']
+    },
     Reports: {
       id: 'reports',
       icon: BarChart3,
@@ -136,38 +180,6 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
   };
 
   const moreMenuStructure = {
-    Monitoring: {
-      id: 'monitoring',
-      icon: Activity,
-      description: 'System metrics & alerts',
-      badge: 'LIVE',
-      badgeColor: 'green',
-      tabs: ['Overview', 'Security', 'Emergency', 'Performance']
-    },
-    'Fraud Review': {
-      id: 'fraud-review',
-      icon: Shield,
-      description: 'Advanced fraud detection',
-      badge: 'NEW',
-      badgeColor: 'red',
-      tabs: ['Alerts', 'Analytics', 'Rules', 'Investigations']
-    },
-    'Fraud Config': {
-      id: 'fraud-config',
-      icon: Settings,
-      description: 'Detection thresholds & rules',
-      badge: '',
-      badgeColor: 'blue',
-      tabs: ['Thresholds', 'Rules', 'Settings', 'Testing']
-    },
-    'Fraud Alerts': {
-      id: 'fraud-notifications',
-      icon: Bell,
-      description: 'Notification channels',
-      badge: '',
-      badgeColor: 'green',
-      tabs: ['Channels', 'Rules', 'Templates', 'Logs']
-    }
   };
 
   const mainNavigationItems: NavigationItem[] = Object.entries(mainMenuStructure).map(([section, config]) => ({
@@ -239,13 +251,24 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
       <div key={item.id} className="relative">
         <button
           onClick={() => handleItemClick(item.id, item.label)}
-          onMouseEnter={() => setHoveredItem(item.id)}
-          onMouseLeave={() => setHoveredItem(null)}
+          onMouseEnter={(e) => {
+            setHoveredItem(item.id);
+            if (typeof window !== 'undefined' && !item.active) {
+              e.currentTarget.style.backgroundColor = 'rgb(10, 64, 96)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            setHoveredItem(null);
+            if (typeof window !== 'undefined' && !item.active) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
           className={`w-full flex items-center px-4 py-3 text-left transition-all duration-200 group relative ${
             item.active
-              ? 'bg-blue-600 text-white'
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              ? 'text-white'
+              : 'text-gray-300 hover:text-white'
           } ${collapsed ? 'justify-center' : 'justify-start'}`}
+          style={item.active ? { backgroundColor: 'rgb(235, 29, 37)' } : {}}
         >
           <Icon className={`w-5 h-5 ${collapsed ? '' : 'mr-3'} flex-shrink-0`} />
           
@@ -292,9 +315,12 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
   };
 
   return (
-    <div className={`rideshare-sidebar bg-gray-800 flex flex-col h-screen transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
-    } ${className}`}>
+    <div 
+      className={`flex flex-col h-screen transition-all duration-300 ease-in-out relative z-30 ${
+        collapsed ? 'w-16' : 'w-64'
+      } ${className}`}
+      style={{ backgroundColor: 'rgb(3, 35, 58)' }}
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         {!collapsed ? (
@@ -324,6 +350,87 @@ export const RidesharingSidebar: React.FC<RidesharingSidebarProps> = ({
         )}
       </div>
 
+      {/* Region Selector */}
+      <div className="px-4 py-2 border-b border-gray-700">
+        {!collapsed ? (
+          <div className="relative">
+            <button
+              onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <Globe className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-white">
+                  {regions.find(r => r.id === selectedRegion)?.name || 'Select Region'}
+                </span>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${regionDropdownOpen ? 'transform rotate-180' : ''}`} />
+            </button>
+            
+            {regionDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                {regions.map((region) => (
+                  <button
+                    key={region.id}
+                    onClick={() => {
+                      setSelectedRegion(region.id);
+                      setRegionDropdownOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-700 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-white">{region.name}</span>
+                      {region.status === 'pilot' && (
+                        <span className="bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded text-xs font-medium">
+                          PILOT
+                        </span>
+                      )}
+                    </div>
+                    {selectedRegion === region.id && (
+                      <Check className="w-4 h-4 text-blue-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <button
+              onClick={() => setRegionDropdownOpen(!regionDropdownOpen)}
+              className="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors relative"
+            >
+              <Globe className="w-4 h-4 text-blue-400" />
+              {regionDropdownOpen && (
+                <div className="absolute left-full top-0 ml-2 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-50 w-48">
+                  {regions.map((region) => (
+                    <button
+                      key={region.id}
+                      onClick={() => {
+                        setSelectedRegion(region.id);
+                        setRegionDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-white">{region.name}</span>
+                        {region.status === 'pilot' && (
+                          <span className="bg-yellow-500 text-yellow-900 px-1.5 py-0.5 rounded text-xs font-medium">
+                            PILOT
+                          </span>
+                        )}
+                      </div>
+                      {selectedRegion === region.id && (
+                        <Check className="w-4 h-4 text-blue-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">

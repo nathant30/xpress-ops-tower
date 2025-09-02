@@ -487,7 +487,7 @@ class AnomalyDetectionEngine {
       this.recentAnomalies = this.recentAnomalies.slice(-1000);
     }
 
-    console.log(`🚨 Anomaly Alert Generated: ${alert.description} (${alert.severity})`);
+    `);
   }
 
   private determineAnomalyType(dimensions: AnomalyScore['dimensions']): AnomalyAlert['type'] {

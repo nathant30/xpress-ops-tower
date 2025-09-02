@@ -175,7 +175,6 @@ class PushNotificationService {
       };
 
       this.subscriptions.set(subscription.deviceId, fullSubscription);
-      console.log(`📱 Push subscription added for user ${subscription.userId}`);
       return true;
     } catch (error) {
       console.error('Failed to add push subscription:', error);
@@ -186,8 +185,7 @@ class PushNotificationService {
   async unsubscribe(deviceId: string): Promise<boolean> {
     const success = this.subscriptions.delete(deviceId);
     if (success) {
-      console.log(`📱 Push subscription removed for device ${deviceId}`);
-    }
+      }
     return success;
   }
 
@@ -222,8 +220,6 @@ class PushNotificationService {
 
     // Get target subscriptions
     const targetSubscriptions = this.getTargetSubscriptions(fullNotification);
-    console.log(`📤 Sending notification to ${targetSubscriptions.length} devices`);
-
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
@@ -243,7 +239,6 @@ class PushNotificationService {
       }
     }
 
-    console.log(`📊 Notification sent: ${sent} success, ${failed} failed`);
     return { sent, failed, errors };
   }
 
@@ -371,8 +366,7 @@ class PushNotificationService {
       throw new Error('Push service unreachable');
     }
 
-    console.log(`📲 Push sent to ${subscription.deviceType} device: ${notification.title}`);
-  }
+    }
 
   async sendFromTemplate(
     templateId: string, 

@@ -1,9 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    // TODO: Fix TypeScript errors identified in hardening assessment
-    // Primary issues: Playwright deps, Google Maps types, export conflicts
-    ignoreBuildErrors: process.env.NODE_ENV === 'production',
+    // TypeScript configuration improved - resolved:
+    // - Playwright deps: Added proper dev dependencies
+    // - Google Maps types: Using @types/google.maps 
+    // - Export conflicts: Using proper module resolution
+    ignoreBuildErrors: false, // Enable proper TypeScript checking
   },
   eslint: {
     ignoreDuringBuilds: process.env.NODE_ENV === 'production',
@@ -15,12 +17,16 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'DENY',
           },
           {
             key: 'X-XSS-Protection',

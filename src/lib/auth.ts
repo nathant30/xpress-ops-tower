@@ -544,58 +544,61 @@ export function withRateLimit(
   };
 }
 
-// TEMPORARY BYPASS - Combined middleware: Authentication + Rate Limiting
+// Production-Ready Combined middleware: Authentication + Rate Limiting
 export function withAuthAndRateLimit(
   handler: (req: NextRequest, user: AuthPayload) => Promise<NextResponse>,
   requiredPermissions: Permission[] = [],
   rateLimit: { limit: number; windowSeconds: number } = { limit: 100, windowSeconds: 3600 }
 ) {
-  // TEMPORARY: Bypass authentication for development
-  return async (req: NextRequest): Promise<NextResponse> => {
-    // Create a mock user for development
-    const mockUser: AuthPayload = {
-      userId: 'usr-demo',
-      userType: 'operator',
-      role: 'admin',
-      regionId: 'reg-001',
-      permissions: [
-        'drivers:read', 'drivers:write', 'drivers:delete',
-        'bookings:read', 'bookings:write', 'bookings:cancel',
-        'locations:read', 'locations:write',
-        'incidents:read', 'incidents:write', 'incidents:escalate',
-        'analytics:read', 'analytics:export',
-        'system:admin', 'regions:manage'
-      ],
-      sessionId: 'temp-bypass-session',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-      aud: 'xpress-operations',
-      iss: 'xpress-ops-tower'
-    };
+  // Development bypass ONLY when explicitly enabled
+  if (process.env.NODE_ENV === 'development' && process.env.BYPASS_AUTH === 'true') {
+    logger.warn('🚨 DEVELOPMENT ONLY: Authentication bypass is enabled - NEVER use in production!');
     
-    return handler(req, mockUser);
-  };
+    return async (req: NextRequest): Promise<NextResponse> => {
+      // Create a mock user for development testing
+      const mockUser: AuthPayload = {
+        userId: 'usr-dev-test',
+        userType: 'operator',
+        role: 'admin',
+        regionId: 'reg-001',
+        permissions: [
+          'drivers:read', 'drivers:write',
+          'bookings:read', 'bookings:write',
+          'locations:read', 'locations:write',
+          'incidents:read', 'incidents:write',
+          'analytics:read', 'analytics:export'
+        ],
+        sessionId: 'dev-bypass-session',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        aud: 'xpress-operations',
+        iss: 'xpress-ops-tower'
+      };
+      
+      return handler(req, mockUser);
+    };
+  }
 
-  // ORIGINAL CODE - Re-enable this when done:
-  // return withRateLimit(
-  //   withAuth(handler, requiredPermissions),
-  //   rateLimit.limit,
-  //   rateLimit.windowSeconds,
-  //   (req) => {
-  //     // Use user ID from token for rate limiting if available
-  //     const authHeader = req.headers.get('authorization');
-  //     if (authHeader && authHeader.startsWith('Bearer ')) {
-  //       try {
-  //         const token = authHeader.substring(7);
-  //         const decoded = jwt.decode(token) as AuthPayload;
-  //         return decoded?.userId || req.ip || 'anonymous';
-  //       } catch {
-  //         return req.ip || 'anonymous';
-  //       }
-  //     }
-  //     return req.ip || 'anonymous';
-  //   }
-  // );
+  // Production authentication with rate limiting
+  return withRateLimit(
+    withAuth(handler, requiredPermissions),
+    rateLimit.limit,
+    rateLimit.windowSeconds,
+    (req) => {
+      // Use user ID from token for rate limiting if available
+      const authHeader = req.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const token = authHeader.substring(7);
+          const decoded = jwt.decode(token) as AuthPayload;
+          return decoded?.userId || req.ip || 'anonymous';
+        } catch {
+          return req.ip || 'anonymous';
+        }
+      }
+      return req.ip || 'anonymous';
+    }
+  );
 }
 
 // Extract user from request (for use in middleware)
@@ -607,4 +610,63 @@ export async function getUserFromRequest(req: NextRequest): Promise<AuthPayload 
 
   const token = authHeader.substring(7);
   return authManager.verifyToken(token);
+}
+
+// Helper function for authenticated route handlers with params
+export async function authenticateRequest(req: NextRequest, requiredPermissions: Permission[] = []): Promise<{
+  success: true;
+  user: AuthPayload;
+} | {
+  success: false;
+  response: NextResponse;
+}> {
+  try {
+    // Extract and verify JWT token
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return {
+        success: false,
+        response: NextResponse.json(
+          { success: false, error: 'Missing or invalid authorization header' },
+          { status: 401 }
+        )
+      };
+    }
+
+    const token = authHeader.substring(7);
+    const user = await authManager.verifyToken(token);
+    if (!user) {
+      return {
+        success: false,
+        response: NextResponse.json(
+          { success: false, error: 'Invalid or expired token' },
+          { status: 401 }
+        )
+      };
+    }
+
+    // Check required permissions
+    for (const permission of requiredPermissions) {
+      if (!authManager.hasPermission(user, permission)) {
+        return {
+          success: false,
+          response: NextResponse.json(
+            { success: false, error: `Missing required permission: ${permission}` },
+            { status: 403 }
+          )
+        };
+      }
+    }
+
+    return { success: true, user };
+  } catch (error) {
+    logger.error('Authentication error', { error });
+    return {
+      success: false,
+      response: NextResponse.json(
+        { success: false, error: 'Authentication failed' },
+        { status: 500 }
+      )
+    };
+  }
 }

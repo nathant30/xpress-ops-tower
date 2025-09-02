@@ -252,8 +252,6 @@ class SMSServiceManager {
             const report = await this.sendWithProvider(fallbackProvider, message);
             
             // Log successful failover
-            console.log(`📱 SMS failover successful: ${provider} → ${fallbackProvider} for message ${message.id}`);
-            
             return report;
             
           } catch (fallbackError) {

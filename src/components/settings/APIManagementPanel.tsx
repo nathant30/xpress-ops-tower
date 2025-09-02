@@ -73,119 +73,119 @@ const APIManagementPanel = memo<APIManagementPanelProps>(({
 
   return (
     <div className="space-y-6">
-      {/* Sub-tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {subTabs.map((tab) => (
+      {/* Sub-tabs - Modern Pill Style */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {subTabs.map((tab) => {
+          const isActive = activeSubTab === tab.id;
+          
+          return (
             <button
               key={tab.id}
               onClick={() => onSubTabChange(tab.id)}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeSubTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {tab.label}
             </button>
-          ))}
-        </nav>
+          );
+        })}
       </div>
 
       {/* API Keys Tab */}
       {activeSubTab === 'xpress-api' && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">API Keys</h3>
-              <p className="text-sm text-gray-600">Manage API keys for external integrations</p>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">API Keys</h3>
+            <p className="text-sm text-gray-500">Manage API keys for external integrations</p>
+          </div>
+
+          {/* Header with search and add button */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search API keys..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
             <button 
               onClick={onAddApiKey}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               Generate Key
             </button>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    API Key
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Used
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {apiKeys.map((key) => (
-                  <tr key={key.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Key className="w-4 h-4 text-gray-400 mr-2" />
-                        <span className="text-sm font-medium text-gray-900">{key.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <code className="text-sm text-gray-600">
-                          {showKeys[key.id] ? key.key : maskApiKey(key.key)}
-                        </code>
-                        <button
-                          onClick={() => toggleKeyVisibility(key.id)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          {showKeys[key.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                        <button
-                          onClick={() => onCopyApiKey(key.key)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(key.status)}`}>
-                        {key.status.charAt(0).toUpperCase() + key.status.slice(1)}
+          {/* API Keys list - Minimal cards matching User Management */}
+          <div className="space-y-2">
+            {apiKeys.map((key) => (
+              <div key={key.id} className="flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-100/50 rounded-lg transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-medium text-blue-600">
+                      {key.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 truncate">{key.name}</p>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        key.status === 'active' ? 'bg-green-100 text-green-800' : 
+                        key.status === 'revoked' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {key.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {key.lastUsed ? key.lastUsed.toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          onClick={() => onEditApiKey(key)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => onDeleteApiKey(key.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <code className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        {showKeys[key.id] ? key.key : maskApiKey(key.key)}
+                      </code>
+                      <button
+                        onClick={() => toggleKeyVisibility(key.id)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5"
+                      >
+                        {showKeys[key.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      </button>
+                      <button
+                        onClick={() => onCopyApiKey(key.key)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="text-right">
+                    <div className="font-medium text-blue-600">
+                      {key.lastUsed ? key.lastUsed.toLocaleDateString() : 'Never used'}
+                    </div>
+                    <div>{key.createdAt.toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => onEditApiKey(key)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Edit API key"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => onDeleteApiKey(key.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      title="Delete API key"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

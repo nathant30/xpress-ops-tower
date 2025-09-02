@@ -1,0 +1,2835 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { 
+  AlertTriangle, FileText, Clock, User, Play, Pause, Download,
+  Zap, Heart, AlertCircle, Route, DollarSign, Volume2,
+  Filter, Search, X, Video, Image, Shield, Ban,
+  CheckCircle, XCircle, Calendar, ArrowUpRight, ArrowDownRight,
+  Eye, Lock, Hash, Shield as ShieldIcon, MapPin
+} from 'lucide-react';
+import EmergencyMap from '@/components/EmergencyMap';
+
+interface LocationData {
+  lat: number;
+  lng: number;
+  address: string;
+  timestamp: Date;
+  speed?: number;
+  heading?: number;
+  accuracy?: number;
+}
+
+interface EmergencyService {
+  id: string;
+  type: '911' | 'POLICE' | 'EMS' | 'FIRE' | 'SECURITY';
+  status: 'NOTIFIED' | 'DISPATCHED' | 'ON_SCENE' | 'COMPLETED';
+  contactInfo: string;
+  reportNumber?: string;
+  eta?: Date;
+  arrivalTime?: Date;
+  notes: string[];
+}
+
+interface RiskAssessment {
+  overallScore: number;
+  passengerRisk: number;
+  driverRisk: number;
+  locationRisk: number;
+  timeRisk: number;
+  factors: string[];
+  autoClassification: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+interface SeverityMetrics {
+  responseTime: number;
+  heartRate?: number;
+  gpsAccuracy: number;
+  ambientNoise?: number;
+  callDuration?: number;
+  movementPattern: 'NORMAL' | 'ERRATIC' | 'STOPPED' | 'SPEEDING';
+  voiceStress?: number;
+  backgroundAnalysis?: string[];
+}
+
+interface DynamicClassification {
+  currentSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  recommendedSeverity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence: number;
+  riskFactors: Array<{
+    factor: string;
+    weight: number;
+    score: number;
+    description: string;
+  }>;
+  autoEscalationTrigger: boolean;
+  timeToNextAssessment: number;
+  assessmentHistory: Array<{
+    timestamp: Date;
+    severity: string;
+    score: number;
+    triggerReason: string;
+  }>;
+}
+
+interface IncomingAlert {
+  id: string;
+  timestamp: Date;
+  source: 'PASSENGER_SOS' | 'DRIVER_PANIC' | 'SYSTEM_DETECTION' | 'THIRD_PARTY_REPORT' | 'AUTO_CRASH_DETECTION';
+  urgency: 'IMMEDIATE' | 'HIGH' | 'MODERATE';
+  initialData: {
+    tripId: string;
+    passengerName: string;
+    driverName: string;
+    location: {
+      lat: number;
+      lng: number;
+      address: string;
+    };
+    category: string;
+    description: string;
+    autoDetectedRisk: number;
+  };
+  processing: {
+    status: 'INCOMING' | 'TRIAGING' | 'ASSIGNED' | 'ACKNOWLEDGED';
+    assignedOperator?: string;
+    timeToResponse: number;
+    autoActions: string[];
+  };
+}
+
+interface AlertNotification {
+  id: string;
+  timestamp: Date;
+  type: 'NEW_CASE' | 'ESCALATION' | 'SYSTEM_ALERT' | 'UPDATE';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  title: string;
+  message: string;
+  actionRequired: boolean;
+  acknowledged: boolean;
+  relatedIncidentId?: string;
+  soundAlert: boolean;
+}
+
+interface CommunicationLog {
+  id: string;
+  type: 'CALL' | 'SMS' | 'APP_MESSAGE' | 'SYSTEM' | 'OPERATOR_NOTE';
+  direction: 'INBOUND' | 'OUTBOUND';
+  participant: string;
+  content: string;
+  timestamp: Date;
+  duration?: number;
+  status: 'DELIVERED' | 'FAILED' | 'PENDING';
+  transcript?: string;
+}
+
+interface FraudAlert {
+  id: string;
+  type: 'PAYMENT' | 'IDENTITY' | 'RIDE_MANIPULATION' | 'RATING' | 'REFERRAL' | 'ACCOUNT_SHARING';
+  subtype: string;
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence: number;
+  detectionMethod: 'ML_ALGORITHM' | 'PATTERN_ANALYSIS' | 'DOCUMENT_VERIFICATION' | 'GPS_TRACKING' | 'DEVICE_FINGERPRINT';
+  flags: string[];
+  evidence: {
+    financialData?: any;
+    behaviorPatterns?: any;
+    documentAnalysis?: any;
+    routeData?: any;
+    deviceInfo?: any;
+  };
+  riskScore: number;
+  timestamp: Date;
+}
+
+interface SafetyIncident {
+  id: string;
+  timestamp: Date;
+  category: 'SOS' | 'HARASSMENT' | 'ACCIDENT' | 'ROUTE_DEVIATION' | 'MEDICAL' | 'VIOLENCE' | 'FRAUD' | 'PANIC' | 'SUSPICIOUS';
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'ACTIVE' | 'RESPONDING' | 'INVESTIGATING' | 'ESCALATED' | 'RESOLVED' | 'CLOSED';
+  autoEscalationTime?: Date;
+  responseDeadline: Date;
+  
+  // Trip Information
+  tripId: string;
+  tripStatus: 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'ABANDONED';
+  
+  // Passenger Information
+  passengerId: string;
+  passengerName: string;
+  passengerPhone: string;
+  
+  // Driver Information
+  driverId: string;
+  driverName: string;
+  driverPhone: string;
+  
+  // Current Location
+  currentLocation: LocationData;
+  
+  // Incident Details
+  description: string;
+  severity: 1 | 2 | 3 | 4 | 5;
+  riskAssessment: RiskAssessment;
+  keywordFlags: string[];
+  
+  // Dynamic Classification
+  dynamicClassification: DynamicClassification;
+  severityMetrics: SeverityMetrics;
+  
+  // Evidence & Documentation
+  evidence: Array<{
+    id: string;
+    type: 'VIDEO' | 'AUDIO' | 'IMAGE' | 'DOCUMENT';
+    url: string;
+    filename: string;
+    fileSize: number;
+    timestamp: Date;
+    source: 'PASSENGER' | 'DRIVER' | 'SYSTEM' | 'OPERATOR' | 'DASHCAM';
+    duration?: number;
+    transcript?: {
+      text: string;
+      confidence: number;
+      language: string;
+      processedAt: Date;
+      speakers?: Array<{
+        id: string;
+        name: string;
+        confidence: number;
+      }>;
+      keywords: string[];
+      sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+      urgencyScore?: number;
+    };
+    chainOfCustody: Array<{
+      action: 'CREATED' | 'ACCESSED' | 'MODIFIED' | 'TRANSFERRED' | 'DELETED' | 'VERIFIED';
+      timestamp: Date;
+      actor: string;
+      actorRole: string;
+      description: string;
+      hash?: string;
+      ipAddress?: string;
+      deviceInfo?: string;
+    }>;
+    legalHold: boolean;
+    integrity: {
+      hash: string;
+      algorithm: 'SHA-256';
+      verified: boolean;
+      lastVerified: Date;
+    };
+    metadata: {
+      originalPath?: string;
+      compressionApplied: boolean;
+      qualityLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'ORIGINAL';
+      redactionApplied: boolean;
+    };
+  }>;
+  
+  // Communications
+  communicationLog: CommunicationLog[];
+  emergencyContacts: Array<{
+    name: string;
+    relationship: string;
+    phone: string;
+    contacted: boolean;
+    contactTime?: Date;
+    responseReceived: boolean;
+  }>;
+  
+  // Emergency Services
+  emergencyServices: EmergencyService[];
+  
+  // Response Management
+  responseActions: Array<{
+    id: string;
+    action: string;
+    timestamp: Date;
+    operator: string;
+    operatorId: string;
+    type: 'COMMUNICATION' | 'ESCALATION' | 'EVIDENCE' | 'SERVICES' | 'ADMIN';
+    status: 'COMPLETED' | 'PENDING' | 'FAILED';
+    mandatory: boolean;
+    notes?: string;
+    supervisorApproval?: boolean;
+  }>;
+  
+  // Workflow & Compliance
+  assignedOperator: string;
+  supervisorOverride: boolean;
+  legalNotificationRequired: boolean;
+  insuranceClaimInitiated: boolean;
+  mediaAlertLevel: 'NONE' | 'LOW' | 'HIGH' | 'CRITICAL';
+  complianceChecklist: Array<{
+    requirement: string;
+    completed: boolean;
+    timestamp?: Date;
+    notes?: string;
+  }>;
+  
+  vehicleInfo: {
+    plateNumber: string;
+    model: string;
+    color: string;
+  };
+}
+
+// Fixed base times to prevent hydration errors
+const BASE_TIME = new Date('2024-08-29T08:35:00').getTime();
+
+// Category and Status Helper Functions
+const getCategoryIcon = (category: string) => {
+  const icons = { 
+    SOS: AlertTriangle, 
+    HARASSMENT: Shield, 
+    ACCIDENT: Zap, 
+    ROUTE_DEVIATION: Route, 
+    MEDICAL: Heart, 
+    VIOLENCE: Ban, 
+    FRAUD: DollarSign,
+    PANIC: AlertCircle,
+    SUSPICIOUS: Eye
+  };
+  return icons[category as keyof typeof icons] || AlertCircle;
+};
+
+const getCategoryColor = (category: string) => {
+  const colors = { 
+    SOS: 'text-red-600 bg-red-50', 
+    HARASSMENT: 'text-purple-600 bg-purple-50', 
+    ACCIDENT: 'text-orange-600 bg-orange-50', 
+    ROUTE_DEVIATION: 'text-blue-600 bg-blue-50', 
+    MEDICAL: 'text-pink-600 bg-pink-50', 
+    VIOLENCE: 'text-red-800 bg-red-100', 
+    FRAUD: 'text-yellow-600 bg-yellow-50',
+    PANIC: 'text-red-700 bg-red-100',
+    SUSPICIOUS: 'text-gray-600 bg-gray-50'
+  };
+  return colors[category as keyof typeof colors] || 'text-gray-600 bg-gray-50';
+};
+
+const getPriorityColor = (priority: string) => {
+  const colors = { 
+    CRITICAL: 'bg-red-500 text-white', 
+    HIGH: 'bg-orange-500 text-white', 
+    MEDIUM: 'bg-yellow-500 text-white', 
+    LOW: 'bg-green-500 text-white' 
+  };
+  return colors[priority as keyof typeof colors];
+};
+
+const getStatusColor = (status: string) => {
+  const colors = { 
+    ACTIVE: 'bg-red-100 text-red-800', 
+    RESPONDING: 'bg-blue-100 text-blue-800', 
+    INVESTIGATING: 'bg-yellow-100 text-yellow-800', 
+    RESOLVED: 'bg-green-100 text-green-800', 
+    CLOSED: 'bg-gray-100 text-gray-800' 
+  };
+  return colors[status as keyof typeof colors];
+};
+
+// Dummy Incoming Alerts - Simulating real-time new cases
+const createDummyIncomingAlerts = (): IncomingAlert[] => [
+  {
+    id: 'ALERT-2024-005',
+    timestamp: new Date(),
+    source: 'PASSENGER_SOS',
+    urgency: 'IMMEDIATE',
+    initialData: {
+      tripId: 'TRIP-789016',
+      passengerName: 'Sarah Johnson',
+      driverName: 'Michael Torres',
+      location: {
+        lat: 14.5794,
+        lng: 121.0359,
+        address: 'Ortigas Center, Pasig City'
+      },
+      category: 'SOS',
+      description: 'Passenger pressed emergency SOS button',
+      autoDetectedRisk: 95
+    },
+    processing: {
+      status: 'INCOMING',
+      timeToResponse: 45,
+      autoActions: ['Emergency call initiated', 'GPS tracking enabled', 'Operator notification sent']
+    }
+  }
+];
+
+const createAlertNotifications = (): AlertNotification[] => [
+  {
+    id: 'NOTIF-001',
+    timestamp: new Date(),
+    type: 'NEW_CASE',
+    priority: 'CRITICAL',
+    title: '🚨 EMERGENCY SOS ACTIVATED',
+    message: 'Sarah Johnson pressed emergency button in Ortigas Center',
+    actionRequired: true,
+    acknowledged: false,
+    relatedIncidentId: 'ALERT-2024-005',
+    soundAlert: true
+  }
+];
+
+const mockIncidents: SafetyIncident[] = [
+  {
+    id: 'INC-2024-001',
+    timestamp: new Date('2024-08-29T08:35:00'),
+    category: 'SOS',
+    priority: 'CRITICAL',
+    status: 'ACTIVE',
+    responseDeadline: new Date('2024-08-29T09:05:00'),
+    tripId: 'TRIP-789012',
+    tripStatus: 'ACTIVE',
+    passengerId: 'PASS-456',
+    passengerName: 'Maria Santos',
+    passengerPhone: '+63 917 123 4567',
+    driverId: 'DRV-123',
+    driverName: 'Juan dela Cruz',
+    driverPhone: '+63 918 765 4321',
+    currentLocation: {
+      lat: 14.5995,
+      lng: 120.9842,
+      address: 'EDSA Guadalupe, Makati City',
+      timestamp: new Date('2024-08-29T08:35:00'),
+      speed: 24,
+      heading: 180,
+      accuracy: 5
+    },
+    description: 'Passenger activated emergency SOS button. No response to callback attempts.',
+    severity: 5,
+    riskAssessment: {
+      overallScore: 92,
+      passengerRisk: 95,
+      driverRisk: 80,
+      locationRisk: 85,
+      timeRisk: 90,
+      factors: ['No response to emergency call', 'SOS button pressed', 'High-risk area'],
+      autoClassification: 'CRITICAL'
+    },
+    keywordFlags: ['emergency', 'no response', 'sos'],
+    severityMetrics: {
+      responseTime: 25,
+      heartRate: 135,
+      gpsAccuracy: 5,
+      ambientNoise: 75,
+      callDuration: 45,
+      movementPattern: 'STOPPED',
+      voiceStress: 0.85,
+      backgroundAnalysis: ['traffic noise', 'distress sounds']
+    },
+    dynamicClassification: {
+      currentSeverity: 'CRITICAL',
+      recommendedSeverity: 'CRITICAL',
+      confidence: 0.92,
+      riskFactors: [
+        {
+          factor: 'Emergency SOS Activated',
+          weight: 0.9,
+          score: 90,
+          description: 'Passenger manually triggered emergency button'
+        }
+      ],
+      autoEscalationTrigger: true,
+      timeToNextAssessment: 30,
+      assessmentHistory: [
+        {
+          timestamp: new Date('2024-08-29T08:33:00'),
+          severity: 'HIGH',
+          score: 78,
+          triggerReason: 'SOS button pressed'
+        }
+      ]
+    },
+    evidence: [
+      {
+        id: 'EVD-2024-001-001',
+        type: 'AUDIO',
+        url: '/evidence/audio/emergency-call-001.mp3',
+        filename: 'emergency-call-001.mp3',
+        fileSize: 2457600,
+        timestamp: new Date('2024-08-29T08:33:15'),
+        source: 'PASSENGER',
+        duration: 45,
+        transcript: {
+          text: 'Help me please! The driver is taking a different route and won\'t respond to me. I\'m scared!',
+          confidence: 0.92,
+          language: 'en-PH',
+          processedAt: new Date('2024-08-29T08:34:00'),
+          speakers: [
+            {
+              id: 'SPEAKER-001',
+              name: 'Maria Santos',
+              confidence: 0.88
+            }
+          ],
+          keywords: ['help', 'scared', 'different route', 'driver', 'won\'t respond'],
+          sentiment: 'NEGATIVE',
+          urgencyScore: 85
+        },
+        chainOfCustody: [
+          {
+            action: 'CREATED',
+            timestamp: new Date('2024-08-29T08:33:15'),
+            actor: 'System Auto-Recording',
+            actorRole: 'SYSTEM',
+            description: 'Emergency call automatically recorded upon SOS activation',
+            hash: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
+            ipAddress: '10.0.0.125',
+            deviceInfo: 'iPhone 12 Pro - iOS 17.5.1'
+          },
+          {
+            action: 'ACCESSED',
+            timestamp: new Date('2024-08-29T08:35:30'),
+            actor: 'Current Operator',
+            actorRole: 'SAFETY_OPERATOR',
+            description: 'Initial evidence review during incident response',
+            ipAddress: '192.168.1.45',
+            deviceInfo: 'Chrome 127.0 - Windows 11'
+          }
+        ],
+        legalHold: true,
+        integrity: {
+          hash: 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9',
+          algorithm: 'SHA-256',
+          verified: true,
+          lastVerified: new Date('2024-08-29T08:35:30')
+        },
+        metadata: {
+          originalPath: '/recordings/emergency/2024/08/29/08-33-15-PASS-456.mp3',
+          compressionApplied: false,
+          qualityLevel: 'ORIGINAL',
+          redactionApplied: false
+        }
+      },
+      {
+        id: 'EVD-2024-001-002',
+        type: 'IMAGE',
+        url: '/evidence/images/dashcam-screenshot-001.jpg',
+        filename: 'dashcam-screenshot-001.jpg',
+        fileSize: 1843200,
+        timestamp: new Date('2024-08-29T08:35:00'),
+        source: 'DASHCAM',
+        chainOfCustody: [
+          {
+            action: 'CREATED',
+            timestamp: new Date('2024-08-29T08:35:00'),
+            actor: 'Vehicle Dashcam System',
+            actorRole: 'SYSTEM',
+            description: 'Automatic screenshot captured during emergency alert',
+            hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+            deviceInfo: 'Viofo A129 Pro Duo - Firmware 2.8'
+          }
+        ],
+        legalHold: true,
+        integrity: {
+          hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          algorithm: 'SHA-256',
+          verified: true,
+          lastVerified: new Date('2024-08-29T08:35:30')
+        },
+        metadata: {
+          originalPath: '/dashcam/vehicle-ABC1234/2024/08/29/08-35-00.jpg',
+          compressionApplied: false,
+          qualityLevel: 'HIGH',
+          redactionApplied: false
+        }
+      }
+    ],
+    communicationLog: [],
+    emergencyContacts: [],
+    emergencyServices: [],
+    responseActions: [],
+    assignedOperator: 'Current Operator',
+    supervisorOverride: false,
+    legalNotificationRequired: true,
+    insuranceClaimInitiated: false,
+    mediaAlertLevel: 'NONE',
+    complianceChecklist: [],
+    vehicleInfo: {
+      plateNumber: 'ABC 1234',
+      model: 'Toyota Vios',
+      color: 'White'
+    }
+  }
+];
+
+// Unified Incident Management Modal Component
+const IncidentManagementModal = ({ incident, onClose }: { incident: SafetyIncident; onClose: () => void }) => {
+  const [activeTab, setActiveTab] = useState('overview');
+  const [selectedEvidence, setSelectedEvidence] = useState(incident.evidence[0] || null);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [transcriptionView, setTranscriptionView] = useState(false);
+  const [processSteps, setProcessSteps] = useState([
+    { id: 1, title: 'Initial Assessment', completed: true, timestamp: new Date('2024-08-29T08:35:00'), notes: 'Emergency SOS activated by passenger' },
+    { id: 2, title: 'Verify Location & Contact', completed: true, timestamp: new Date('2024-08-29T08:36:30'), notes: 'GPS location confirmed, attempted passenger contact' },
+    { id: 3, title: 'Emergency Services Notification', completed: false, timestamp: null, notes: '' },
+    { id: 4, title: 'Passenger Safety Confirmation', completed: false, timestamp: null, notes: '' },
+    { id: 5, title: 'Driver Instructions', completed: false, timestamp: null, notes: '' },
+    { id: 6, title: 'Incident Documentation', completed: false, timestamp: null, notes: '' },
+    { id: 7, title: 'Follow-up & Resolution', completed: false, timestamp: null, notes: '' }
+  ]);
+  const [processNotes, setProcessNotes] = useState('');
+
+  const formatDuration = (start: Date, end?: Date) => {
+    const duration = (end ? end.getTime() : Date.now()) - start.getTime();
+    const minutes = Math.floor(duration / 60000);
+    const seconds = Math.floor((duration % 60000) / 1000);
+    return `${minutes}m ${seconds}s`;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getEvidenceIcon = (type: string) => {
+    switch (type) {
+      case 'AUDIO': return Volume2;
+      case 'VIDEO': return Video;
+      case 'IMAGE': return Image;
+      case 'DOCUMENT': return FileText;
+      default: return FileText;
+    }
+  };
+
+  const getSourceColor = (source: string) => {
+    const colors = {
+      'PASSENGER': 'bg-blue-100 text-blue-800',
+      'DRIVER': 'bg-green-100 text-green-800', 
+      'SYSTEM': 'bg-gray-100 text-gray-800',
+      'DASHCAM': 'bg-purple-100 text-purple-800',
+      'OPERATOR': 'bg-orange-100 text-orange-800'
+    };
+    return colors[source as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b bg-gradient-to-r from-red-50 to-orange-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-full ${incident.priority === 'CRITICAL' ? 'bg-red-100' : 'bg-orange-100'}`}>
+                <AlertTriangle className={`w-6 h-6 ${incident.priority === 'CRITICAL' ? 'text-red-600' : 'text-orange-600'}`} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{incident.id}</h2>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                    incident.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'
+                  }`}>
+                    {incident.priority} PRIORITY
+                  </span>
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                    incident.status === 'ACTIVE' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {incident.status}
+                  </span>
+                  <span className="text-sm text-gray-600">
+                    Active for {formatDuration(incident.timestamp)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-gray-200 rounded-lg"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Workflow (Smaller) */}
+          <div className="w-72 border-r bg-gray-50 flex flex-col">
+            <div className="p-4 border-b bg-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Emergency Workflow</h3>
+                <div className="text-sm text-gray-600">
+                  {processSteps.filter(step => step.completed).length}/{processSteps.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Workflow Steps */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-3">
+                {processSteps.map((step, index) => (
+                  <div key={step.id} className={`p-4 rounded-lg border-2 transition-all ${
+                    step.completed 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-white border-gray-200 hover:border-blue-200'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => {
+                          const newSteps = [...processSteps];
+                          newSteps[index] = {
+                            ...step,
+                            completed: !step.completed,
+                            timestamp: !step.completed ? new Date() : null
+                          };
+                          setProcessSteps(newSteps);
+                        }}
+                        className={`mt-0.5 p-1 rounded-full transition-colors ${
+                          step.completed
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-400 hover:bg-blue-600 hover:text-white'
+                        }`}
+                      >
+                        <CheckCircle size={14} />
+                      </button>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h5 className={`text-sm font-medium ${
+                            step.completed ? 'text-green-800' : 'text-gray-900'
+                          }`}>
+                            {step.title}
+                          </h5>
+                          {step.timestamp && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              {step.timestamp.toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                          {step.description}
+                        </p>
+                        
+                        {step.showInput && (
+                          <div className="mt-2">
+                            <textarea
+                              value={step.notes || ''}
+                              onChange={(e) => {
+                                const newSteps = [...processSteps];
+                                newSteps[index] = { ...step, notes: e.target.value };
+                                setProcessSteps(newSteps);
+                              }}
+                              placeholder="Add notes..."
+                              rows={2}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Workflow Actions */}
+            <div className="p-4 border-t bg-white">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-2 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                    Contact Passenger
+                  </button>
+                  <button className="px-2 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700">
+                    Call Emergency
+                  </button>
+                  <button className="px-2 py-1.5 bg-orange-600 text-white rounded text-xs font-medium hover:bg-orange-700">
+                    Notify Driver
+                  </button>
+                  <button className="px-2 py-1.5 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700">
+                    Alert Supervisor
+                  </button>
+                </div>
+                
+                <textarea
+                  value={processNotes}
+                  onChange={(e) => setProcessNotes(e.target.value)}
+                  placeholder="Add workflow notes..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+                
+                <button className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                  Save Notes
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Main Content (Larger) */}
+          <div className="flex-1 flex flex-col">
+            {/* Tab Navigation */}
+            <div className="px-6 border-b">
+              <div className="flex gap-6">
+                {[
+                  { key: 'overview', label: 'Overview' },
+                  { key: 'map', label: 'Live Map', icon: MapPin },
+                  { key: 'evidence', label: 'Evidence', icon: FileText },
+                  { key: 'communications', label: 'Communications' },
+                  { key: 'emergency', label: 'Emergency Services' },
+                  { key: 'assessment', label: 'Risk Assessment' }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-2 px-3 py-3 text-sm font-medium border-b-2 ${
+                      activeTab === tab.key
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {tab.icon && <tab.icon size={16} />}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {renderTabContent()}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Close
+          </button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            Update Status
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render tab content function
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Trip Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Trip ID</label>
+                      <div className="text-sm text-gray-900">{incident.tripId}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Status</label>
+                      <div className="text-sm text-gray-900">{incident.tripStatus}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Vehicle</label>
+                      <div className="text-sm text-gray-900">
+                        {incident.vehicleInfo.color} {incident.vehicleInfo.model}
+                      </div>
+                      <div className="text-xs text-gray-500">{incident.vehicleInfo.plateNumber}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Operator</label>
+                      <div className="text-sm text-gray-900">{incident.assignedOperator}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passenger Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Passenger Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Name</label>
+                      <div className="text-sm text-gray-900">{incident.passengerName}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <div className="text-sm text-gray-900">{incident.passengerPhone}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">ID</label>
+                      <div className="text-sm text-gray-900">{incident.passengerId}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Driver Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Driver Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Name</label>
+                      <div className="text-sm text-gray-900">{incident.driverName}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <div className="text-sm text-gray-900">{incident.driverPhone}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">ID</label>
+                      <div className="text-sm text-gray-900">{incident.driverId}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Incident Details */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Category</label>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryIcon(incident.category) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {incident.category}
+                        </span>
+                        <span className="text-sm text-gray-600">Severity Level {incident.severity}/5</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Description</label>
+                      <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                        {incident.description}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Started</label>
+                      <div className="text-sm text-gray-900">{incident.timestamp.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Response Deadline</label>
+                      <div className="text-sm text-red-600 font-medium">
+                        {incident.responseDeadline.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Location */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Location</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <div className="text-sm text-gray-900">{incident.currentLocation.address}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Latitude</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.lat.toFixed(6)}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Longitude</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.lng.toFixed(6)}</div>
+                      </div>
+                    </div>
+                    {incident.currentLocation.speed && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Speed</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.speed} km/h</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* AI Analysis */}
+                {incident.keywordFlags && incident.keywordFlags.length > 0 && (
+                  <div className="bg-white rounded-lg border p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Analysis</h3>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 mb-2 block">Detected Keywords</label>
+                      <div className="flex flex-wrap gap-2">
+                        {incident.keywordFlags.map((keyword, index) => (
+                          <span key={index} className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm font-medium">
+                            {keyword}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'map':
+        return (
+          <div className="h-full">
+            <EmergencyMap
+              center={{ lat: incident.currentLocation.lat, lng: incident.currentLocation.lng }}
+              incidents={[incident]}
+              className="h-full rounded-lg border"
+            />
+          </div>
+        );
+
+      case 'evidence':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Evidence & Documentation</h3>
+              
+              {/* Evidence Items */}
+              <div className="space-y-4">
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Volume2 className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <h4 className="font-medium text-gray-900">Emergency Call Recording</h4>
+                        <p className="text-sm text-gray-500">Duration: 0:02:34 • Quality: High</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <Play size={16} />
+                      </button>
+                      <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded p-4 mb-3">
+                    <h5 className="font-medium text-gray-900 mb-2">AI Transcription</h5>
+                    <p className="text-sm text-gray-700 italic">
+                      "Help! Something's wrong with my driver. He's acting really strange and won't stop the car. 
+                      I'm scared. We're on Highway 1 heading north... please send help!"
+                    </p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Confidence: 94% • Auto-generated • Reviewed by: AI System
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h5 className="font-medium text-gray-900 mb-2">Chain of Custody</h5>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>• <strong>Recorded:</strong> 29/08/2024, 08:35:12</div>
+                      <div>• <strong>Hash:</strong> sha256:a1b2c3d4...</div>
+                      <div>• <strong>Stored:</strong> Secure Evidence Vault</div>
+                      <div>• <strong>Access:</strong> Emergency Response Team Only</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <Video className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <h4 className="font-medium text-gray-900">Vehicle Dashcam Footage</h4>
+                        <p className="text-sm text-gray-500">Duration: 0:05:21 • Resolution: 1080p</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="p-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                        <Play size={16} />
+                      </button>
+                      <button className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+                        <Download size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded p-4 mb-3">
+                    <h5 className="font-medium text-gray-900 mb-2">Video Analysis</h5>
+                    <p className="text-sm text-gray-700">
+                      Unusual driving patterns detected at 08:35:45. Vehicle swerving detected. 
+                      Passenger distress visible in rear camera.
+                    </p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Analysis by: AI Vision System • Confidence: 89%
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <h5 className="font-medium text-gray-900 mb-2">Metadata</h5>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <div>• <strong>Camera:</strong> Front & Rear Dashcam</div>
+                      <div>• <strong>GPS Coordinates:</strong> Embedded</div>
+                      <div>• <strong>Integrity:</strong> Verified ✓</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'communications':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Communication Log</h3>
+              
+              <div className="space-y-4">
+                <div className="border-l-4 border-red-500 pl-4 py-3 bg-red-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-medium text-red-900">Emergency Call Received</div>
+                    <div className="text-sm text-red-600">08:35:00</div>
+                  </div>
+                  <div className="text-sm text-red-800">
+                    Passenger called emergency line reporting suspicious driver behavior
+                  </div>
+                </div>
+
+                <div className="border-l-4 border-blue-500 pl-4 py-3 bg-blue-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-medium text-blue-900">Operator Response</div>
+                    <div className="text-sm text-blue-600">08:35:15</div>
+                  </div>
+                  <div className="text-sm text-blue-800">
+                    Emergency protocol activated. Attempting to contact driver and dispatch support
+                  </div>
+                </div>
+
+                <div className="border-l-4 border-yellow-500 pl-4 py-3 bg-yellow-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-medium text-yellow-900">Driver Contact Attempt</div>
+                    <div className="text-sm text-yellow-600">08:35:30</div>
+                  </div>
+                  <div className="text-sm text-yellow-800">
+                    Multiple calls to driver - no response. Vehicle tracking shows continued movement
+                  </div>
+                </div>
+
+                <div className="border-l-4 border-purple-500 pl-4 py-3 bg-purple-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-medium text-purple-900">Emergency Services Notified</div>
+                    <div className="text-sm text-purple-600">08:36:00</div>
+                  </div>
+                  <div className="text-sm text-purple-800">
+                    Police and EMS dispatched to last known location
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'emergency':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Services Coordination</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Active Services</h4>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <div className="font-medium">Police - Unit 247</div>
+                          <div className="text-sm text-gray-500">Officer Johnson</div>
+                        </div>
+                      </div>
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                        EN ROUTE
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <div>ETA: 4 minutes</div>
+                      <div>Contact: +63 917 555 0247</div>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Heart className="h-5 w-5 text-red-600" />
+                        <div>
+                          <div className="font-medium">EMS - Ambulance 15</div>
+                          <div className="text-sm text-gray-500">Paramedic Team A</div>
+                        </div>
+                      </div>
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
+                        DISPATCHED
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <div>ETA: 7 minutes</div>
+                      <div>Contact: +63 917 555 0815</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Incident Reports</h4>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="font-medium text-gray-900 mb-2">Police Report #2024-08-001</div>
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <div><strong>Status:</strong> Active Investigation</div>
+                      <div><strong>Priority:</strong> High</div>
+                      <div><strong>Lead Officer:</strong> Sgt. Martinez</div>
+                      <div><strong>Contact:</strong> +63 917 555 0001</div>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-4">
+                    <div className="font-medium text-gray-900 mb-2">EMS Incident #EM-789012</div>
+                    <div className="text-sm text-gray-600 space-y-2">
+                      <div><strong>Status:</strong> Response Initiated</div>
+                      <div><strong>Medical Priority:</strong> Level 2</div>
+                      <div><strong>Lead Paramedic:</strong> J. Santos</div>
+                      <div><strong>Hospital:</strong> City General (On Standby)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'assessment':
+        return (
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg border p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Risk Assessment</h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Risk Factors</h4>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded">
+                      <span className="font-medium text-red-900">Passenger Safety Risk</span>
+                      <span className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">CRITICAL</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+                      <span className="font-medium text-orange-900">Driver Response Risk</span>
+                      <span className="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded">HIGH</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-3 bg-yellow-50 rounded">
+                      <span className="font-medium text-yellow-900">Location Risk</span>
+                      <span className="px-2 py-1 bg-yellow-500 text-white text-xs font-bold rounded">MEDIUM</span>
+                    </div>
+                    
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+                      <span className="font-medium text-green-900">Time Factor</span>
+                      <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded">LOW</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">AI Risk Analysis</h4>
+                  
+                  <div className="border rounded-lg p-4">
+                    <div className="text-2xl font-bold text-red-600 mb-2">95/100</div>
+                    <div className="text-sm font-medium text-red-900 mb-3">CRITICAL RISK SCORE</div>
+                    
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div>• Driver non-responsive to emergency calls</div>
+                      <div>• Passenger distress signals detected</div>
+                      <div>• Unusual driving pattern analysis</div>
+                      <div>• Emergency keyword detection in call</div>
+                      <div>• Vehicle still in motion despite alerts</div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-red-50 rounded">
+                      <div className="text-sm font-medium text-red-900 mb-1">Recommended Actions:</div>
+                      <div className="text-sm text-red-800">
+                        Immediate police intervention required. Continue tracking. 
+                        Prepare medical response. Notify emergency contacts.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            <div className="text-center">
+              <div className="text-lg font-medium mb-2">Tab Content</div>
+              <div className="text-sm">Content for {activeTab} tab</div>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  if (!incident) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-[95%] h-[90%] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex-shrink-0">
+          <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-red-600 to-red-700">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-6 w-6 text-white" />
+                <span className="text-xl font-bold text-white">{incident.id}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="px-3 py-1 bg-red-800 text-white text-sm font-bold rounded-full">
+                  {incident.priority}_PRIORITY
+                </span>
+                <span className="text-red-100 text-sm mt-1">
+                  {incident.status} • Active for {Math.floor((new Date().getTime() - incident.timestamp.getTime()) / (1000 * 60))} minutes
+                </span>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-red-800 rounded-lg transition-colors"
+            >
+              <X size={24} className="text-white" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left Panel - Workflow (Smaller) */}
+          <div className="w-80 border-r bg-gray-50 flex flex-col">
+            <div className="p-4 border-b bg-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Emergency Workflow</h3>
+                <div className="text-sm text-gray-600">
+                  {processSteps.filter(step => step.completed).length}/{processSteps.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Workflow Steps */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-3">
+                {processSteps.map((step, index) => (
+                  <div key={step.id} className={`p-3 rounded-lg border-2 transition-all ${
+                    step.completed 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-white border-gray-200 hover:border-blue-200'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => {
+                          const newSteps = [...processSteps];
+                          newSteps[index] = {
+                            ...step,
+                            completed: !step.completed,
+                            timestamp: !step.completed ? new Date() : null
+                          };
+                          setProcessSteps(newSteps);
+                        }}
+                        className={`mt-0.5 p-1 rounded-full transition-colors ${
+                          step.completed
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-400 hover:bg-blue-600 hover:text-white'
+                        }`}
+                      >
+                        <CheckCircle size={14} />
+                      </button>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h5 className={`text-sm font-medium ${
+                            step.completed ? 'text-green-800' : 'text-gray-900'
+                          }`}>
+                            {step.title}
+                          </h5>
+                          {step.timestamp && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              {step.timestamp.toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                          {step.description}
+                        </p>
+                        
+                        {step.showInput && (
+                          <div className="mt-2">
+                            <textarea
+                              value={step.notes || ''}
+                              onChange={(e) => {
+                                const newSteps = [...processSteps];
+                                newSteps[index] = { ...step, notes: e.target.value };
+                                setProcessSteps(newSteps);
+                              }}
+                              placeholder="Add notes..."
+                              rows={2}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Workflow Actions */}
+            <div className="p-4 border-t bg-white">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-2 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                    Contact Passenger
+                  </button>
+                  <button className="px-2 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700">
+                    Call Emergency
+                  </button>
+                  <button className="px-2 py-1.5 bg-orange-600 text-white rounded text-xs font-medium hover:bg-orange-700">
+                    Notify Driver
+                  </button>
+                  <button className="px-2 py-1.5 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700">
+                    Alert Supervisor
+                  </button>
+                </div>
+                
+                <textarea
+                  value={processNotes}
+                  onChange={(e) => setProcessNotes(e.target.value)}
+                  placeholder="Add workflow notes..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+                
+                <button className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                  Save Notes
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Main Content (Larger) */}
+          <div className="flex-1 flex flex-col">
+            {/* Tab Navigation */}
+            <div className="px-6 border-b">
+              <div className="flex gap-6">
+                {[
+                  { key: 'overview', label: 'Overview' },
+                  { key: 'map', label: 'Live Map', icon: MapPin },
+                  { key: 'evidence', label: 'Evidence', icon: FileText },
+                  { key: 'communications', label: 'Communications' },
+                  { key: 'emergency', label: 'Emergency Services' },
+                  { key: 'assessment', label: 'Risk Assessment' }
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      activeTab === tab.key
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {tab.icon && <tab.icon size={16} />}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {activeTab === 'overview' && (
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Left Column */}
+                  <div className="space-y-6">
+                    {/* Trip Information */}
+                    <div className="bg-white rounded-lg border p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Information</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Trip ID</label>
+                          <div className="text-sm text-gray-900">{incident.tripId}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Status</label>
+                          <div className="text-sm text-gray-900">{incident.tripStatus}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Vehicle</label>
+                          <div className="text-sm text-gray-900">
+                            {incident.vehicleInfo.color} {incident.vehicleInfo.model}
+                          </div>
+                          <div className="text-xs text-gray-500">{incident.vehicleInfo.plateNumber}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Operator</label>
+                          <div className="text-sm text-gray-900">{incident.assignedOperator}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Passenger Information */}
+                    <div className="bg-white rounded-lg border p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Passenger Details</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Name</label>
+                          <div className="text-sm text-gray-900">{incident.passengerName}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Phone</label>
+                          <div className="text-sm text-gray-900">{incident.passengerPhone}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">ID</label>
+                          <div className="text-sm text-gray-900">{incident.passengerId}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Driver Information */}
+                    <div className="bg-white rounded-lg border p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Driver Details</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Name</label>
+                          <div className="text-sm text-gray-900">{incident.driverName}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Phone</label>
+                          <div className="text-sm text-gray-900">{incident.driverPhone}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">ID</label>
+                          <div className="text-sm text-gray-900">{incident.driverId}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    {/* Incident Details */}
+                    <div className="bg-white rounded-lg border p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Details</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Category</label>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryIcon(incident.category) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {incident.category}
+                            </span>
+                            <span className="text-sm text-gray-600">Severity Level {incident.severity}/5</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Description</label>
+                          <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                            {incident.description}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Started</label>
+                          <div className="text-sm text-gray-900">{incident.timestamp.toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Response Deadline</label>
+                          <div className="text-sm text-red-600 font-medium">
+                            {incident.responseDeadline.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Current Location */}
+                    <div className="bg-white rounded-lg border p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Location</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">Address</label>
+                          <div className="text-sm text-gray-900">{incident.currentLocation.address}</div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Latitude</label>
+                            <div className="text-sm text-gray-900">{incident.currentLocation.lat.toFixed(6)}</div>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Longitude</label>
+                            <div className="text-sm text-gray-900">{incident.currentLocation.lng.toFixed(6)}</div>
+                          </div>
+                        </div>
+                        {incident.currentLocation.speed && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-500">Speed</label>
+                            <div className="text-sm text-gray-900">{incident.currentLocation.speed} km/h</div>
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">GPS Accuracy</label>
+                          <div className="text-sm text-gray-900">{incident.currentLocation.accuracy}m</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Keyword Flags */}
+                    {incident.keywordFlags && incident.keywordFlags.length > 0 && (
+                      <div className="bg-white rounded-lg border p-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Keyword Flags</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {incident.keywordFlags.map((keyword, index) => (
+                            <span key={index} className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm font-medium">
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+          </div>
+
+            <div className="p-4 border-b bg-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Emergency Workflow</h3>
+                <div className="text-sm text-gray-600">
+                  {processSteps.filter(step => step.completed).length}/{processSteps.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Workflow Steps */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-3">
+                {processSteps.map((step, index) => (
+                  <div key={step.id} className={`p-4 rounded-lg border-2 transition-all ${
+                    step.completed 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-white border-gray-200 hover:border-blue-200'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => {
+                          const newSteps = [...processSteps];
+                          newSteps[index] = {
+                            ...step,
+                            completed: !step.completed,
+                            timestamp: !step.completed ? new Date() : null
+                          };
+                          setProcessSteps(newSteps);
+                        }}
+                        className={`mt-0.5 p-1 rounded-full transition-colors ${
+                          step.completed
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-200 text-gray-400 hover:bg-blue-600 hover:text-white'
+                        }`}
+                      >
+                        <CheckCircle size={14} />
+                      </button>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h5 className={`text-sm font-medium ${
+                            step.completed ? 'text-green-800' : 'text-gray-900'
+                          }`}>
+                            {step.title}
+                          </h5>
+                          {step.timestamp && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              {step.timestamp.toLocaleTimeString()}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {step.notes && (
+                          <div className="mt-2 text-xs text-gray-600 bg-white bg-opacity-50 p-2 rounded">
+                            {step.notes}
+                          </div>
+                        )}
+                        
+                        {!step.completed && (
+                          <div className="mt-2">
+                            <input
+                              type="text"
+                              placeholder="Add notes..."
+                              value={step.notes}
+                              onChange={(e) => {
+                                const newSteps = [...processSteps];
+                                newSteps[index] = { ...step, notes: e.target.value };
+                                setProcessSteps(newSteps);
+                              }}
+                              className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Workflow Actions */}
+            <div className="p-4 border-t bg-white">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="px-2 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                    Contact Passenger
+                  </button>
+                  <button className="px-2 py-1.5 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700">
+                    Call Emergency
+                  </button>
+                  <button className="px-2 py-1.5 bg-orange-600 text-white rounded text-xs font-medium hover:bg-orange-700">
+                    Notify Driver
+                  </button>
+                  <button className="px-2 py-1.5 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700">
+                    Alert Supervisor
+                  </button>
+                </div>
+                
+                <textarea
+                  value={processNotes}
+                  onChange={(e) => setProcessNotes(e.target.value)}
+                  placeholder="Add workflow notes..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+                
+                <button className="w-full px-3 py-2 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                  Save Notes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Close
+          </button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            Update Status
+          </button>
+        </div>
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Trip Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Trip Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Trip ID</label>
+                      <div className="text-sm text-gray-900">{incident.tripId}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Status</label>
+                      <div className="text-sm text-gray-900">{incident.tripStatus}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Vehicle</label>
+                      <div className="text-sm text-gray-900">
+                        {incident.vehicleInfo.color} {incident.vehicleInfo.model}
+                      </div>
+                      <div className="text-xs text-gray-500">{incident.vehicleInfo.plateNumber}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Operator</label>
+                      <div className="text-sm text-gray-900">{incident.assignedOperator}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passenger Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Passenger Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Name</label>
+                      <div className="text-sm text-gray-900">{incident.passengerName}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <div className="text-sm text-gray-900">{incident.passengerPhone}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">ID</label>
+                      <div className="text-sm text-gray-900">{incident.passengerId}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Driver Information */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Driver Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Name</label>
+                      <div className="text-sm text-gray-900">{incident.driverName}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Phone</label>
+                      <div className="text-sm text-gray-900">{incident.driverPhone}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">ID</label>
+                      <div className="text-sm text-gray-900">{incident.driverId}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Incident Details */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Incident Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Category</label>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${getCategoryIcon(incident.category) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {incident.category}
+                        </span>
+                        <span className="text-sm text-gray-600">Severity Level {incident.severity}/5</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Description</label>
+                      <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded">
+                        {incident.description}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Started</label>
+                      <div className="text-sm text-gray-900">{incident.timestamp.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Response Deadline</label>
+                      <div className="text-sm text-red-600 font-medium">
+                        {incident.responseDeadline.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Current Location */}
+                <div className="bg-white rounded-lg border p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Current Location</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Address</label>
+                      <div className="text-sm text-gray-900">{incident.currentLocation.address}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Latitude</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.lat.toFixed(6)}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Longitude</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.lng.toFixed(6)}</div>
+                      </div>
+                    </div>
+                    {incident.currentLocation.speed && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Speed</label>
+                        <div className="text-sm text-gray-900">{incident.currentLocation.speed} km/h</div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">GPS Accuracy</label>
+                      <div className="text-sm text-gray-900">{incident.currentLocation.accuracy}m</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Keyword Flags */}
+                {incident.keywordFlags && incident.keywordFlags.length > 0 && (
+                  <div className="bg-white rounded-lg border p-4">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Keyword Flags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {incident.keywordFlags.map((keyword, index) => (
+                        <span key={index} className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm font-medium">
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'map' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-900">Live Tracking Map</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                    <span className="text-sm font-medium">Live GPS</span>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    Last updated: {new Date().toLocaleTimeString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border overflow-hidden">
+                <div className="h-[60vh]">
+                  <EmergencyMap incident={incident} />
+                </div>
+              </div>
+
+              {/* Location Details */}
+              <div className="grid grid-cols-3 gap-6">
+                <div className="bg-white rounded-lg border p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Current Position</h4>
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="text-gray-500">Address:</span>
+                      <div className="font-medium">{incident.currentLocation.address}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs text-gray-600">
+                      <div>Lat: {incident.currentLocation.lat.toFixed(6)}</div>
+                      <div>Lng: {incident.currentLocation.lng.toFixed(6)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Movement Data</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Speed</span>
+                      <span className="font-medium">{incident.currentLocation.speed || 0} km/h</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Pattern</span>
+                      <span className={`font-medium ${
+                        incident.severityMetrics.movementPattern === 'STOPPED' ? 'text-red-600' :
+                        incident.severityMetrics.movementPattern === 'ERRATIC' ? 'text-orange-600' :
+                        'text-green-600'
+                      }`}>
+                        {incident.severityMetrics.movementPattern}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">GPS Accuracy</span>
+                      <span className="font-medium">{incident.currentLocation.accuracy || 5}m</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Proximity</h4>
+                  <div className="space-y-2">
+                    <div className="text-sm">
+                      <span className="text-gray-500">Nearest Hospital:</span>
+                      <div className="font-medium">St. Luke's Medical Center</div>
+                      <div className="text-xs text-gray-500">2.1 km • 4 min ETA</div>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-gray-500">Police Station:</span>
+                      <div className="font-medium">Makati Police Station</div>
+                      <div className="text-xs text-gray-500">1.8 km • 3 min ETA</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'evidence' && (
+            <div className="flex h-full gap-6">
+              {/* Evidence List */}
+              <div className="w-80 bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Evidence Items</h3>
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                    {incident.evidence.length} items
+                  </span>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {incident.evidence.map((evidence) => {
+                    const Icon = getEvidenceIcon(evidence.type);
+                    return (
+                      <div
+                        key={evidence.id}
+                        onClick={() => setSelectedEvidence(evidence)}
+                        className={`p-3 rounded-lg cursor-pointer border transition-all ${
+                          selectedEvidence?.id === evidence.id 
+                            ? 'bg-white border-blue-200 shadow-sm ring-1 ring-blue-200' 
+                            : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Icon className="w-5 h-5 text-gray-400 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">
+                              {evidence.filename}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatFileSize(evidence.fileSize)} • {evidence.timestamp.toLocaleTimeString()}
+                            </div>
+                            <div className="mt-2">
+                              <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getSourceColor(evidence.source)}`}>
+                                {evidence.source}
+                              </span>
+                            </div>
+                            {evidence.legalHold && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Lock size={12} className="text-red-500" />
+                                <span className="text-xs text-red-600 font-medium">Legal Hold</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Evidence Detail */}
+              <div className="flex-1">
+                {selectedEvidence ? (
+                  <div className="bg-white rounded-lg border p-6 h-full">
+                    <div className="flex items-start justify-between mb-6">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{selectedEvidence.filename}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {selectedEvidence.type} • {formatFileSize(selectedEvidence.fileSize)} • 
+                          {selectedEvidence.timestamp.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedEvidence.transcript && (
+                          <button
+                            onClick={() => setTranscriptionView(!transcriptionView)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                              transcriptionView ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            <FileText size={16} />
+                            {transcriptionView ? 'Hide' : 'Show'} Transcript
+                          </button>
+                        )}
+                        <button className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+                          <Download size={16} />
+                          Download
+                        </button>
+                        {selectedEvidence.type === 'AUDIO' && (
+                          <button 
+                            onClick={() => setPlayingAudio(playingAudio === selectedEvidence.id ? null : selectedEvidence.id)}
+                            className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium"
+                          >
+                            {playingAudio === selectedEvidence.id ? <Pause size={16} /> : <Play size={16} />}
+                            {playingAudio === selectedEvidence.id ? 'Pause' : 'Play'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Transcription View */}
+                    {transcriptionView && selectedEvidence.transcript ? (
+                      <div className="space-y-6">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-semibold text-gray-900">Speech-to-Text Transcription</h4>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <span>Confidence: <span className="font-medium">{Math.round(selectedEvidence.transcript.confidence * 100)}%</span></span>
+                              <span>Language: <span className="font-medium">{selectedEvidence.transcript.language}</span></span>
+                              {selectedEvidence.transcript.sentiment && (
+                                <span>Sentiment: <span className={`font-medium ${
+                                  selectedEvidence.transcript.sentiment === 'NEGATIVE' ? 'text-red-600' :
+                                  selectedEvidence.transcript.sentiment === 'POSITIVE' ? 'text-green-600' :
+                                  'text-gray-600'
+                                }`}>{selectedEvidence.transcript.sentiment}</span></span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {selectedEvidence.transcript.urgencyScore && (
+                            <div className="flex items-center gap-2 mb-3">
+                              <AlertTriangle className="w-4 h-4 text-orange-500" />
+                              <span className="text-sm font-medium text-gray-700">
+                                Urgency Score: 
+                                <span className={`ml-1 ${
+                                  selectedEvidence.transcript.urgencyScore >= 80 ? 'text-red-600' :
+                                  selectedEvidence.transcript.urgencyScore >= 60 ? 'text-orange-600' :
+                                  'text-yellow-600'
+                                }`}>
+                                  {selectedEvidence.transcript.urgencyScore}/100
+                                </span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <h4 className="font-semibold text-gray-900 mb-3">Transcript</h4>
+                          <p className="text-gray-900 leading-relaxed">{selectedEvidence.transcript.text}</p>
+                        </div>
+
+                        {selectedEvidence.transcript.keywords && selectedEvidence.transcript.keywords.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Key Terms</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedEvidence.transcript.keywords.map((keyword, index) => (
+                                <span key={index} className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm font-medium">
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      /* Evidence Preview & Chain of Custody */
+                      <div className="space-y-6">
+                        {/* Evidence Preview */}
+                        <div className="bg-gray-50 rounded-lg p-8 flex items-center justify-center">
+                          <div className="text-center">
+                            {selectedEvidence.type === 'AUDIO' && (
+                              <>
+                                <Volume2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600">Audio Evidence</p>
+                                <p className="text-sm text-gray-500">{selectedEvidence.duration}s duration</p>
+                              </>
+                            )}
+                            {selectedEvidence.type === 'IMAGE' && (
+                              <>
+                                <Image className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600">Image Evidence</p>
+                                <p className="text-sm text-gray-500">Dashcam screenshot</p>
+                              </>
+                            )}
+                            {selectedEvidence.type === 'VIDEO' && (
+                              <>
+                                <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600">Video Evidence</p>
+                                <p className="text-sm text-gray-500">{selectedEvidence.duration}s duration</p>
+                              </>
+                            )}
+                            {selectedEvidence.type === 'DOCUMENT' && (
+                              <>
+                                <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                                <p className="text-gray-600">Document Evidence</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Chain of Custody */}
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <ShieldIcon className="w-5 h-5 text-blue-600" />
+                            Chain of Custody
+                          </h4>
+                          <div className="space-y-4 max-h-64 overflow-y-auto">
+                            {selectedEvidence.chainOfCustody.map((entry, index) => (
+                              <div key={index} className="flex items-start gap-4 pb-4 border-b border-gray-100 last:border-0">
+                                <div className={`p-2 rounded-full ${
+                                  entry.action === 'CREATED' ? 'bg-green-100' :
+                                  entry.action === 'ACCESSED' ? 'bg-blue-100' :
+                                  entry.action === 'MODIFIED' ? 'bg-orange-100' :
+                                  'bg-gray-100'
+                                }`}>
+                                  {entry.action === 'CREATED' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                  {entry.action === 'ACCESSED' && <Eye className="w-4 h-4 text-blue-600" />}
+                                  {entry.action === 'MODIFIED' && <FileText className="w-4 h-4 text-orange-600" />}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-sm font-medium text-gray-900">{entry.action}</div>
+                                    <div className="text-xs text-gray-500">
+                                      {entry.timestamp.toLocaleString()}
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-gray-600 mt-1">{entry.description}</div>
+                                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                    <span>Actor: {entry.actor} ({entry.actorRole})</span>
+                                    {entry.hash && (
+                                      <span className="flex items-center gap-1">
+                                        <Hash size={12} />
+                                        {entry.hash.slice(0, 8)}...
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Integrity Verification */}
+                        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                              <span className="text-sm font-medium text-green-800">Integrity Verified</span>
+                            </div>
+                            <div className="text-xs text-green-700">
+                              Last verified: {selectedEvidence.integrity.lastVerified.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-xs text-green-700 mt-2 font-mono">
+                            {selectedEvidence.integrity.algorithm}: {selectedEvidence.integrity.hash.slice(0, 16)}...
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border p-6 h-full flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                      <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-lg font-medium">Select Evidence</p>
+                      <p className="text-sm">Choose an evidence item from the left to view details</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'process' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-gray-900">Emergency Response Process</h3>
+                <div className="text-sm text-gray-600">
+                  {processSteps.filter(step => step.completed).length} of {processSteps.length} steps completed
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Process Steps */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900">Response Steps</h4>
+                  <div className="space-y-3">
+                    {processSteps.map((step, index) => (
+                      <div key={step.id} className={`p-4 rounded-lg border-2 transition-all ${
+                        step.completed 
+                          ? 'bg-green-50 border-green-200' 
+                          : 'bg-white border-gray-200 hover:border-blue-200'
+                      }`}>
+                        <div className="flex items-start gap-3">
+                          <button
+                            onClick={() => {
+                              const newSteps = [...processSteps];
+                              newSteps[index] = {
+                                ...step,
+                                completed: !step.completed,
+                                timestamp: !step.completed ? new Date() : null
+                              };
+                              setProcessSteps(newSteps);
+                            }}
+                            className={`mt-1 p-1 rounded-full transition-colors ${
+                              step.completed
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-200 text-gray-400 hover:bg-blue-600 hover:text-white'
+                            }`}
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h5 className={`font-medium ${
+                                step.completed ? 'text-green-800' : 'text-gray-900'
+                              }`}>
+                                {step.title}
+                              </h5>
+                              {step.timestamp && (
+                                <span className="text-xs text-gray-500">
+                                  {step.timestamp.toLocaleTimeString()}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {step.notes && (
+                              <div className="mt-2 text-sm text-gray-600 bg-white bg-opacity-50 p-2 rounded">
+                                {step.notes}
+                              </div>
+                            )}
+                            
+                            {!step.completed && (
+                              <div className="mt-3">
+                                <input
+                                  type="text"
+                                  placeholder="Add notes for this step..."
+                                  value={step.notes}
+                                  onChange={(e) => {
+                                    const newSteps = [...processSteps];
+                                    newSteps[index] = { ...step, notes: e.target.value };
+                                    setProcessSteps(newSteps);
+                                  }}
+                                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Process Notes & Updates */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900">Process Notes & Updates</h4>
+                  
+                  {/* Quick Actions */}
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h5 className="font-medium text-blue-900 mb-3">Quick Actions</h5>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        Contact Passenger
+                      </button>
+                      <button className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                        Call Emergency
+                      </button>
+                      <button className="px-3 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                        Notify Driver
+                      </button>
+                      <button className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                        Alert Supervisor
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notes Input */}
+                  <div className="bg-white rounded-lg border p-4">
+                    <h5 className="font-medium text-gray-900 mb-3">Add Process Notes</h5>
+                    <textarea
+                      value={processNotes}
+                      onChange={(e) => setProcessNotes(e.target.value)}
+                      placeholder="Add detailed notes about the incident response process, actions taken, observations, or next steps..."
+                      rows={6}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-gray-500">
+                        {processNotes.length} characters
+                      </span>
+                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        Save Notes
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Recent Updates */}
+                  <div className="bg-white rounded-lg border p-4">
+                    <h5 className="font-medium text-gray-900 mb-3">Recent Updates</h5>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">Location Verified</div>
+                          <div className="text-xs text-gray-500">GPS confirmed at EDSA Guadalupe - 08:36:30</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">Initial Assessment Complete</div>
+                          <div className="text-xs text-gray-500">Emergency SOS activated - 08:35:00</div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
+                        <Clock className="w-4 h-4 text-yellow-600 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900">Awaiting Emergency Services</div>
+                          <div className="text-xs text-gray-500">Next action required - Now</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'communications' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Communication Log</h3>
+              <div className="space-y-4">
+                {incident.communicationLog.length > 0 ? (
+                  incident.communicationLog.map((log, index) => (
+                    <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
+                      <div className={`p-2 rounded-full ${
+                        log.direction === 'INBOUND' ? 'bg-blue-100' : 'bg-green-100'
+                      }`}>
+                        {log.type === 'CALL' ? (
+                          <AlertTriangle className={`w-4 h-4 ${
+                            log.direction === 'INBOUND' ? 'text-blue-600' : 'text-green-600'
+                          }`} />
+                        ) : (
+                          <FileText className={`w-4 h-4 ${
+                            log.direction === 'INBOUND' ? 'text-blue-600' : 'text-green-600'
+                          }`} />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="font-medium text-gray-900">
+                            {log.type} - {log.participant}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {log.timestamp.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600 mt-2">
+                          {log.content}
+                        </div>
+                        {log.duration && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Duration: {log.duration}s
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No communications logged yet
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'emergency' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Emergency Services</h3>
+              <div className="space-y-4">
+                {incident.emergencyServices.length > 0 ? (
+                  incident.emergencyServices.map((service, index) => (
+                    <div key={index} className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="font-medium text-gray-900">{service.type}</div>
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          service.status === 'ON_SCENE' ? 'bg-green-100 text-green-800' :
+                          service.status === 'DISPATCHED' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {service.status}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <div>Contact: {service.contactInfo}</div>
+                        {service.reportNumber && <div>Report #: {service.reportNumber}</div>}
+                        {service.eta && <div>ETA: {service.eta.toLocaleString()}</div>}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    No emergency services contacted yet
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'assessment' && (
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900">Risk Assessment</h3>
+              
+              {/* Overall Risk Score */}
+              <div className="bg-white rounded-lg border p-4">
+                <h4 className="font-semibold text-gray-900 mb-4">Overall Risk Score</h4>
+                <div className="text-4xl font-bold text-red-600 mb-2">
+                  {incident.riskAssessment.overallScore}/100
+                </div>
+                <div className="text-sm text-gray-600">
+                  Auto-classification: {incident.riskAssessment.autoClassification}
+                </div>
+              </div>
+
+              {/* Risk Breakdown */}
+              <div className="bg-white rounded-lg border p-4">
+                <h4 className="font-semibold text-gray-900 mb-4">Risk Breakdown</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Passenger Risk</span>
+                    <span className="font-medium">{incident.riskAssessment.passengerRisk}/100</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Driver Risk</span>
+                    <span className="font-medium">{incident.riskAssessment.driverRisk}/100</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Location Risk</span>
+                    <span className="font-medium">{incident.riskAssessment.locationRisk}/100</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Time Risk</span>
+                    <span className="font-medium">{incident.riskAssessment.timeRisk}/100</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Factors */}
+              <div className="bg-white rounded-lg border p-4">
+                <h4 className="font-semibold text-gray-900 mb-4">Risk Factors</h4>
+                <div className="space-y-2">
+                  {incident.riskAssessment.factors.map((factor, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm text-gray-700">{factor}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic Classification */}
+              <div className="bg-white rounded-lg border p-4">
+                <h4 className="font-semibold text-gray-900 mb-4">Dynamic Classification</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Current Severity</span>
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                      incident.dynamicClassification.currentSeverity === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                      incident.dynamicClassification.currentSeverity === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {incident.dynamicClassification.currentSeverity}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Confidence</span>
+                    <span className="font-medium">{Math.round(incident.dynamicClassification.confidence * 100)}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Auto Escalation</span>
+                    <span className={`font-medium ${
+                      incident.dynamicClassification.autoEscalationTrigger ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                      {incident.dynamicClassification.autoEscalationTrigger ? 'Triggered' : 'Not Triggered'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Close
+          </button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            Update Status
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SafetyPage = () => {
+  const [incidents, setIncidents] = useState<SafetyIncident[]>(mockIncidents);
+  const [selectedIncident, setSelectedIncident] = useState<SafetyIncident | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('ALL');
+  const [filterPriority, setFilterPriority] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [notifications, setNotifications] = useState<string[]>([]);
+  const [incomingAlerts, setIncomingAlerts] = useState<IncomingAlert[]>(createDummyIncomingAlerts());
+  const [alertNotifications, setAlertNotifications] = useState<AlertNotification[]>(createAlertNotifications());
+  const [showIncomingPanel, setShowIncomingPanel] = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+
+  const filteredIncidents = useMemo(() => {
+    return incidents.filter(incident => {
+      const matchesCategory = filterCategory === 'ALL' || incident.category === filterCategory;
+      const matchesPriority = filterPriority === 'ALL' || incident.priority === filterPriority;
+      const matchesSearch = searchTerm === '' || 
+        incident.passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.driverName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        incident.id.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesCategory && matchesPriority && matchesSearch;
+    });
+  }, [incidents, filterCategory, filterPriority, searchTerm]);
+
+  const priorityStats = useMemo(() => {
+    const stats = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
+    incidents.forEach(incident => {
+      if (incident.status === 'ACTIVE' || incident.status === 'RESPONDING') {
+        stats[incident.priority]++;
+      }
+    });
+    return stats;
+  }, [incidents]);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Safety & Security</h1>
+          <p className="text-sm text-gray-500 mt-1">Emergency response and incident management</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search incidents, passengers, drivers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-96 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+          </div>
+          <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option>All Services</option>
+            <option>Emergency</option>
+            <option>Security</option>
+          </select>
+          <div className="flex items-center bg-green-50 text-green-700 px-3 py-2 rounded-lg">
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+            <span className="text-sm font-medium">Live</span>
+          </div>
+          <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium">
+            <Filter size={16} />
+            Filters
+          </button>
+        </div>
+      </div>
+
+      {/* Incoming Alerts Panel Toggle */}
+      {showIncomingPanel && (
+        <div className="fixed top-16 right-4 z-40 w-96 bg-white rounded-lg shadow-xl border max-h-96 overflow-y-auto">
+          <div className="p-4 border-b bg-red-50">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Incoming Safety Alerts</h3>
+              <button
+                onClick={() => setShowIncomingPanel(false)}
+                className="p-1 hover:bg-gray-200 rounded"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-6">
+        {/* Main Content Area */}
+        <div className="w-full">
+          {/* Status Tabs */}
+          <div className="flex items-center gap-4 mb-6">
+            {[
+              { key: 'ACTIVE', label: 'Active', count: priorityStats.CRITICAL + priorityStats.HIGH, icon: AlertTriangle },
+              { key: 'RESPONDING', label: 'Responding', count: incidents.filter(i => i.status === 'RESPONDING').length, icon: Zap },
+              { key: 'INVESTIGATING', label: 'Investigating', count: incidents.filter(i => i.status === 'INVESTIGATING').length, icon: CheckCircle },
+              { key: 'RESOLVED', label: 'Resolved', count: incidents.filter(i => i.status === 'RESOLVED').length, icon: XCircle },
+              { key: 'CLOSED', label: 'Closed', count: incidents.filter(i => i.status === 'CLOSED').length, icon: Calendar }
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = (tab.key === 'ACTIVE' && filterCategory === 'ALL') || filterCategory === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFilterCategory(tab.key === 'ACTIVE' ? 'ALL' : tab.key)}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full border ${
+                    isActive
+                      ? 'bg-blue-50 text-blue-600 border-blue-200'
+                      : 'text-gray-500 border-gray-200 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    isActive ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Main Content Table */}
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+            {/* Table Header */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {filterCategory === 'ALL' ? 'Active' : filterCategory.charAt(0) + filterCategory.slice(1).toLowerCase()}
+                  </h2>
+                  <p className="text-sm text-gray-500 flex items-center">
+                    Showing 1-15 of {filteredIncidents.length} incidents
+                    <span className="ml-2 inline-flex items-center">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse mr-1"></span>
+                      Live
+                    </span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">10 per page</span>
+                    <select className="text-sm border-gray-300 rounded">
+                      <option>Sort by Time</option>
+                      <option>Sort by Priority</option>
+                      <option>Sort by Status</option>
+                    </select>
+                  </div>
+                  <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded bg-green-50 text-green-700">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    Live ON
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Incident ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Passenger</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Route</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fare</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredIncidents.map((incident) => {
+                    const CategoryIcon = getCategoryIcon(incident.category);
+                    return (
+                      <tr 
+                        key={incident.id} 
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => setSelectedIncident(incident)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <button className="text-blue-600 hover:text-blue-800 font-medium">
+                              {incident.id}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{incident.passengerName}</div>
+                          <div className="text-xs text-gray-500">★ 4.8</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{incident.driverName}</div>
+                          <div className="text-xs text-gray-500">Unassigned</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{incident.currentLocation.address}</div>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <CategoryIcon size={12} className="mr-1" />
+                            {incident.category} • 2.5 km • 8 min
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-900">Emergency</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            incident.priority === 'CRITICAL' ? 'bg-red-100 text-red-800' :
+                            incident.priority === 'HIGH' ? 'bg-orange-100 text-orange-800' :
+                            incident.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {incident.priority}
+                          </span>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {(() => {
+                              const timeDiff = Date.now() - incident.timestamp.getTime();
+                              const minutes = Math.floor(timeDiff / 60000);
+                              const seconds = Math.floor((timeDiff % 60000) / 1000);
+                              return `${minutes}m ${seconds}s`;
+                            })()}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₱{Math.floor(Math.random() * 500 + 200)}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedIncident(incident);
+                              setShowIncidentModal(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                          >
+                            <Eye size={14} />
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Page 1 of 1
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Previous</span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 text-sm rounded">1-{filteredIncidents.length} of {filteredIncidents.length}</span>
+                <span className="text-sm text-gray-500">Next</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Unified Incident Management Modal */}
+      {showIncidentModal && selectedIncident && (
+        <IncidentManagementModal 
+          incident={selectedIncident}
+          onClose={() => {
+            setShowIncidentModal(false);
+            setSelectedIncident(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default SafetyPage;

@@ -178,8 +178,7 @@ export default function EditUserPage() {
         router.push('/settings');
       }, 2000);
       
-      console.log('✅ User updated:', editUser);
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Failed to update user:', error);
     } finally {
       setIsLoading(false);
@@ -190,7 +189,6 @@ export default function EditUserPage() {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('🗑️ User deleted:', userId);
       router.push('/settings');
     } catch (error) {
       console.error('❌ Failed to delete user:', error);

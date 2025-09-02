@@ -64,24 +64,6 @@ const SecurityPanel = memo<SecurityPanelProps>(({
     { id: 'permissions', label: 'Permissions', icon: Users }
   ];
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'login_failure': return <AlertTriangle className="w-4 h-4" />;
-      case 'password_change': return <Key className="w-4 h-4" />;
-      case 'permission_change': return <Shield className="w-4 h-4" />;
-      case 'suspicious_activity': return <Eye className="w-4 h-4" />;
-      default: return <Activity className="w-4 h-4" />;
-    }
-  };
 
   const handleConfigChange = (key: keyof SecurityConfig, value: any) => {
     const updatedConfig = { ...localConfig, [key]: value };
@@ -201,48 +183,59 @@ const SecurityPanel = memo<SecurityPanelProps>(({
   );
 
   const renderSecurityEvents = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Recent Security Events</h3>
-          <p className="text-sm text-gray-600">Monitor and respond to security incidents</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600">
-            {securityEvents.filter(e => e.severity === 'high').length} high priority events
-          </span>
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Recent Security Events</h3>
+        <p className="text-sm text-gray-500">Monitor and respond to security incidents</p>
+        <div className="mt-2 text-sm text-amber-600">
+          {securityEvents.filter(e => e.severity === 'high').length} high priority events
         </div>
       </div>
 
-      <div className="space-y-4">
+      {/* Security Events list - Minimal cards matching User Management */}
+      <div className="space-y-2">
         {securityEvents.map((event) => (
-          <div
-            key={event.id}
-            className={`p-4 rounded-lg border-2 ${getSeverityColor(event.severity)}`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
-                <div className="mt-1">
-                  {getEventIcon(event.type)}
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">{event.description}</h4>
-                  <div className="text-sm text-gray-600 mt-1">
-                    <span>User: {event.user}</span>
-                    <span className="mx-2">•</span>
-                    <span>IP: {event.ipAddress}</span>
-                    <span className="mx-2">•</span>
-                    <span>{event.timestamp.toLocaleString()}</span>
-                  </div>
-                </div>
+          <div key={event.id} className="flex items-center justify-between p-4 bg-gray-50/50 hover:bg-gray-100/50 rounded-lg transition-colors">
+            <div className="flex items-center gap-3 flex-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                event.severity === 'high' ? 'bg-red-100' : 
+                event.severity === 'medium' ? 'bg-yellow-100' : 'bg-blue-100'
+              }`}>
+                <AlertTriangle className={`w-4 h-4 ${
+                  event.severity === 'high' ? 'text-red-600' : 
+                  event.severity === 'medium' ? 'text-yellow-600' : 'text-blue-600'
+                }`} />
               </div>
-              <button
-                onClick={() => onAcknowledgeEvent(event.id)}
-                className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Acknowledge
-              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-gray-900 truncate">{event.description}</p>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    event.severity === 'high' ? 'bg-red-100 text-red-800' : 
+                    event.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {event.severity}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {event.user} • {event.ipAddress} • {event.timestamp.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="text-right">
+                <div className="font-medium text-blue-600 capitalize">{event.type.replace('_', ' ')}</div>
+                <div>{event.timestamp.toLocaleDateString()}</div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onAcknowledgeEvent(event.id)}
+                  className="flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Acknowledge
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -289,28 +282,26 @@ const SecurityPanel = memo<SecurityPanelProps>(({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {subTabs.map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            const Icon = tab.icon;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onSubTabChange(tab.id)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="w-4 h-4 mr-2" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {subTabs.map((tab) => {
+          const isActive = activeSubTab === tab.id;
+          const Icon = tab.icon;
+          
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onSubTabChange(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <div>

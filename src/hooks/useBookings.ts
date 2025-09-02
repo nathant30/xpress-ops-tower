@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useEnhancedAuth } from './useEnhancedAuth';
 import { logger } from '@/lib/security/productionLogger';
 
 export interface Booking {
@@ -53,7 +53,7 @@ export interface UseBookingsOptions {
 }
 
 export function useBookings(options: UseBookingsOptions = {}) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuth();
   const [data, setData] = useState<{
     bookings: Booking[];
     total: number;

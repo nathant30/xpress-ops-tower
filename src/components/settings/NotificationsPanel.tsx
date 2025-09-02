@@ -105,7 +105,7 @@ const NotificationsPanel = memo<NotificationsPanelProps>(({
             </select>
             <button
               onClick={() => onSendTestNotification(testType)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <Bell className="w-4 h-4 mr-2" />
               Send Test
@@ -376,28 +376,26 @@ const NotificationsPanel = memo<NotificationsPanelProps>(({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
-          {subTabs.map((tab) => {
-            const isActive = activeSubTab === tab.id;
-            const Icon = tab.icon;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => onSubTabChange(tab.id)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  isActive
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="w-4 h-4 mr-2" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        {subTabs.map((tab) => {
+          const isActive = activeSubTab === tab.id;
+          const Icon = tab.icon;
+          
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onSubTabChange(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <div>

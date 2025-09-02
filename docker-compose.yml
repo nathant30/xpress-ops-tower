@@ -1,312 +1,59 @@
-# Docker Compose for Xpress Ops Tower
-# Production-ready setup with all services
-
 version: '3.8'
 
 services:
-  # Main application
   xpress-ops-tower:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_ENV: production
-    container_name: xpress-ops-tower
-    restart: unless-stopped
+    build: .
     ports:
-      - "3000:3000"
+      - "4001:4001"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/xpress_ops_tower
-      - REDIS_URL=redis://redis:6379
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
-      - EMERGENCY_SERVICES_API_KEY=${EMERGENCY_SERVICES_API_KEY}
-      - PORT=3000
-      - HOSTNAME=0.0.0.0
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - JWT_SECRET=production-jwt-secret-change-in-production
+      - PORT=4001
     volumes:
-      - app_logs:/app/logs
-      - app_uploads:/app/uploads
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
+      - ./data:/app/data
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4001/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-
-  # PostgreSQL Database
-  postgres:
-    image: postgis/postgis:15-3.3
-    container_name: xpress-postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=xpress_ops_tower
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
-      # Security: Enable SSL and configure encryption
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_WALDIR=/var/lib/postgresql/wal
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - postgres_wal:/var/lib/postgresql/wal
-      - ./database/schemas:/docker-entrypoint-initdb.d
-      - ./database/security:/docker-entrypoint-initdb.d/security
-      - ./database/ssl:/var/lib/postgresql/ssl:ro
-    ports:
-      - "127.0.0.1:5432:5432"  # Security: Bind to localhost only
+      start_period: 40s
     networks:
-      - xpress-backend-network  # Backend-only network
-    command: >
-      postgres
-      -c ssl=on
-      -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt
-      -c ssl_key_file=/var/lib/postgresql/ssl/server.key
-      -c ssl_ca_file=/var/lib/postgresql/ssl/ca.crt
-      -c ssl_ciphers='ECDHE-RSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384'
-      -c ssl_prefer_server_ciphers=on
-      -c ssl_min_protocol_version='TLSv1.2'
-      -c log_connections=on
-      -c log_disconnections=on
-      -c log_statement=all
-      -c shared_preload_libraries='pg_stat_statements'
-      -c max_connections=200
-      -c shared_buffers=256MB
-      -c effective_cache_size=1GB
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d xpress_ops_tower"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      - xpress-network
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: xpress-redis
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-    volumes:
-      - redis_data:/data
-    ports:
-      - "127.0.0.1:6379:6379"  # Security: Bind to localhost only
-    networks:
-      - xpress-backend-network  # Backend-only network
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: xpress-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/sites-available:/etc/nginx/sites-available
-      - ./nginx/ssl:/etc/nginx/ssl
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - xpress-ops-tower
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Prometheus Monitoring
   prometheus:
     image: prom/prometheus:latest
-    container_name: xpress-prometheus
-    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./monitoring/security-monitoring.yml:/etc/prometheus/rules/security.yml
-      - prometheus_data:/prometheus
+      - ./monitoring/prometheus:/etc/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--storage.tsdb.retention.time=30d'
     networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - xpress-network
+    depends_on:
+      - xpress-ops-tower
 
-  # Grafana Dashboard
   grafana:
     image: grafana/grafana:latest
-    container_name: xpress-grafana
-    restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SECURITY_DISABLE_GRAVATAR=true
-      - GF_ANALYTICS_REPORTING_ENABLED=false
-      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
-      - GF_INSTALL_PLUGINS=grafana-worldmap-panel,grafana-clock-panel
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
     volumes:
-      - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - xpress-network
     depends_on:
       - prometheus
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # AlertManager for alert routing
-  alertmanager:
-    image: prom/alertmanager:latest
-    container_name: xpress-alertmanager
-    restart: unless-stopped
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
-      - alertmanager_data:/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
-      - '--web.external-url=http://localhost:9093'
-      - '--log.level=info'
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Log aggregation with Loki
-  loki:
-    image: grafana/loki:latest
-    container_name: xpress-loki
-    restart: unless-stopped
-    ports:
-      - "3100:3100"
-    volumes:
-      - loki_data:/loki
-      - ./monitoring/loki-config.yml:/etc/loki/loki-config.yml
-    command: -config.file=/etc/loki/loki-config.yml
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-
-  # Promtail log collector
-  promtail:
-    image: grafana/promtail:latest
-    container_name: xpress-promtail
-    restart: unless-stopped
-    volumes:
-      - app_logs:/var/log/app:ro
-      - nginx_logs:/var/log/nginx:ro
-      - ./monitoring/promtail-config.yml:/etc/promtail/promtail-config.yml
-    command: -config.file=/etc/promtail/promtail-config.yml
-    depends_on:
-      - loki
-    networks:
-      - xpress-frontend-network
-      - xpress-backend-network
-
-# Volumes
 volumes:
-  postgres_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/data/postgres
-      o: bind
-  postgres_wal:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/data/postgres_wal
-      o: bind
-  redis_data:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${PWD}/data/redis
-      o: bind
-  app_logs:
-    driver: local
-  app_uploads:
-    driver: local
-  nginx_logs:
-    driver: local
-  prometheus_data:
-    driver: local
-  grafana_data:
-    driver: local
-  loki_data:
-    driver: local
-  alertmanager_data:
-    driver: local
+  grafana-storage:
 
-# Networks
 networks:
-  # Public-facing network for web traffic
-  xpress-frontend-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24
-          gateway: 172.20.0.1
-    driver_opts:
-      com.docker.network.bridge.name: xpress-frontend
-      
-  # Private backend network for database and cache
-  xpress-backend-network:
-    driver: bridge
-    internal: true  # No external internet access
-    ipam:
-      config:
-        - subnet: 172.21.0.0/24
-          gateway: 172.21.0.1
-    driver_opts:
-      com.docker.network.bridge.name: xpress-backend
-      
-  # Legacy network for compatibility (will be deprecated)
   xpress-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

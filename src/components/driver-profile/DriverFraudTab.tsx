@@ -10,7 +10,7 @@ import {
   Activity,
   TrendingUp
 } from 'lucide-react';
-import { productionLogger } from '@/lib/security/productionLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface RiskPillar {
   score: number;
@@ -171,21 +171,21 @@ const DriverFraudTab = memo<DriverFraudTabProps>(({
   };
 
   const handleViewInvestigation = (investigationId: string) => {
-    productionLogger.info('Investigation details requested', { investigationId, driverId });
+    logger.info('Investigation details requested', { investigationId, driverId });
     if (onViewInvestigation) {
       onViewInvestigation(investigationId);
     }
   };
 
   const handleRunFraudScan = () => {
-    productionLogger.info('Manual fraud scan initiated', { driverId });
+    logger.info('Manual fraud scan initiated', { driverId });
     if (onRunFraudScan) {
       onRunFraudScan();
     }
   };
 
   const handlePillarClick = (pillarName: string) => {
-    productionLogger.info('Fraud pillar details requested', { pillarName, driverId });
+    logger.info('Fraud pillar details requested', { pillarName, driverId });
     setSelectedPillar(selectedPillar === pillarName ? null : pillarName);
   };
 

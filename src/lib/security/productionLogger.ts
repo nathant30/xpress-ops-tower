@@ -78,14 +78,14 @@ class ProductionLogger {
     if (!this.shouldLog(LogLevel.INFO)) return;
     
     const sanitizedData = this.sanitizeData(data);
-    console.info(this.formatMessage('INFO', message, context), sanitizedData);
+    console.log(`[INFO] ${message}`, sanitizedData);
   }
 
   debug(message: string, data?: any, context?: LogContext): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
     
     const sanitizedData = this.sanitizeData(data);
-    console.log(this.formatMessage('DEBUG', message, context), sanitizedData);
+    console.debug(`[DEBUG] ${message}`, sanitizedData);
   }
 
   // Performance logging

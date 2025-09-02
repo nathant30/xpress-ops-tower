@@ -11,6 +11,9 @@ export type { CardProps } from './card';
 export { Badge } from './badge';
 export type { BadgeProps, BadgeVariant, BadgeSize } from './badge';
 
+export { Table, StatusBadge, RoleBadge, TableActions } from './table';
+export type { TableProps, TableColumn } from './table';
+
 // Layout Components (to be added by other agents)
 // export { Container } from './container';
 // export { Grid } from './grid';

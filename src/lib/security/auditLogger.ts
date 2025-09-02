@@ -105,7 +105,86 @@ class AuditLogger {
     // Could integrate with Slack, email, SMS, or monitoring systems
     for (const event of events) {
       console.warn('🚨 CRITICAL SECURITY EVENT:', event);
-      // TODO: Implement external alerting (Slack, PagerDuty, etc.)
+      
+      try {
+        // Send Slack alert if configured
+        if (process.env.SLACK_WEBHOOK_URL) {
+          await this.sendSlackAlert(event);
+        }
+        
+        // Send email alert if configured
+        if (process.env.SMTP_HOST && process.env.SECURITY_ALERT_EMAIL) {
+          await this.sendEmailAlert(event);
+        }
+        
+        // Log to external monitoring service if configured
+        if (process.env.MONITORING_WEBHOOK_URL) {
+          await this.sendMonitoringAlert(event);
+        }
+      } catch (alertError) {
+        console.error('Failed to send security alert:', alertError);
+      }
+    }
+  }
+
+  private async sendSlackAlert(event: AuditEvent): Promise<void> {
+    try {
+      const slackPayload = {
+        text: `🚨 CRITICAL SECURITY EVENT`,
+        attachments: [{
+          color: 'danger',
+          fields: [
+            { title: 'Event Type', value: event.eventType, short: true },
+            { title: 'Security Level', value: event.securityLevel, short: true },
+            { title: 'Outcome', value: event.outcome, short: true },
+            { title: 'Timestamp', value: new Date(event.timestamp).toISOString(), short: true },
+            { title: 'User ID', value: event.userId || 'Unknown', short: true },
+            { title: 'IP Address', value: event.ipAddress || 'Unknown', short: true },
+            { title: 'Details', value: JSON.stringify(event.details, null, 2), short: false }
+          ]
+        }]
+      };
+
+      await fetch(process.env.SLACK_WEBHOOK_URL!, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackPayload)
+      });
+    } catch (error) {
+      console.error('Failed to send Slack alert:', error);
+    }
+  }
+
+  private async sendEmailAlert(event: AuditEvent): Promise<void> {
+    try {
+      // Email implementation would go here
+      // For now, just log that email would be sent
+      console.log(`EMAIL ALERT would be sent to ${process.env.SECURITY_ALERT_EMAIL} for event:`, event.eventType);
+    } catch (error) {
+      console.error('Failed to send email alert:', error);
+    }
+  }
+
+  private async sendMonitoringAlert(event: AuditEvent): Promise<void> {
+    try {
+      const monitoringPayload = {
+        alert_type: 'security_event',
+        severity: event.securityLevel,
+        event_type: event.eventType,
+        outcome: event.outcome,
+        timestamp: event.timestamp,
+        user_id: event.userId,
+        ip_address: event.ipAddress,
+        details: event.details
+      };
+
+      await fetch(process.env.MONITORING_WEBHOOK_URL!, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(monitoringPayload)
+      });
+    } catch (error) {
+      console.error('Failed to send monitoring alert:', error);
     }
   }
 

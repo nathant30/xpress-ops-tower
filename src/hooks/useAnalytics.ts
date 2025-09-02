@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useEnhancedAuth } from './useEnhancedAuth';
 import { logger } from '@/lib/security/productionLogger';
 
 export interface AnalyticsData {
@@ -57,7 +57,7 @@ export interface UseAnalyticsOptions {
 }
 
 export function useAnalytics(options: UseAnalyticsOptions = {}) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuth();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

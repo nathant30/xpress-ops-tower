@@ -1,4 +1,4 @@
-// /api/bookings - Booking Management API
+// /api/bookings - Booking Management API (Versioned)
 import { NextRequest } from 'next/server';
 import { logger } from '@/lib/security/productionLogger';
 import { 
@@ -15,6 +15,7 @@ import {
 import { withAuthAndRateLimit } from '@/lib/auth';
 import { MockDataService } from '@/lib/mockData';
 import { CreateBookingRequest } from '@/types';
+import { versionedApiRoute, createVersionedResponse } from '@/middleware/apiVersioning';
 
 // Real-time update broadcasting function
 async function broadcastBookingUpdate(bookingId: string, status: string, data: any) {

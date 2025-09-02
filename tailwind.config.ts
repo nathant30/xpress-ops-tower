@@ -8,21 +8,60 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // XPRESS Design System Colors
+      // XPRESS Design System Colors - Official Brand Guide
       colors: {
-        // Primary Brand Colors
+        // Primary Brand Colors - Xpress Rose
+        'xpress-rose': {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#eb1d25', // Primary Xpress Rose
+          600: '#dc1a22',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+        },
+        // Secondary - Xpress Navy
+        'xpress-navy': {
+          50: '#eff6fc',
+          100: '#dbebf7',
+          200: '#bfdbf0',
+          300: '#93c5e6',
+          400: '#60a5d5',
+          500: '#0a4060', // Primary Navy
+          600: '#03233a', // Primary Navy Dark
+          700: '#021c2e',
+          800: '#021523',
+          900: '#010e17',
+        },
+        // Accent - Xpress Digital Blue
+        'xpress-blue': {
+          50: '#eff6fc',
+          100: '#dbebf7',
+          200: '#bfdbf0',
+          300: '#93c5e6',
+          400: '#60a5d5',
+          500: '#0a4060', // Primary Digital Blue
+          600: '#083351',
+          700: '#072642',
+          800: '#051a26',
+          900: '#030d13',
+        },
+        // Legacy compatibility
         xpress: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+          50: '#eff6fc',
+          100: '#dbebf7',
+          200: '#bfdbf0',
+          300: '#93c5e6',
+          400: '#60a5d5',
+          500: '#0a4060',
+          600: '#083351',
+          700: '#072642',
+          800: '#051a26',
+          900: '#030d13',
+          950: '#03233a',
         },
         // Semantic Colors
         success: {
@@ -94,10 +133,11 @@ const config: Config = {
         },
       },
       
-      // XPRESS Typography
+      // XPRESS Typography - Design Guide Fonts
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-poppins)', 'Poppins', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', 'JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       
       fontSize: {

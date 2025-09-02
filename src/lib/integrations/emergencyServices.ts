@@ -797,8 +797,6 @@ class PhilippinesEmergencyServices {
 
   private async sendSMS(phoneNumber: string, message: string): Promise<void> {
     // This would integrate with SMS service
-    console.log(`📱 Emergency SMS to ${phoneNumber}:`, message);
-    
     // Store in database for audit trail
     await db.query(
       'INSERT INTO emergency_communications (type, recipient, message, sent_at) VALUES ($1, $2, $3, NOW())',
@@ -807,16 +805,13 @@ class PhilippinesEmergencyServices {
   }
 
   private async sendSMSFallback(serviceType: EmergencyServiceType, request: EmergencyServiceRequest): Promise<void> {
-    console.log(`📱 SMS Fallback for ${serviceType}:`, request.incident.id);
-  }
+    }
 
   private async initiatePhoneCall(serviceType: EmergencyServiceType, request: EmergencyServiceRequest): Promise<void> {
-    console.log(`📞 Phone Fallback for ${serviceType}:`, request.incident.id);
-  }
+    }
 
   private async escalateEmergency(incidentId: string): Promise<void> {
-    console.log(`⚠️ Auto-escalating emergency: ${incidentId}`);
-  }
+    }
 
   private async getServiceStatusUpdate(service: EmergencyServiceType, referenceNumber: string): Promise<EmergencyServiceResponse | null> {
     // This would query service APIs for status updates
@@ -824,8 +819,7 @@ class PhilippinesEmergencyServices {
   }
 
   private async cancelWithService(service: EmergencyServiceType, incidentId: string, reason: string): Promise<void> {
-    console.log(`❌ Cancelling ${service} for incident ${incidentId}: ${reason}`);
-  }
+    }
 
   private async logEmergencyRequest(request: EmergencyServiceRequest): Promise<void> {
     if (!this.config.integration.enableLogging) return;
@@ -875,8 +869,7 @@ class PhilippinesEmergencyServices {
   private startHealthMonitoring(): void {
     setInterval(async () => {
       // This would implement actual health checks
-      console.log('🔍 Monitoring emergency service health...');
-    }, 300000); // Check every 5 minutes
+      }, 300000); // Check every 5 minutes
   }
 }
 

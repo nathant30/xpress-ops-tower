@@ -1,14 +1,22 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, Poppins, JetBrains_Mono } from 'next/font/google';
 
 import '@/styles/globals.css';
 import AppLayout from '@/components/AppLayout';
 import { ServiceTypeProvider } from '@/contexts/ServiceTypeContext';
-import { AuthProvider } from '@/hooks/useAuth';
+import { EnhancedAuthProvider } from '@/hooks/useEnhancedAuth';
+import { RBACProvider } from '@/hooks/useRBAC';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+  display: 'swap',
+});
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  variable: '--font-poppins',
+  weight: ['300', '400', '500', '600', '700'],
   display: 'swap',
 });
 
@@ -62,7 +70,7 @@ export const metadata: Metadata = {
     shortcut: '/favicon-16x16.png',
     apple: '/apple-touch-icon.png',
   },
-  manifest: '/site.webmanifest',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -71,15 +79,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang='en-PH' className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang='en-PH' className={`${inter.variable} ${poppins.variable} ${jetbrainsMono.variable}`}>
       <body className='font-sans antialiased'>
-        <AuthProvider>
-          <ServiceTypeProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </ServiceTypeProvider>
-        </AuthProvider>
+        <RBACProvider>
+          <EnhancedAuthProvider>
+            <ServiceTypeProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </ServiceTypeProvider>
+          </EnhancedAuthProvider>
+        </RBACProvider>
       </body>
     </html>
   );

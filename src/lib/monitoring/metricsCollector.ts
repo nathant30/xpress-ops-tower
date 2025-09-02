@@ -233,8 +233,7 @@ class MetricsCollector {
       };
       
       await fs.writeFile(filePath, JSON.stringify(metricsData, null, 2));
-      console.log(`📊 Metrics exported to ${filePath}`);
-    } catch (error) {
+      } catch (error) {
       console.error('Failed to export metrics:', error);
     }
   }

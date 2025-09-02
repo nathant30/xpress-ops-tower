@@ -254,8 +254,7 @@ export default function EditRolePage() {
         router.push('/settings');
       }, 2000);
       
-      console.log('✅ Role updated:', editRole);
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Failed to update role:', error);
     } finally {
       setIsLoading(false);
@@ -275,7 +274,6 @@ export default function EditRolePage() {
     setIsLoading(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('🗑️ Role deleted:', roleId);
       router.push('/settings');
     } catch (error) {
       console.error('❌ Failed to delete role:', error);

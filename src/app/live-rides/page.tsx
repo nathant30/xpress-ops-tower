@@ -156,8 +156,8 @@ const LiveRidesPage = () => {
           <div className="col-span-12 lg:col-span-4">
             <LiveRidesPanel
               maxRides={12}
-              onTripSelect={(trip) => console.log('Selected trip:', trip)}
-              onEmergencyAlert={(tripId) => console.log('Emergency for trip:', tripId)}
+              onTripSelect={(trip) => {}}
+              onEmergencyAlert={(tripId) => {}}
               className="h-[700px]"
             />
           </div>

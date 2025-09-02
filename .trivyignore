@@ -1,0 +1,33 @@
+# Trivy ignore file for Xpress Ops Tower
+# Format: CVE-YYYY-NNNN or vulnerability ID
+
+# Low severity vulnerabilities in development dependencies
+# These can be ignored for now but should be reviewed periodically
+
+# NPM audit vulnerabilities that are false positives or acceptable risk
+# GHSA-XXXX-XXXX-XXXX
+
+# Specific CVEs that are not applicable to our use case
+# Example: CVE-2023-12345 - Only affects Windows environments, we use Linux containers
+
+# Development-only dependencies vulnerabilities (lower priority)
+CVE-2021-44906  # minimist in dev dependencies
+CVE-2022-25883  # semver in dev dependencies
+
+# Documentation and example vulnerabilities
+# These are in documentation or examples and don't affect production
+
+# Temporary ignores (should have expiration dates)
+# CVE-2023-XXXXX  # TODO: Remove after upgrade to package v2.0.0 (expires 2024-03-01)
+
+# Base image vulnerabilities that cannot be fixed
+# These should be rare and well-documented
+
+# Test-only vulnerabilities
+# Vulnerabilities in test fixtures or mock data
+
+# Instructions:
+# - Each ignore should have a comment explaining why
+# - Add expiration dates for temporary ignores
+# - Review this file monthly
+# - Remove entries when vulnerabilities are fixed

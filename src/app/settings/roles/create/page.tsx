@@ -198,8 +198,7 @@ export default function CreateRolePage() {
         router.push('/settings');
       }, 2000);
       
-      console.log('✅ New role created:', newRole);
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Failed to create role:', error);
     } finally {
       setIsLoading(false);

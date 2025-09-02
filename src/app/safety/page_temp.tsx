@@ -40,8 +40,7 @@ const SafetyPage = () => {
     if (typeof window !== 'undefined') {
       try {
         window.open(`tel:${phone}`, '_self');
-        console.log(`Emergency call initiated to ${type}: ${phone}`);
-      } catch (error) {
+        } catch (error) {
         console.error('Failed to initiate call:', error);
         alert(`Failed to initiate call to ${phone}. Please call manually.`);
       }
@@ -53,8 +52,7 @@ const SafetyPage = () => {
       try {
         const message = `XPRESS EMERGENCY: This is an automated safety check from Xpress Operations. Please confirm your status immediately.`;
         window.open(`sms:${phone}?body=${encodeURIComponent(message)}`, '_self');
-        console.log(`Emergency SMS initiated to ${type}: ${phone}`);
-      } catch (error) {
+        } catch (error) {
         console.error('Failed to send SMS:', error);
         alert(`Failed to send SMS to ${phone}. Please contact manually.`);
       }

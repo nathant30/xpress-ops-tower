@@ -1,0 +1,195 @@
+# GitLeaks Configuration for Xpress Ops Tower
+# Detects secrets, API keys, tokens, and other sensitive information
+
+title = "Xpress Ops Tower Security Configuration"
+
+# Global settings
+[extend]
+# Use the default GitLeaks rules as a base
+useDefault = true
+
+# Custom rules for Xpress-specific secrets
+[[rules]]
+id = "xpress-api-key"
+description = "Xpress API Key"
+regex = '''(?i)(xpress[_-]?api[_-]?key\s*[=:]\s*['"]*[a-zA-Z0-9]{32,}['"]*)|(['"]*xpress_[a-f0-9]{40}['"]*)'''
+tags = ["api-key", "xpress"]
+severity = "high"
+
+[[rules]]
+id = "ops-tower-secret"
+description = "Ops Tower Secret"
+regex = '''(?i)(ops[_-]?tower[_-]?(secret|key|token)\s*[=:]\s*['"]*[a-zA-Z0-9]{16,}['"]*)|(['"]*ops_tower_[a-f0-9]{32}['"]*)'''
+tags = ["secret", "ops-tower"]
+severity = "high"
+
+[[rules]]
+id = "emergency-api-key"
+description = "Emergency System API Key"
+regex = '''(?i)(emergency[_-]?(api[_-]?key|secret|token)\s*[=:]\s*['"]*[a-zA-Z0-9]{20,}['"]*)|(['"]*emrg_[a-f0-9]{32}['"]*)'''
+tags = ["api-key", "emergency"]
+severity = "critical"
+
+[[rules]]
+id = "twilio-credentials"
+description = "Twilio Auth Token or Account SID"
+regex = '''(?i)(twilio[_-]?(auth[_-]?token|account[_-]?sid)\s*[=:]\s*['"]*[a-zA-Z0-9]{32,}['"]*)|(['"]*AC[a-f0-9]{32}['"]*)|(['"]*SK[a-f0-9]{32}['"]*)'''
+tags = ["twilio", "communication"]
+severity = "high"
+
+[[rules]]
+id = "google-maps-api-key"
+description = "Google Maps API Key"
+regex = '''(?i)(google[_-]?maps?[_-]?api[_-]?key\s*[=:]\s*['"]*AIza[a-zA-Z0-9_-]{35}['"]*)|(['"]*AIza[a-zA-Z0-9_-]{35}['"]*)'''
+tags = ["google", "api-key", "maps"]
+severity = "medium"
+
+[[rules]]
+id = "sendgrid-api-key"
+description = "SendGrid API Key"
+regex = '''(?i)(sendgrid[_-]?api[_-]?key\s*[=:]\s*['"]*SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}['"]*)|(['"]*SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}['"]*)'''
+tags = ["sendgrid", "email"]
+severity = "high"
+
+[[rules]]
+id = "jwt-secret"
+description = "JWT Secret Key"
+regex = '''(?i)(jwt[_-]?(secret|key)\s*[=:]\s*['"]*[a-zA-Z0-9+/]{32,}['"]*)|(['"]*jwt_[a-zA-Z0-9+/]{32,}['"]*)'''
+tags = ["jwt", "auth"]
+severity = "high"
+
+[[rules]]
+id = "database-url"
+description = "Database Connection URL"
+regex = '''(?i)(database[_-]?url\s*[=:]\s*['"]*(?:postgresql|mysql|mongodb)://[^'"]+['"]*)|(['"]*(?:postgresql|mysql|mongodb)://[^@]+:[^@]+@[^/]+/[^'"]*['"]*)'''
+tags = ["database", "connection"]
+severity = "critical"
+
+[[rules]]
+id = "redis-password"
+description = "Redis Password or URL"
+regex = '''(?i)(redis[_-]?(password|url)\s*[=:]\s*['"]*[^'"]+['"]*)|(['"]*redis://[^@]*:[^@]+@[^'"]*['"]*)'''
+tags = ["redis", "cache"]
+severity = "high"
+
+[[rules]]
+id = "private-key"
+description = "Private Key (RSA, EC, etc.)"
+regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----'''
+tags = ["private-key", "crypto"]
+severity = "critical"
+
+[[rules]]
+id = "certificate"
+description = "SSL Certificate"
+regex = '''-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----'''
+tags = ["certificate", "ssl"]
+severity = "medium"
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''(?i)(aws[_-]?access[_-]?key[_-]?id\s*[=:]\s*['"]*AKIA[0-9A-Z]{16}['"]*)|(['"]*AKIA[0-9A-Z]{16}['"]*)'''
+tags = ["aws", "access-key"]
+severity = "critical"
+
+[[rules]]
+id = "aws-secret-key"
+description = "AWS Secret Access Key"
+regex = '''(?i)(aws[_-]?secret[_-]?access[_-]?key\s*[=:]\s*['"]*[a-zA-Z0-9+/]{40}['"]*)|(['"]*[a-zA-Z0-9+/]{40}['"]*)'''
+tags = ["aws", "secret"]
+severity = "critical"
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Pattern"
+regex = '''(?i)(api[_-]?key\s*[=:]\s*['"]*[a-zA-Z0-9]{20,}['"]*)|(['"]*[a-zA-Z0-9]{20,}['"]*\s*#.*api.?key)'''
+tags = ["api-key", "generic"]
+severity = "medium"
+
+[[rules]]
+id = "generic-password"
+description = "Generic Password in Code"
+regex = '''(?i)(password\s*[=:]\s*['"]+[a-zA-Z0-9!@#$%^&*()_+-=]{8,}['"]+)'''
+tags = ["password", "hardcoded"]
+severity = "high"
+
+# Allowlist (files and patterns to ignore)
+[allowlist]
+description = "Allowlist for known false positives"
+files = [
+    # Test files
+    ".*test.*",
+    ".*spec.*", 
+    ".*mock.*",
+    # Documentation
+    ".*README.*",
+    ".*CHANGELOG.*",
+    ".*/docs/.*",
+    # Configuration templates
+    ".*example.*",
+    ".*template.*",
+    ".*sample.*",
+    # Package files
+    "package-lock.json",
+    "yarn.lock",
+    # Build and output directories
+    ".*/build/.*",
+    ".*/dist/.*",
+    ".*/node_modules/.*",
+    # Git files
+    ".git/.*"
+]
+
+# Patterns to ignore (regex)
+regexes = [
+    # Fake/example secrets
+    "(?i)(test|fake|example|dummy|placeholder|xxx|yyy|zzz)",
+    # Short strings that are likely not secrets
+    "[a-zA-Z0-9]{1,7}",
+    # Common placeholder patterns
+    "(?i)(your[_-]?key|api[_-]?key[_-]?here|insert[_-]?key)",
+    # Documentation examples
+    "(?i)(example|sample)[_-]?(key|secret|token)",
+    # Development/staging indicators (but be careful with this)
+    "(?i)(dev|development|test|testing)[_-]?(key|secret|token)"
+]
+
+# Paths to ignore entirely
+paths = [
+    # Generated files
+    ".next/",
+    "build/",
+    "dist/", 
+    "coverage/",
+    # Dependencies
+    "node_modules/",
+    "vendor/",
+    # Version control
+    ".git/",
+    # IDE files
+    ".vscode/",
+    ".idea/",
+    # OS files
+    ".DS_Store",
+    "Thumbs.db",
+    # Log files
+    "*.log"
+]
+
+# Commits to ignore (if specific commits need to be skipped)
+commits = [
+    # "commit-hash-here"
+]
+
+# Additional settings
+[allowlist.stopwords]
+# Common words that trigger false positives
+stopwords = [
+    "password",
+    "secret", 
+    "key",
+    "token",
+    "credential",
+    "auth"
+]

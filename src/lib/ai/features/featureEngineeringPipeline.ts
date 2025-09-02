@@ -301,7 +301,13 @@ export class FeatureEngineeringPipeline extends EventEmitter {
             deviceFeatures,
             behavioralFeatures
           }),
-          missing_feature_count: 0, // TODO: calculate
+          missing_feature_count: this.calculateMissingFeatureCount({
+            timeFeatures,
+            rideFeatures,
+            locationFeatures,
+            deviceFeatures,
+            behavioralFeatures
+          }),
           timestamp: new Date()
         }
       };
@@ -1168,6 +1174,36 @@ export class FeatureEngineeringPipeline extends EventEmitter {
     }
     
     return results;
+  }
+
+  private calculateMissingFeatureCount(features: {
+    timeFeatures: Record<string, unknown>;
+    rideFeatures: Record<string, unknown>;
+    locationFeatures: Record<string, unknown>;
+    deviceFeatures: Record<string, unknown>;
+    behavioralFeatures: Record<string, unknown>;
+  }): number {
+    let missingCount = 0;
+    
+    const countMissing = (obj: Record<string, unknown>) => {
+      Object.values(obj).forEach(value => {
+        if (value === null || value === undefined || 
+            (typeof value === 'number' && (isNaN(value) || !isFinite(value))) ||
+            (typeof value === 'string' && value.trim() === '')) {
+          missingCount++;
+        } else if (typeof value === 'object' && value !== null) {
+          countMissing(value as Record<string, unknown>);
+        }
+      });
+    };
+    
+    Object.values(features).forEach(featureGroup => {
+      if (typeof featureGroup === 'object' && featureGroup !== null) {
+        countMissing(featureGroup as Record<string, unknown>);
+      }
+    });
+    
+    return missingCount;
   }
 }
 

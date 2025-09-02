@@ -1,0 +1,161 @@
+{
+  "allowed_actions": {
+    "ground_ops": [
+      "assign_driver",
+      "contact_driver_masked", 
+      "view_live_map",
+      "manage_queue",
+      "contact_passenger_masked",
+      "view_trip_basic",
+      "update_trip_status"
+    ],
+    "ops_monitor": [
+      "view_live_map",
+      "view_fleet_status",
+      "view_trip_basic",
+      "view_metrics_basic"
+    ],
+    "ops_manager": [
+      "assign_driver",
+      "contact_driver_masked",
+      "view_live_map", 
+      "manage_queue",
+      "contact_passenger_masked",
+      "view_trip_basic",
+      "update_trip_status",
+      "view_fleet_status",
+      "view_metrics_basic",
+      "view_metrics_detailed",
+      "manage_shift_schedules",
+      "approve_overtime",
+      "view_driver_performance",
+      "assign_vehicle"
+    ],
+    "support": [
+      "case_open",
+      "case_update",
+      "case_close",
+      "contact_driver_unmasked",
+      "contact_passenger_unmasked",
+      "view_trip_detailed",
+      "issue_refund_small",
+      "escalate_to_manager",
+      "view_payment_history",
+      "cross_region_override"
+    ],
+    "analyst": [
+      "query_curated_views",
+      "export_anonymized_data",
+      "view_metrics_detailed",
+      "create_reports",
+      "view_trend_analysis"
+    ],
+    "risk_investigator": [
+      "unmask_pii_with_mfa",
+      "view_fraud_alerts",
+      "case_manage",
+      "contact_driver_unmasked",
+      "contact_passenger_unmasked", 
+      "view_trip_detailed",
+      "view_payment_history",
+      "flag_suspicious_activity",
+      "cross_region_override",
+      "access_raw_location_data",
+      "review_driver_background"
+    ],
+    "regional_manager": [
+      "assign_driver",
+      "contact_driver_masked",
+      "view_live_map",
+      "manage_queue", 
+      "contact_passenger_masked",
+      "view_trip_basic",
+      "update_trip_status",
+      "view_fleet_status",
+      "view_metrics_basic",
+      "view_metrics_detailed",
+      "manage_shift_schedules",
+      "approve_overtime",
+      "view_driver_performance", 
+      "assign_vehicle",
+      "approve_temp_access_region",
+      "manage_regional_settings",
+      "approve_regional_campaigns",
+      "view_regional_financials",
+      "manage_partner_drivers"
+    ],
+    "expansion_manager": [
+      "create_region_request",
+      "promote_region_stage",
+      "configure_prelaunch_pricing_flagged",
+      "configure_supply_campaign_flagged",
+      "view_market_intel_masked",
+      "view_vendor_pipeline",
+      "create_vendor_onboarding_task",
+      "request_temp_access_region",
+      "publish_go_live_checklist",
+      "handover_to_regional_manager"
+    ],
+    "finance_ops": [
+      "view_financial_reports",
+      "process_payments",
+      "approve_payout_batch",
+      "view_revenue_metrics",
+      "manage_pricing_rules",
+      "issue_refund_large",
+      "view_driver_earnings",
+      "manage_incentives"
+    ],
+    "hr_ops": [
+      "initiate_payroll_run",
+      "manage_driver_onboarding", 
+      "view_driver_performance",
+      "manage_driver_documents",
+      "process_driver_applications",
+      "manage_training_records"
+    ],
+    "compliance_officer": [
+      "view_audit_logs",
+      "generate_compliance_reports",
+      "review_data_access",
+      "manage_data_retention",
+      "investigate_privacy_incidents",
+      "export_audit_data"
+    ],
+    "executive": [
+      "view_executive_dashboard",
+      "view_all_metrics",
+      "view_financial_summary",
+      "view_strategic_reports"
+    ],
+    "auditor": [
+      "view_audit_logs",
+      "export_audit_data", 
+      "review_access_patterns",
+      "generate_security_reports"
+    ],
+    "iam_admin": [
+      "manage_users",
+      "assign_roles",
+      "revoke_access",
+      "view_user_activity",
+      "manage_permissions",
+      "set_pii_scope",
+      "configure_mfa_requirements"
+    ],
+    "app_admin": [
+      "manage_feature_flags",
+      "configure_system_settings",
+      "manage_api_keys",
+      "view_system_health",
+      "manage_integrations",
+      "configure_alerts"
+    ]
+  },
+  "metadata": {
+    "generated_at": "2025-08-31T03:25:00Z",
+    "version": "v2025-08-31",
+    "total_roles": 15,
+    "total_permissions": 77
+  }
+}

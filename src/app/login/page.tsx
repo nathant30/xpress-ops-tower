@@ -2,14 +2,14 @@
 
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuth } from '@/hooks/useEnhancedAuth';
 import { Eye, EyeOff, Lock, Mail, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { createLoginValidator, ValidationError } from '@/utils/validation';
 
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading, error } = useEnhancedAuth();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -53,7 +53,11 @@ function LoginPageContent() {
     }
 
     try {
-      await login(formData.email, formData.password, formData.mfaCode || undefined);
+      await login({
+        email: formData.email,
+        password: formData.password,
+        mfaCode: formData.mfaCode || undefined
+      });
       router.push(redirect);
     } catch (err) {
       // Check if MFA is required

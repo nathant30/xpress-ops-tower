@@ -11,8 +11,9 @@ import {
 import { logger } from '@/lib/security/productionLogger';
 
 import { XpressCard as Card, Button, Badge } from '@/components/xpress';
-import { useAuth } from '@/hooks/useAuth';
+import { useEnhancedAuth } from '@/hooks/useEnhancedAuth';
 import { sanitizeInput } from '@/lib/security/inputSanitizer';
+import { PermissionButton, usePermissionCheck } from '@/hooks/useRBAC';
 import { auditLogger } from '@/lib/security/auditLogger';
 import { RealTimeMap } from './RealTimeMap';
 import { SystemStatusMonitor } from './SystemStatusMonitor';
@@ -73,7 +74,7 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
   sessionToken
 }) => {
   // Security: Authentication and authorization checks
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuth();
   
   // Security: Sanitize regionId input
   const sanitizedRegionId = sanitizeInput(regionId || 'metro_manila');
@@ -437,13 +438,19 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                               </div>
                             </div>
                             {!alert.acknowledged && (
-                              <Button
+                              <PermissionButton
+                                permission="configure_alerts"
                                 size="sm"
                                 variant="outline"
                                 onClick={() => acknowledgeAlert(alert.id)}
+                                fallback={
+                                  <Badge variant="secondary" className="text-xs">
+                                    ACK (No Permission)
+                                  </Badge>
+                                }
                               >
                                 ACK
-                              </Button>
+                              </PermissionButton>
                             )}
                           </div>
                         </div>
@@ -547,11 +554,17 @@ export const RealtimeDashboard: React.FC<DashboardProps> = ({
                       
                       <div className="flex flex-col space-y-2 ml-4">
                         {!alert.acknowledged && (
-                          <Button
+                          <PermissionButton
+                            permission="configure_alerts"
                             onClick={() => acknowledgeAlert(alert.id)}
+                            fallback={
+                              <Button variant="outline" disabled>
+                                Acknowledge (No Permission)
+                              </Button>
+                            }
                           >
                             Acknowledge
-                          </Button>
+                          </PermissionButton>
                         )}
                         <Button variant="outline" size="sm">
                           View Details

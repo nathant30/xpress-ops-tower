@@ -744,8 +744,6 @@ class PhoneServiceManager {
   }
 
   private createSandboxCallStatus(call: PhoneCall): CallStatus {
-    console.log(`📞 SANDBOX: Call would be made to ${call.to} with message: ${call.message}`);
-    
     return {
       callId: call.id!,
       status: 'completed',
@@ -861,8 +859,6 @@ class PhoneServiceManager {
     
     // Process confirmation based on digits
     if (digits === '1') {
-      console.log(`✅ Emergency call ${callId} confirmed by recipient`);
-      
       // Update any related incident or alert
       if (status.confirmation) {
         await redis.publish('emergency:confirmation', {
@@ -872,8 +868,6 @@ class PhoneServiceManager {
         });
       }
     } else if (digits === '0') {
-      console.log(`⚠️ Emergency call ${callId} requires escalation`);
-      
       // Trigger escalation
       await redis.publish('emergency:escalation', {
         callId,

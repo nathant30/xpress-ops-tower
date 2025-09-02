@@ -1,630 +1,732 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, memo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AlertTriangle,
-  Shield, 
-  MapPin,
-  Users,
-  Clock,
-  Eye,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  TrendingUp,
-  Filter,
-  Search,
-  RefreshCw,
-  Download,
-  BarChart3
-} from 'lucide-react';
-import { FraudAlert, FraudAlertType } from '@/types/fraudDetection';
+import React, { useState } from 'react';
+import { Eye, Clock, CheckCircle } from 'lucide-react';
+import { SafeText } from '@/lib/security/htmlSanitizer';
 
-interface FraudDashboardProps {
-  className?: string;
+interface FraudAlert {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  status: 'ACTIVE' | 'INVESTIGATING' | 'RESOLVED';
+  score: string;
+  user: string;
+  time: string;
 }
 
-interface FraudStats {
-  totalAlerts: number;
-  activeAlerts: number;
-  resolvedAlerts: number;
-  criticalAlerts: number;
-  estimatedLoss: number;
-  preventedLoss: number;
-}
-
-const FraudReviewDashboard: React.FC<FraudDashboardProps> = ({ className = '' }) => {
-  const [alerts, setAlerts] = useState<FraudAlert[]>([]);
-  const [filteredAlerts, setFilteredAlerts] = useState<FraudAlert[]>([]);
-  const [stats, setStats] = useState<FraudStats>({
-    totalAlerts: 0,
-    activeAlerts: 0,
-    resolvedAlerts: 0,
-    criticalAlerts: 0,
-    estimatedLoss: 0,
-    preventedLoss: 0
-  });
+const FraudReviewDashboard = () => {
+  const [activeSubTab, setActiveSubTab] = useState('Alert Review');
+  const [showAllRules, setShowAllRules] = useState(false);
+  const [activeRuleTab, setActiveRuleTab] = useState('Overview');
+  const [selectedRule, setSelectedRule] = useState<{name: string, desc: string, status: string} | null>(null);
+  const [alerts, setAlerts] = useState<FraudAlert[]>([
+    {
+      id: '1',
+      type: 'Rider Incentive Fraud',
+      title: 'Excessive Promo Code Usage',
+      description: 'Rider has used 25 promo codes in the last 7 days with suspicious ride patterns',
+      status: 'ACTIVE',
+      score: '87%',
+      user: 'rider_12345',
+      time: '29/08/2025, 10:30:00'
+    },
+    {
+      id: '2',
+      type: 'GPS Spoofing',
+      title: 'GPS Location Manipulation Detected',
+      description: 'Driver appears to be using fake GPS location during ride',
+      status: 'INVESTIGATING',
+      score: '95%',
+      user: 'ride_67890',
+      time: '29/08/2025, 09:15:00'
+    },
+    {
+      id: '3',
+      type: 'Multi-Accounting',
+      title: 'Multiple Account Detection',
+      description: 'Potential multiple accounts sharing same device and payment method',
+      status: 'RESOLVED',
+      score: '73%',
+      user: 'rider_54321',
+      time: '29/08/2025, 08:45:00'
+    }
+  ]);
   
-  const [selectedAlert, setSelectedAlert] = useState<FraudAlert | null>(null);
-  const [filterType, setFilterType] = useState<FraudAlertType | 'all'>('all');
-  const [filterSeverity, setFilterSeverity] = useState<string>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const subTabs = ['Alert Review', 'Analytics', 'Detection Rules', 'Investigations'];
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const generateMockAlerts = (): FraudAlert[] => {
-      const mockAlerts: FraudAlert[] = [
-        {
-          id: 'RIF_001',
-          timestamp: new Date('2025-08-29T10:30:00'),
-          alertType: 'rider_incentive_fraud',
-          severity: 'high',
-          status: 'active',
-          subjectType: 'rider',
-          subjectId: 'rider_12345',
-          title: 'Excessive Promo Code Usage',
-          description: 'Rider has used 25 promo codes in the last 7 days with suspicious ride patterns',
-          fraudScore: 87,
-          confidence: 92,
-          evidence: [
-            {
-              type: 'behavior',
-              description: 'Extremely high promo code usage frequency',
-              data: { promoCount: 25, period: '7_days' },
-              weight: 30,
-              timestamp: new Date()
-            }
-          ],
-          patterns: [],
-          riskFactors: [],
-          currency: 'PHP',
-          estimatedLoss: 2500
-        },
-        {
-          id: 'GPS_002',
-          timestamp: new Date('2025-08-29T09:15:00'),
-          alertType: 'gps_spoofing',
-          severity: 'critical',
-          status: 'investigating',
-          subjectType: 'ride',
-          subjectId: 'ride_67890',
-          title: 'GPS Location Manipulation Detected',
-          description: 'Driver appears to be using fake GPS location during ride',
-          fraudScore: 95,
-          confidence: 88,
-          evidence: [
-            {
-              type: 'location',
-              description: 'Impossible travel speeds detected',
-              data: { maxSpeed: 250, normalSpeed: 45 },
-              weight: 35,
-              timestamp: new Date()
-            }
-          ],
-          patterns: [],
-          riskFactors: [],
-          currency: 'PHP',
-          estimatedLoss: 150
-        },
-        {
-          id: 'MA_003',
-          timestamp: new Date('2025-08-29T08:45:00'),
-          alertType: 'multi_accounting',
-          severity: 'medium',
-          status: 'resolved',
-          subjectType: 'rider',
-          subjectId: 'rider_54321',
-          title: 'Multiple Account Detection',
-          description: 'Potential multiple accounts sharing same device and payment method',
-          fraudScore: 73,
-          confidence: 79,
-          evidence: [],
-          patterns: [],
-          riskFactors: [],
-          currency: 'PHP',
-          estimatedLoss: 800
-        }
-      ];
-      return mockAlerts;
-    };
+  const handleReview = (alertId: string) => {
+    setAlerts(prev => prev.map(alert => 
+      alert.id === alertId 
+        ? { ...alert, status: 'INVESTIGATING' as const }
+        : alert
+    ));
+  };
 
-    const mockAlerts = generateMockAlerts();
-    setAlerts(mockAlerts);
-    setFilteredAlerts(mockAlerts);
-    
-    // Calculate stats
-    const mockStats: FraudStats = {
-      totalAlerts: mockAlerts.length,
-      activeAlerts: mockAlerts.filter(a => a.status === 'active').length,
-      resolvedAlerts: mockAlerts.filter(a => a.status === 'resolved').length,
-      criticalAlerts: mockAlerts.filter(a => a.severity === 'critical').length,
-      estimatedLoss: mockAlerts.reduce((sum, alert) => sum + (alert.estimatedLoss || 0), 0),
-      preventedLoss: 15750 // Mock prevented loss
-    };
-    setStats(mockStats);
-    setIsLoading(false);
-  }, []);
+  const handleResolve = (alertId: string) => {
+    setAlerts(prev => prev.map(alert => 
+      alert.id === alertId 
+        ? { ...alert, status: 'RESOLVED' as const }
+        : alert
+    ));
+  };
 
-  // Filter alerts based on current filters
-  useEffect(() => {
-    let filtered = alerts;
-    
-    if (filterType !== 'all') {
-      filtered = filtered.filter(alert => alert.alertType === filterType);
-    }
-    
-    if (filterSeverity !== 'all') {
-      filtered = filtered.filter(alert => alert.severity === filterSeverity);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(alert =>
-        alert.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alert.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alert.subjectId.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    setFilteredAlerts(filtered);
-  }, [alerts, filterType, filterSeverity, searchTerm]);
+  const handleView = (alertId: string) => {
+    // Could open a modal or navigate to detail view
+  };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-blue-500';
-      default: return 'bg-gray-500';
+  const renderTabContent = (tab: string) => {
+    switch (tab) {
+      case 'Analytics':
+        return (
+          <div className="space-y-4">
+            {/* Analytics Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Detection Rate</p>
+                    <p className="text-2xl font-bold text-green-600">94.2%</p>
+                  </div>
+                  <div className="text-green-500">📊</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">False Positives</p>
+                    <p className="text-2xl font-bold text-yellow-600">5.8%</p>
+                  </div>
+                  <div className="text-yellow-500">⚠️</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
+                    <p className="text-2xl font-bold text-blue-600">2.4h</p>
+                  </div>
+                  <div className="text-blue-500">⏱️</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Loss Prevented</p>
+                    <p className="text-2xl font-bold text-green-600">₱2.1M</p>
+                  </div>
+                  <div className="text-green-500">💰</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Fraud Trends */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h4 className="font-semibold text-gray-900 mb-4">Fraud Trends (Last 30 Days)</h4>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">GPS Spoofing</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-200 rounded-full h-2 relative">
+                      <div className="bg-red-500 h-2 rounded-full w-16"></div>
+                    </div>
+                    <span className="text-sm font-medium text-red-600">+15%</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Promo Abuse</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-200 rounded-full h-2 relative">
+                      <div className="bg-orange-500 h-2 rounded-full w-11"></div>
+                    </div>
+                    <span className="text-sm font-medium text-orange-600">+8%</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Multi-Accounting</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-200 rounded-full h-2 relative">
+                      <div className="bg-yellow-500 h-2 rounded-full w-6"></div>
+                    </div>
+                    <span className="text-sm font-medium text-green-600">-5%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Detection Rules':
+        // Driver-specific rules
+        const driverRules = [
+          { name: 'GPS Location Variance', desc: 'Impossible speed/teleportation detection', status: 'ACTIVE' },
+          { name: 'Mock Location Detection', desc: 'Developer options & rooted devices', status: 'ACTIVE' },
+          { name: 'Route Deviation', desc: 'Unusual route patterns', status: 'ACTIVE' },
+          { name: 'Speed Anomalies', desc: 'Unrealistic speed changes', status: 'ACTIVE' },
+          { name: 'Driver Collusion', desc: 'Coordinated fraudulent activities', status: 'ACTIVE' },
+          { name: 'Fake Rides', desc: 'Ghost trips without passengers', status: 'ACTIVE' },
+          { name: 'Time Manipulation', desc: 'Fraudulent time adjustments', status: 'TESTING' },
+          { name: 'Location Spoofing', desc: 'False pickup/dropoff locations', status: 'ACTIVE' },
+          { name: 'Rating Manipulation', desc: 'Artificial rating boosting', status: 'ACTIVE' },
+          { name: 'Device Anomalies', desc: 'Multiple devices per driver', status: 'ACTIVE' },
+          { name: 'Surge Abuse', desc: 'Artificial surge creation', status: 'ACTIVE' },
+          { name: 'Trip Cancellation Fraud', desc: 'Suspicious cancellation patterns', status: 'ACTIVE' },
+          { name: 'Distance Manipulation', desc: 'Route length falsification', status: 'ACTIVE' },
+          { name: 'Offline Fraud', desc: 'Off-platform transaction detection', status: 'TESTING' }
+        ];
+
+        // Passenger-specific rules  
+        const passengerRules = [
+          { name: 'Excessive Promo Usage', desc: '&gt;20 promo codes in 7 days', status: 'ACTIVE' },
+          { name: 'Short Ride Pattern', desc: 'Consecutive rides &lt;1km for incentives', status: 'ACTIVE' },
+          { name: 'Multi-Accounting', desc: 'Multiple accounts on same device', status: 'TESTING' },
+          { name: 'Shared Payment Methods', desc: 'Same payment across multiple accounts', status: 'ACTIVE' },
+          { name: 'Referral Fraud', desc: 'Fake referral networks', status: 'ACTIVE' },
+          { name: 'Promo Code Sharing', desc: 'Unauthorized code distribution', status: 'ACTIVE' },
+          { name: 'Bonus Hunting', desc: 'Systematic incentive exploitation', status: 'ACTIVE' },
+          { name: 'Identity Theft', desc: 'Stolen identity usage', status: 'ACTIVE' },
+          { name: 'Payment Fraud', desc: 'Fraudulent payment methods', status: 'ACTIVE' },
+          { name: 'Chargeback Abuse', desc: 'Excessive payment disputes', status: 'ACTIVE' },
+          { name: 'Account Takeover', desc: 'Compromised account detection', status: 'ACTIVE' },
+          { name: 'Velocity Checks', desc: 'Rapid successive bookings', status: 'TESTING' },
+          { name: 'Geolocation Fraud', desc: 'False location claims', status: 'ACTIVE' }
+        ];
+
+        const renderRuleTabContent = (tab: string) => {
+          switch (tab) {
+            case 'Overview':
+              return (
+                <div className="space-y-4">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-600">{driverRules.length}</div>
+                        <div className="text-sm text-gray-600">Driver Rules</div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-600">{passengerRules.length}</div>
+                        <div className="text-sm text-gray-600">Passenger Rules</div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">94.2%</div>
+                        <div className="text-sm text-gray-600">Avg Accuracy</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top Performing Rules */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <h4 className="font-semibold text-gray-900 mb-4">Top Performing Rules (30 days)</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">GPS Location Variance</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-gray-500">Triggered: 847 times</span>
+                          <span className="text-xs text-green-600 font-medium">94.2% accuracy</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Mock Location Detection</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-gray-500">Triggered: 623 times</span>
+                          <span className="text-xs text-green-600 font-medium">91.7% accuracy</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Excessive Promo Usage</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs text-gray-500">Triggered: 456 times</span>
+                          <span className="text-xs text-green-600 font-medium">88.3% accuracy</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            
+            case 'Driver':
+              return (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900">Driver Detection Rules ({driverRules.length})</h4>
+                      <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">
+                        + Add Rule
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {driverRules.map((rule, index) => (
+                        <div key={index} className={`p-3 rounded-lg border ${
+                          rule.status === 'ACTIVE' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                rule.status === 'ACTIVE' ? 'bg-green-500' : 'bg-yellow-500'
+                              }`}></div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{rule.name}</p>
+                                <SafeText content={rule.desc} className="text-xs text-gray-500" preserveFormatting={true} />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rule.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {rule.status}
+                              </span>
+                              <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedRule(rule);
+                                }}
+                                className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors cursor-pointer"
+                                title="Configure Rule"
+                                type="button"
+                              >
+                                ⚙️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+
+            case 'Passenger':
+              return (
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900">Passenger Detection Rules ({passengerRules.length})</h4>
+                      <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">
+                        + Add Rule
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {passengerRules.map((rule, index) => (
+                        <div key={index} className={`p-3 rounded-lg border ${
+                          rule.status === 'ACTIVE' ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${
+                                rule.status === 'ACTIVE' ? 'bg-green-500' : 'bg-yellow-500'
+                              }`}></div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{rule.name}</p>
+                                <SafeText content={rule.desc} className="text-xs text-gray-500" preserveFormatting={true} />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                rule.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {rule.status}
+                              </span>
+                              <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedRule(rule);
+                                }}
+                                className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1 rounded transition-colors cursor-pointer"
+                                title="Configure Rule"
+                                type="button"
+                              >
+                                ⚙️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+
+            default:
+              return null;
+          }
+        };
+
+        return (
+          <div className="flex gap-4">
+            {/* Vertical Navigation */}
+            <div className="w-48 space-y-1">
+              {['Overview', 'Driver', 'Passenger'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveRuleTab(tab)}
+                  className={`w-full text-left px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeRuleTab === tab
+                      ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1">
+              {renderRuleTabContent(activeRuleTab)}
+            </div>
+          </div>
+        );
+
+      case 'Investigations':
+        return (
+          <div className="space-y-4">
+            {/* Active Investigations */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-gray-900">Active Investigations</h4>
+                <button className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">
+                  + New Investigation
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">INV-2025-001</span>
+                      <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">HIGH</span>
+                    </div>
+                    <span className="text-xs text-gray-500">Started 2 days ago</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">Coordinated GPS spoofing across multiple driver accounts</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>Assigned: Security Team</span>
+                      <span>•</span>
+                      <span>7 related alerts</span>
+                    </div>
+                    <button className="text-blue-600 hover:text-blue-700 text-xs font-medium">View Details →</button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">INV-2025-002</span>
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded">MEDIUM</span>
+                    </div>
+                    <span className="text-xs text-gray-500">Started 5 days ago</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">Systematic promo code abuse pattern</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>Assigned: Fraud Team</span>
+                      <span>•</span>
+                      <span>12 related alerts</span>
+                    </div>
+                    <button className="text-blue-600 hover:text-blue-700 text-xs font-medium">View Details →</button>
+                  </div>
+                </div>
+
+                <div className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">INV-2025-003</span>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">RESOLVED</span>
+                    </div>
+                    <span className="text-xs text-gray-500">Completed 1 day ago</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2">Multi-account registration from same device</p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>Assigned: Compliance Team</span>
+                      <span>•</span>
+                      <span>4 accounts suspended</span>
+                    </div>
+                    <button className="text-blue-600 hover:text-blue-700 text-xs font-medium">View Report →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Investigation Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">7</div>
+                  <div className="text-sm text-gray-600">Active Cases</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">23</div>
+                  <div className="text-sm text-gray-600">Resolved This Month</div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">2.1</div>
+                  <div className="text-sm text-gray-600">Avg Days to Resolve</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="flex items-center justify-center h-48 text-gray-500 bg-gray-50 rounded-lg">
+            <div className="text-center">
+              <div className="text-2xl mb-2">🚧</div>
+              <p className="font-medium">{tab} content coming soon</p>
+            </div>
+          </div>
+        );
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'text-red-600';
-      case 'investigating': return 'text-orange-600';
-      case 'resolved': return 'text-green-600';
-      case 'false_positive': return 'text-gray-600';
-      default: return 'text-gray-600';
+      case 'ACTIVE': return 'text-red-700 bg-red-100 border border-red-200';
+      case 'INVESTIGATING': return 'text-orange-700 bg-orange-100 border border-orange-200';
+      case 'RESOLVED': return 'text-green-700 bg-green-100 border border-green-200';
+      default: return 'text-gray-700 bg-gray-100 border border-gray-200';
     }
   };
 
-  const getAlertTypeLabel = (type: FraudAlertType) => {
-    const labels: Record<FraudAlertType, string> = {
-      'rider_incentive_fraud': 'Rider Incentive Fraud',
-      'gps_spoofing': 'GPS Spoofing',
-      'multi_accounting': 'Multi-Accounting',
-      'fake_rides': 'Fake Rides',
-      'payment_fraud': 'Payment Fraud',
-      'driver_collusion': 'Driver Collusion',
-      'promo_abuse': 'Promo Abuse',
-      'rating_manipulation': 'Rating Manipulation',
-      'identity_theft': 'Identity Theft',
-      'device_fraud': 'Device Fraud'
-    };
-    return labels[type] || type;
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'Rider Incentive Fraud': return 'bg-orange-100';
+      case 'GPS Spoofing': return 'bg-red-100';
+      case 'Multi-Accounting': return 'bg-yellow-100';
+      default: return 'bg-gray-100';
+    }
   };
 
-  const handleAlertAction = (alertId: string, action: string) => {
-    setAlerts(prev => prev.map(alert => 
-      alert.id === alertId 
-        ? { ...alert, status: action === 'resolve' ? 'resolved' : 'investigating' }
-        : alert
-    ));
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return '●';
+      case 'INVESTIGATING': return '●';
+      case 'RESOLVED': return '●';
+      default: return '●';
+    }
   };
 
-  if (isLoading) {
+  if (activeSubTab !== 'Alert Review') {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2">
-          <RefreshCw className="animate-spin h-5 w-5" />
-          <span>Loading fraud detection data...</span>
+      <div className="space-y-4">
+        {/* Sub Navigation - Pill Tabs */}
+        <div className="flex items-center gap-2">
+          {subTabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveSubTab(tab)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeSubTab === tab
+                  ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
+
+        {renderTabContent(activeSubTab)}
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Sub Navigation - Pill Tabs */}
+      <div className="flex items-center gap-2">
+        {subTabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveSubTab(tab)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+              activeSubTab === tab
+                ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Alert Count */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Fraud Detection Center
-          </h2>
-          <p className="text-gray-600">
-            Advanced fraud detection and review system for Xpress Philippines
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900">Fraud Alerts ({alerts.length})</h3>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              All-time fraud alerts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.activeAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              Requires attention
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
-            <Shield className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-500">{stats.criticalAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              High priority cases
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.resolvedAlerts}</div>
-            <p className="text-xs text-muted-foreground">
-              Cases closed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estimated Loss</CardTitle>
-            <TrendingUp className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">₱{stats.estimatedLoss.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Potential losses
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prevented Loss</CardTitle>
-            <Shield className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">₱{stats.preventedLoss.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Fraud prevented
-            </p>
-          </CardContent>
-        </Card>
+      {/* Fraud Alerts List - Compact */}
+      <div className="space-y-3">
+        {alerts.map((alert) => (
+          <div key={alert.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 flex-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  alert.type === 'Rider Incentive Fraud' ? 'bg-orange-100' :
+                  alert.type === 'GPS Spoofing' ? 'bg-red-100' :
+                  'bg-yellow-100'
+                }`}>
+                  <div className={`w-3 h-3 rounded-full ${
+                    alert.status === 'ACTIVE' ? 'bg-red-500' :
+                    alert.status === 'INVESTIGATING' ? 'bg-orange-500' :
+                    'bg-green-500'
+                  }`}></div>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">{alert.type}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase tracking-wide ${getStatusColor(alert.status)}`}>
+                      {alert.status}
+                    </span>
+                  </div>
+                  
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{alert.title}</h4>
+                  <p className="text-xs text-gray-600 mb-2">{alert.description}</p>
+                  
+                  <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>{alert.time}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>👤</span>
+                      <span>{alert.user}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span>📊</span>
+                      <span className="font-medium">Risk: {alert.score}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-4">
+                <button 
+                  onClick={() => handleView(alert.id)}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  title="View Details"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => handleReview(alert.id)}
+                  disabled={alert.status === 'INVESTIGATING' || alert.status === 'RESOLVED'}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded transition-colors"
+                >
+                  Review
+                </button>
+                <button 
+                  onClick={() => handleResolve(alert.id)}
+                  disabled={alert.status === 'RESOLVED'}
+                  className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed rounded transition-colors"
+                >
+                  Resolve
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Search Alerts
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Search by title, description, or ID..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Rule Configuration Modal */}
+      {selectedRule && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Configure Rule</h3>
+              <button
+                onClick={() => setSelectedRule(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Rule Name</label>
+                <p className="text-gray-900 font-medium">{selectedRule.name}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700">Description</label>
+                <SafeText content={selectedRule.desc} className="text-sm text-gray-600" preserveFormatting={true} />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+                <select 
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  defaultValue={selectedRule.status}
+                >
+                  <option value="ACTIVE">Active</option>
+                  <option value="TESTING">Testing</option>
+                  <option value="DISABLED">Disabled</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Threshold</label>
+                <input 
+                  type="number"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="Risk threshold (0-100)"
+                  defaultValue="75"
                 />
               </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Action</label>
+                <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                  <option value="alert">Generate Alert</option>
+                  <option value="block">Block Transaction</option>
+                  <option value="review">Manual Review</option>
+                  <option value="flag">Flag Account</option>
+                </select>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Alert Type
-              </label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as FraudAlertType | 'all')}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setSelectedRule(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
               >
-                <option value="all">All Types</option>
-                <option value="rider_incentive_fraud">Rider Incentive Fraud</option>
-                <option value="gps_spoofing">GPS Spoofing</option>
-                <option value="multi_accounting">Multi-Accounting</option>
-                <option value="payment_fraud">Payment Fraud</option>
-                <option value="fake_rides">Fake Rides</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Severity
-              </label>
-              <select
-                value={filterSeverity}
-                onChange={(e) => setFilterSeverity(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Handle save logic here
+                  setSelectedRule(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
               >
-                <option value="all">All Severities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-1" />
-              More Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="alerts" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="alerts">Alert Review</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="rules">Detection Rules</TabsTrigger>
-          <TabsTrigger value="investigations">Investigations</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="alerts" className="space-y-4">
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Alerts List */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Fraud Alerts ({filteredAlerts.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {filteredAlerts.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-gray-50 ${
-                          selectedAlert?.id === alert.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                        }`}
-                        onClick={() => setSelectedAlert(alert)}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={`w-3 h-3 rounded-full ${getSeverityColor(alert.severity)}`}></span>
-                              <Badge variant="outline">{getAlertTypeLabel(alert.alertType)}</Badge>
-                              <span className={`text-sm font-medium ${getStatusColor(alert.status)}`}>
-                                {alert.status.toUpperCase()}
-                              </span>
-                            </div>
-                            
-                            <h3 className="font-semibold text-gray-900 mb-1">{alert.title}</h3>
-                            <p className="text-sm text-gray-600 mb-2">{alert.description}</p>
-                            
-                            <div className="flex items-center gap-4 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {alert.timestamp.toLocaleString()}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {alert.subjectId}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <BarChart3 className="h-3 w-3" />
-                                Score: {alert.fraudScore}%
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 ml-4">
-                            {alert.status === 'active' && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAlertAction(alert.id, 'investigate');
-                                  }}
-                                >
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  Review
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAlertAction(alert.id, 'resolve');
-                                  }}
-                                >
-                                  Resolve
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    
-                    {filteredAlerts.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        No alerts match the current filters
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Alert Details */}
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Alert Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {selectedAlert ? (
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 mb-2">{selectedAlert.title}</h4>
-                        <p className="text-sm text-gray-600 mb-3">{selectedAlert.description}</p>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 uppercase">Severity</label>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`w-3 h-3 rounded-full ${getSeverityColor(selectedAlert.severity)}`}></span>
-                              <span className="capitalize">{selectedAlert.severity}</span>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 uppercase">Score</label>
-                            <span className="text-lg font-semibold">{selectedAlert.fraudScore}%</span>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 uppercase">Confidence</label>
-                            <span className="text-lg font-semibold">{selectedAlert.confidence}%</span>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-500 uppercase">Est. Loss</label>
-                            <span className="text-lg font-semibold text-red-600">
-                              ₱{selectedAlert.estimatedLoss?.toLocaleString() || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h5 className="font-medium text-gray-900 mb-2">Evidence ({selectedAlert.evidence.length})</h5>
-                        <div className="space-y-2">
-                          {selectedAlert.evidence.map((evidence, index) => (
-                            <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex justify-between items-start mb-1">
-                                <span className="text-sm font-medium capitalize">{evidence.type}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  Weight: {evidence.weight}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-gray-600">{evidence.description}</p>
-                            </div>
-                          ))}
-                          
-                          {selectedAlert.evidence.length === 0 && (
-                            <p className="text-sm text-gray-500 italic">No evidence recorded</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="pt-4 border-t">
-                        <div className="flex gap-2">
-                          <Button size="sm" className="flex-1">
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Mark Resolved
-                          </Button>
-                          <Button size="sm" variant="outline" className="flex-1">
-                            <XCircle className="h-4 w-4 mr-1" />
-                            False Positive
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <AlertTriangle className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                      <p>Select an alert to view details</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                Save Changes
+              </button>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fraud Analytics Dashboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium mb-2">Analytics Coming Soon</h3>
-                <p>Advanced fraud analytics and reporting features will be available here.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="rules">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detection Rules Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <Shield className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium mb-2">Rules Engine Coming Soon</h3>
-                <p>Configure and manage fraud detection rules and thresholds.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="investigations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Investigations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <Eye className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium mb-2">Investigation Workflow Coming Soon</h3>
-                <p>Track and manage fraud investigations and case management.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 };
 
-// Add displayName for debugging
-FraudReviewDashboard.displayName = 'FraudReviewDashboard';
-
-export default memo(FraudReviewDashboard);
+export default FraudReviewDashboard;

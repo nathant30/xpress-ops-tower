@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
+import { useEnhancedAuth } from './useEnhancedAuth';
 import { logger } from '@/lib/security/productionLogger';
 
 export interface Driver {
@@ -43,7 +43,7 @@ export interface UseDriversOptions {
 }
 
 export function useDrivers(options: UseDriversOptions = {}) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useEnhancedAuth();
   const [data, setData] = useState<{
     drivers: Driver[];
     total: number;

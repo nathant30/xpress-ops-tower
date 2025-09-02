@@ -166,8 +166,7 @@ export default function AddNewUserPage() {
         router.push('/settings');
       }, 2000);
       
-      console.log('✅ New user created:', newUser);
-    } catch (error) {
+      } catch (error) {
       console.error('❌ Failed to create user:', error);
     } finally {
       setIsLoading(false);

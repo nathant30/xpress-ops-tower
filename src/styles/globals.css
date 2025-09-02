@@ -2,42 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Xpress Ridesharing Operations Dashboard CSS Custom Properties */
+/* Xpress Operations Dashboard CSS Custom Properties */
 :root {
-  /* Ridesharing Brand Colors */
-  --rideshare-primary: 59 130 246;     /* Blue - trust, reliability */
-  --rideshare-primary-50: 239 246 255;
-  --rideshare-primary-100: 219 234 254;
-  --rideshare-primary-200: 191 219 254;
-  --rideshare-primary-300: 147 197 253;
-  --rideshare-primary-400: 96 165 250;
-  --rideshare-primary-500: 59 130 246;
-  --rideshare-primary-600: 37 99 235;
-  --rideshare-primary-700: 29 78 216;
-  --rideshare-primary-800: 30 64 175;
-  --rideshare-primary-900: 30 58 138;
-  --rideshare-primary-950: 23 37 84;
+  /* Xpress Brand Colors - Official Design Guide */
+  --xpress-rose: 235 29 37;           /* Primary: Xpress Rose (#EB1D25) */
+  --xpress-rose-50: 254 242 242;      /* Ultra light rose */
+  --xpress-rose-100: 254 226 226;     /* Very light rose */
+  --xpress-rose-200: 252 165 165;     /* Light rose */
+  --xpress-rose-300: 248 113 113;     /* Medium light rose */
+  --xpress-rose-400: 239 68 68;       /* Medium rose */
+  --xpress-rose-500: 235 29 37;       /* Primary rose */
+  --xpress-rose-600: 220 26 34;       /* Medium dark rose */
+  --xpress-rose-700: 185 22 29;       /* Dark rose */
+  --xpress-rose-800: 153 18 24;       /* Very dark rose */
+  --xpress-rose-900: 127 15 20;       /* Ultra dark rose */
 
-  /* Legacy XPRESS Colors (maintained for compatibility) */
-  --xpress-50: 240 249 255;
-  --xpress-100: 224 242 254;
-  --xpress-200: 186 230 253;
-  --xpress-300: 125 211 252;
-  --xpress-400: 56 189 248;
-  --xpress-500: 14 165 233;
-  --xpress-600: 2 132 199;
-  --xpress-700: 3 105 161;
-  --xpress-800: 7 89 133;
-  --xpress-900: 12 74 110;
-  --xpress-950: 8 47 73;
+  --xpress-navy: 3 35 58;             /* Secondary: Xpress Navy Blue (#03233A) */
+  --xpress-navy-50: 239 246 252;      /* Ultra light navy */
+  --xpress-navy-100: 219 234 247;     /* Very light navy */
+  --xpress-navy-200: 191 219 240;     /* Light navy */
+  --xpress-navy-300: 147 197 230;     /* Medium light navy */
+  --xpress-navy-400: 96 165 215;      /* Medium navy */
+  --xpress-navy-500: 10 64 96;        /* Medium navy */
+  --xpress-navy-600: 3 35 58;         /* Primary navy */
+  --xpress-navy-700: 2 28 46;         /* Dark navy */
+  --xpress-navy-800: 2 21 35;         /* Very dark navy */
+  --xpress-navy-900: 1 14 23;         /* Ultra dark navy */
 
-  /* Ridesharing Operational Colors */
-  --rideshare-success: 16 185 129;     /* Green - available drivers, completed trips */
-  --rideshare-warning: 245 158 11;     /* Orange - demand hotspots, moderate alerts */
-  --rideshare-danger: 239 68 68;       /* Red - surge areas, emergency incidents */
-  --rideshare-info: 14 165 233;        /* Blue - general information */
-  --rideshare-sidebar: 30 41 59;       /* Dark slate operations center */
-  --rideshare-sidebar-hover: 51 65 85; /* Lighter slate for hover states */
+  --xpress-digital-blue: 10 64 96;    /* Accent: Xpress Digital Blue (#0A4060) */
+  --xpress-digital-blue-50: 239 246 252;
+  --xpress-digital-blue-100: 219 234 247;
+  --xpress-digital-blue-200: 191 219 240;
+  --xpress-digital-blue-300: 147 197 230;
+  --xpress-digital-blue-400: 96 165 215;
+  --xpress-digital-blue-500: 10 64 96;
+  --xpress-digital-blue-600: 8 51 77;
+  --xpress-digital-blue-700: 7 38 58;
+  --xpress-digital-blue-800: 5 26 38;
+  --xpress-digital-blue-900: 3 13 19;
+
+  /* Legacy Colors (maintained for compatibility) */
+  --xpress-50: 239 246 252;
+  --xpress-100: 219 234 247;
+  --xpress-200: 191 219 240;
+  --xpress-300: 147 197 230;
+  --xpress-400: 96 165 215;
+  --xpress-500: 10 64 96;
+  --xpress-600: 8 51 77;
+  --xpress-700: 7 38 58;
+  --xpress-800: 5 26 38;
+  --xpress-900: 3 13 19;
+  --xpress-950: 3 35 58;
+
+  /* Operational Status Colors */
+  --status-success: 16 185 129;        /* Green - available drivers, completed trips */
+  --status-warning: 245 158 11;        /* Orange - demand hotspots, moderate alerts */  
+  --status-danger: 235 29 37;          /* Xpress Rose - surge areas, emergency incidents */
+  --status-info: 10 64 96;             /* Xpress Digital Blue - general information */
+  --sidebar-bg: 3 35 58;               /* Xpress Navy - sidebar background */
+  --sidebar-hover: 10 64 96;           /* Xpress Digital Blue - sidebar hover */
   
   /* Surge and Demand Colors */
   --surge-low: 34 197 94;              /* Green - no surge */
@@ -75,8 +98,9 @@
   --color-neutral-900: 17 24 39;
   --color-neutral-950: 3 7 18;
 
-  /* Typography */
+  /* Typography - Xpress Design Guide */
   --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Poppins', system-ui, sans-serif;  
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* Spacing Scale */
@@ -196,21 +220,29 @@
 
 /* XPRESS Component Layer */
 @layer components {
-  /* Button Base Styles */
+  /* Button Base Styles - Xpress Design Guide */
   .xpress-btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-xpress transition-all duration-normal focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .xpress-btn-primary {
-    @apply bg-xpress-600 text-white hover:bg-xpress-700 focus:ring-xpress-500 active:bg-xpress-800;
+    background-color: rgb(var(--xpress-rose));
+    @apply text-white hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+
+  .xpress-btn-primary:hover {
+    background-color: rgb(var(--xpress-rose-600));
   }
 
   .xpress-btn-secondary {
-    @apply bg-neutral-100 text-neutral-900 hover:bg-neutral-200 focus:ring-neutral-500 border border-neutral-300;
+    @apply bg-white text-blue-900 hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 border-2;
+    border-color: rgb(var(--xpress-digital-blue));
+    color: rgb(var(--xpress-digital-blue));
   }
 
   .xpress-btn-danger {
-    @apply bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 active:bg-danger-800;
+    background-color: rgb(var(--status-danger));
+    @apply text-white hover:shadow-lg focus:ring-2 focus:ring-red-500;
   }
 
   /* Card Base Styles */

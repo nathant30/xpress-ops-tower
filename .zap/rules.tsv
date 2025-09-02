@@ -1,0 +1,83 @@
+# ZAP Security Rules for Xpress Ops Tower
+# Format: RULE_ID	THRESHOLD	ACTION	URL_PATTERN	DESCRIPTION
+
+# Ignore false positives for legitimate functionality
+10202	OFF	IGNORE	.*	Content Security Policy (CSP) Header Not Set - handled by Next.js
+10020	OFF	IGNORE	.*	X-Frame-Options Header Not Set - handled by Next.js
+10016	OFF	IGNORE	.*/api/health.*	Web Browser XSS Protection Not Enabled - health endpoint
+10017	OFF	IGNORE	.*/favicon\.ico.*	Cross-Domain Misconfiguration - favicon
+10019	OFF	IGNORE	.*/static/.*	Content-Type Header Missing - static assets
+
+# Authentication endpoints - high sensitivity
+90001	HIGH	FAIL	.*/api/auth/.*	Authentication bypass
+90020	HIGH	FAIL	.*/api/auth/.*	Parameter pollution
+90021	HIGH	FAIL	.*/api/auth/.*	Source code disclosure
+
+# Emergency system endpoints - critical
+90001	HIGH	FAIL	.*/api/emergency/.*	Authentication bypass - emergency systems
+90002	HIGH	FAIL	.*/api/emergency/.*	Private IP disclosure
+90020	HIGH	FAIL	.*/api/emergency/.*	Parameter pollution
+90023	HIGH	FAIL	.*/api/emergency/.*	XML External Entity Attack
+
+# API endpoints - medium to high sensitivity
+40012	MEDIUM	WARN	.*/api/.*	Cross Site Scripting (Reflected)
+40014	MEDIUM	WARN	.*/api/.*	Cross Site Scripting (Persistent)
+40016	MEDIUM	WARN	.*/api/.*	Web Browser XSS Protection Not Enabled
+40017	MEDIUM	WARN	.*/api/.*	Source Code Disclosure - File Inclusion
+
+# Data endpoints - high sensitivity for PII
+90001	HIGH	FAIL	.*/api/drivers/.*	Authentication bypass - driver data
+90001	HIGH	FAIL	.*/api/passengers/.*	Authentication bypass - passenger data
+90001	HIGH	FAIL	.*/api/bookings/.*	Authentication bypass - booking data
+90020	HIGH	FAIL	.*/api/drivers/.*	Parameter pollution
+90020	HIGH	FAIL	.*/api/passengers/.*	Parameter pollution
+90020	HIGH	FAIL	.*/api/bookings/.*	Parameter pollution
+
+# SQL Injection protection
+40018	HIGH	FAIL	.*	SQL Injection
+40019	HIGH	FAIL	.*	SQL Injection - PostgreSQL
+40020	HIGH	FAIL	.*	SQL Injection - MySQL
+40021	HIGH	FAIL	.*	SQL Injection - Oracle
+40022	HIGH	FAIL	.*	SQL Injection - SQLite
+
+# Administrative endpoints
+90001	HIGH	FAIL	.*/api/admin/.*	Authentication bypass - admin
+90002	HIGH	FAIL	.*/api/admin/.*	Private IP disclosure
+90020	HIGH	FAIL	.*/api/admin/.*	Parameter pollution
+90023	HIGH	FAIL	.*/api/admin/.*	XML External Entity Attack
+
+# Generic high-risk vulnerabilities
+90019	HIGH	FAIL	.*	Server Side Code Injection
+90020	HIGH	FAIL	.*	Parameter Pollution
+90023	HIGH	FAIL	.*	XML External Entity Attack
+90024	HIGH	FAIL	.*	Generic Padding Oracle
+
+# Medium risk issues to monitor
+40012	MEDIUM	WARN	.*	Cross Site Scripting (Reflected)
+40014	MEDIUM	WARN	.*	Cross Site Scripting (Persistent) - Prime
+40016	MEDIUM	WARN	.*	Web Browser XSS Protection Not Enabled
+40017	MEDIUM	WARN	.*	Source Code Disclosure - File Inclusion
+40018	MEDIUM	WARN	.*	Source Code Disclosure - Git
+
+# Low priority but still important
+10010	LOW	WARN	.*	Cookie No HttpOnly Flag
+10011	LOW	WARN	.*	Cookie Without Secure Flag
+10015	LOW	WARN	.*	Incomplete or No Cache-control and Pragma HTTP Header Set
+10017	LOW	WARN	.*	Cross-Domain JavaScript Source File Inclusion
+10020	LOW	WARN	.*	X-Frame-Options Header Not Set
+
+# Custom rules for rideshare-specific vulnerabilities
+# Location data protection
+90030	HIGH	FAIL	.*/api/.*/location.*	Location data exposure
+90031	HIGH	FAIL	.*/api/.*/coordinates.*	Coordinate data exposure
+90032	HIGH	FAIL	.*/api/.*/gps.*	GPS data exposure
+
+# Payment and financial data
+90040	HIGH	FAIL	.*/api/.*/payment.*	Payment data exposure
+90041	HIGH	FAIL	.*/api/.*/billing.*	Billing data exposure
+90042	HIGH	FAIL	.*/api/.*/wallet.*	Wallet data exposure
+
+# Communication and messaging
+90050	MEDIUM	WARN	.*/api/.*/messages.*	Message data exposure
+90051	MEDIUM	WARN	.*/api/.*/chat.*	Chat data exposure
+90052	MEDIUM	WARN	.*/api/.*/notifications.*	Notification data exposure

@@ -1,10 +1,12 @@
 // Database Connection Utilities for Xpress Ops Tower
-// PostgreSQL with connection pooling for high-performance operations
+// Enhanced database layer with dual database support and production-ready features
 
 import pkg from 'pg';
 const { Pool } = pkg;
 import type { PoolClient, QueryResult } from 'pg';
 import { logger } from './security/productionLogger';
+import { getDatabaseManager, getDatabase } from './database/connection-manager';
+import type { DatabaseAdapter } from './database/connection-manager';
 
 // Mock database for development when PostgreSQL is not available
 class MockDatabasePool {
@@ -289,34 +291,45 @@ const getDatabaseConfig = (): DatabaseConfig => {
   };
 };
 
-// Singleton database instance
-let dbInstance: DatabasePool | MockDatabasePool | null = null;
+// Legacy compatibility layer - now uses the new connection manager
+let legacyDbInstance: DatabasePool | MockDatabasePool | null = null;
 
-export const getDatabase = (): DatabasePool | MockDatabasePool => {
-  if (!dbInstance) {
+// Enhanced database access using connection manager
+export const getDatabaseAdapter = (): DatabaseAdapter => {
+  return getDatabase();
+};
+
+// Legacy method for backward compatibility
+export const getLegacyDatabase = (): DatabasePool | MockDatabasePool => {
+  if (!legacyDbInstance) {
     const config = getDatabaseConfig();
     
     // In development, use mock if PostgreSQL is not available
     if (process.env.NODE_ENV === 'development' || process.env.USE_MOCK_DB === 'true') {
       try {
         // Try to create real connection first
-        dbInstance = new DatabasePool(config);
+        legacyDbInstance = new DatabasePool(config);
       } catch (error) {
-        logger.info('PostgreSQL not available, using mock database for development', {}, { component: 'DatabaseFactory', action: 'getDatabase' });
-        dbInstance = new MockDatabasePool(config);
+        logger.info('PostgreSQL not available, using mock database for development', {}, { component: 'DatabaseFactory', action: 'getLegacyDatabase' });
+        legacyDbInstance = new MockDatabasePool(config);
       }
     } else {
-      dbInstance = new DatabasePool(config);
+      legacyDbInstance = new DatabasePool(config);
     }
   }
-  return dbInstance;
+  return legacyDbInstance;
 };
 
 // Cleanup function for graceful shutdown
 export const closeDatabaseConnection = async (): Promise<void> => {
-  if (dbInstance) {
-    await dbInstance.close();
-    dbInstance = null;
+  // Close new connection manager
+  const manager = getDatabaseManager();
+  await manager.close();
+  
+  // Close legacy instance if exists
+  if (legacyDbInstance) {
+    await legacyDbInstance.close();
+    legacyDbInstance = null;
   }
 };
 
@@ -475,34 +488,40 @@ export class DatabaseUtils {
 }
 
 // Export the default database instance and utilities
-export { getDatabase as db };
-export const dbUtils = new DatabaseUtils(getDatabase());
+export { getDatabase } from './database/connection-manager';
+export { getDatabaseAdapter as dbAdapter };
+export const dbUtils = new DatabaseUtils(getLegacyDatabase());
 
 // Database initialization for application startup
 export const initializeDatabase = async (): Promise<void> => {
   try {
+    // Initialize the connection manager
+    const manager = getDatabaseManager();
+    const adapter = manager.getAdapter();
+    
     // Test connection
-    const currentDb = getDatabase();
-    const healthCheck = await currentDb.healthCheck();
+    const healthCheck = await adapter.healthCheck();
     if (healthCheck.status === 'unhealthy') {
-      // In development, fall back to mock if health check fails
+      // In development, the connection manager will handle fallback to SQLite/mock
       if (process.env.NODE_ENV === 'development') {
-        logger.warn('Database health check failed, using mock database for development', { responseTime: healthCheck.responseTime, connections: healthCheck.connections }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
-        // Force recreation with mock
-        dbInstance = new MockDatabasePool(getDatabaseConfig());
+        logger.warn('Database health check failed, connection manager handling fallback', { 
+          responseTime: healthCheck.responseTime, 
+          connections: healthCheck.connections 
+        }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
         return;
       }
       throw new Error('Database health check failed');
     }
 
-    logger.info('Database connection established successfully', {
+    logger.info('Database connection established successfully via connection manager', {
       responseTime: healthCheck.responseTime,
-      connections: healthCheck.connections
+      connections: healthCheck.connections,
+      hasReadReplicas: healthCheck.readReplicas ? healthCheck.readReplicas.length > 0 : false
     }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
 
-    // Set up any required database configurations (skip for mock)
-    if (!(currentDb instanceof MockDatabasePool)) {
-      await currentDb.query(`
+    // Set up any required database configurations for PostgreSQL
+    if (adapter.constructor.name.includes('PostgreSQL')) {
+      await adapter.query(`
         SET statement_timeout = '60s';
         SET lock_timeout = '30s';
         SET idle_in_transaction_session_timeout = '300s';
@@ -510,12 +529,9 @@ export const initializeDatabase = async (): Promise<void> => {
     }
 
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('Failed to initialize database, using mock database for development', { error: (error as Error).message }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
-      dbInstance = new MockDatabasePool(getDatabaseConfig());
-      return;
-    }
-    logger.error('Failed to initialize database connection', { error: (error as Error).message }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
+    logger.error('Failed to initialize database connection manager', { 
+      error: (error as Error).message 
+    }, { component: 'DatabaseFactory', action: 'initializeDatabase' });
     throw error;
   }
 };

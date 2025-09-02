@@ -208,7 +208,6 @@ class APIManagementService {
       newProvider.priority, newProvider.createdAt, newProvider.updatedAt
     ]);
 
-    console.log(`📡 Registered new API provider: ${newProvider.name}`);
     return newProvider;
   }
 
@@ -247,7 +246,6 @@ class APIManagementService {
       this.scheduleKeyRotation(newKey);
     }
 
-    console.log(`🔑 Added API key: ${newKey.keyName} for provider ${newKey.providerId}`);
     return newKey;
   }
 
@@ -338,7 +336,6 @@ class APIManagementService {
     // Schedule quota reset
     this.scheduleQuotaReset(newQuota);
 
-    console.log(`📊 Set quota limit for provider ${newQuota.providerId}: ${newQuota.limitValue} ${newQuota.quotaType}/${newQuota.resetPeriod}`);
     return newQuota;
   }
 
@@ -369,7 +366,6 @@ class APIManagementService {
       this.startHealthCheck(newHealthCheck);
     }
 
-    console.log(`🏥 Added health check for provider ${newHealthCheck.providerId}: ${newHealthCheck.endpoint}`);
     return newHealthCheck;
   }
 
@@ -482,11 +478,9 @@ class APIManagementService {
     if (existingKey.rotationSchedule?.gracePeriodHours) {
       setTimeout(async () => {
         await db.query(`UPDATE api_keys SET is_active = FALSE WHERE id = $1`, [keyId]);
-        console.log(`🔑 Deactivated old API key ${keyId} after grace period`);
-      }, existingKey.rotationSchedule.gracePeriodHours * 60 * 60 * 1000);
+        }, existingKey.rotationSchedule.gracePeriodHours * 60 * 60 * 1000);
     }
 
-    console.log(`🔄 Rotated API key for provider ${newKey.providerId}: ${newKey.keyName}`);
     return newKey;
   }
 
@@ -732,7 +726,6 @@ class APIManagementService {
 
     const job = cron.schedule(cronExpression, async () => {
       try {
-        console.log(`🔄 Automatic key rotation for ${apiKey.keyName}`);
         await this.rotateAPIKey(apiKey.id);
       } catch (error) {
         console.error(`Failed to rotate key ${apiKey.id}:`, error);
@@ -770,8 +763,6 @@ class APIManagementService {
         WHERE id = $1
       `, [quota.id, this.calculateNextReset(new Date(), quota.resetPeriod)]);
 
-      console.log(`📊 Reset quota for provider ${quota.providerId}: ${quota.quotaType}`);
-
       // Schedule next reset
       const updatedQuota = { ...quota, currentUsage: 0, lastReset: new Date() };
       this.scheduleQuotaReset(updatedQuota);
@@ -804,9 +795,7 @@ class APIManagementService {
         WHERE id = $1
       `, [healthCheck.id]);
 
-      console.log(`✅ Health check passed for ${healthCheck.endpoint}: ${responseTime}ms`);
-
-    } catch (error) {
+      } catch (error) {
       await db.query(`
         UPDATE api_health_checks 
         SET last_checked = NOW(), consecutive_failures = consecutive_failures + 1 
@@ -911,12 +900,10 @@ class APIManagementService {
         DELETE FROM api_requests 
         WHERE timestamp < NOW() - INTERVAL '${retentionDays} days'
       `);
-      console.log('🧹 Cleaned up old API request logs');
-    });
+      });
 
     // Generate daily cost reports
     cron.schedule('0 6 * * *', async () => {
-      console.log('📊 Generating daily API cost reports...');
       // This would generate and send daily cost reports
     });
   }

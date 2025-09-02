@@ -276,8 +276,6 @@ class EmailServiceManager {
           try {
             const report = await this.sendWithProvider(fallbackProvider, message);
             
-            console.log(`📧 Email failover successful: ${provider} → ${fallbackProvider} for message ${message.id}`);
-            
             return report;
             
           } catch (fallbackError) {
@@ -470,8 +468,7 @@ class EmailServiceManager {
     if (this.config.sendGrid.enabled) {
       try {
         // This would integrate with SendGrid suppression API
-        console.log(`📧 Added ${request.email} to SendGrid suppression list`);
-      } catch (error) {
+        } catch (error) {
         console.error('Failed to add to SendGrid suppression:', error);
       }
     }
@@ -822,8 +819,6 @@ class EmailServiceManager {
   }
 
   private createSandboxReport(message: EmailMessage): EmailDeliveryReport {
-    console.log(`📧 SANDBOX: Email would be sent to ${message.to} with subject "${message.subject}"`);
-    
     return {
       messageId: message.id!,
       status: 'sent',

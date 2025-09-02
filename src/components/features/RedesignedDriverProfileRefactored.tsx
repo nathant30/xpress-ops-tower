@@ -24,7 +24,7 @@ import DriverOverviewTab from '@/components/driver-profile/DriverOverviewTab';
 import DriverFraudTab from '@/components/driver-profile/DriverFraudTab';
 
 // Import production logger
-import { productionLogger } from '@/lib/security/productionLogger';
+import { logger } from '@/lib/security/productionLogger';
 
 interface DriverData {
   name: string;
@@ -141,24 +141,24 @@ const RedesignedDriverProfile = memo<RedesignedDriverProfileProps>(({
 
   // Event handlers
   const handleTabChange = useCallback((tabId: string) => {
-    productionLogger.info('Tab changed in driver profile', { tabId, driverId });
+    logger.info('Tab changed in driver profile', { tabId, driverId });
     setActiveTab(tabId);
   }, [driverId]);
 
   const handleClose = useCallback(() => {
-    productionLogger.info('Driver profile closed', { driverId });
+    logger.info('Driver profile closed', { driverId });
     if (onClose) {
       onClose();
     }
   }, [driverId, onClose]);
 
   const handleViewInvestigation = useCallback((investigationId: string) => {
-    productionLogger.info('Investigation details requested from profile', { investigationId, driverId });
+    logger.info('Investigation details requested from profile', { investigationId, driverId });
     // Handle investigation modal
   }, [driverId]);
 
   const handleRunFraudScan = useCallback(() => {
-    productionLogger.info('Manual fraud scan initiated from profile', { driverId });
+    logger.info('Manual fraud scan initiated from profile', { driverId });
     setLoading(true);
     // Simulate fraud scan
     setTimeout(() => setLoading(false), 2000);

@@ -438,23 +438,21 @@ class MonitoringSystem extends EventEmitter {
 
   private async sendEmailNotification(channel: NotificationChannel, alert: Alert): Promise<void> {
     // In a real implementation, this would integrate with an email service
-    console.log(`📧 Email notification sent to ${channel.config.recipients?.join(', ')}: ${alert.message}`);
+    }: ${alert.message}`);
   }
 
   private async sendSlackNotification(channel: NotificationChannel, alert: Alert): Promise<void> {
     // In a real implementation, this would send to Slack webhook
     const emoji = alert.severity === 'critical' ? '🚨' : alert.severity === 'high' ? '⚠️' : '📊';
-    console.log(`💬 Slack notification: ${emoji} ${alert.message}`);
-  }
+    }
 
   private async sendWebhookNotification(channel: NotificationChannel, alert: Alert): Promise<void> {
     // In a real implementation, this would make HTTP POST to webhook URL
-    console.log(`🔗 Webhook notification sent to ${channel.config.url}: ${alert.message}`);
-  }
+    }
 
   private async sendSMSNotification(channel: NotificationChannel, alert: Alert): Promise<void> {
     // In a real implementation, this would integrate with SMS service
-    console.log(`📱 SMS notification sent to ${channel.config.phoneNumbers?.join(', ')}: ${alert.message}`);
+    }: ${alert.message}`);
   }
 
   start(): void {
@@ -468,7 +466,6 @@ class MonitoringSystem extends EventEmitter {
       this.checkAlerts(metrics);
     }, 30000);
 
-    console.log('🔍 Monitoring system started - collecting metrics every 30 seconds');
     this.emit('monitoring_started');
   }
 
@@ -487,7 +484,6 @@ class MonitoringSystem extends EventEmitter {
       this.alertCheckInterval = undefined;
     }
 
-    console.log('🛑 Monitoring system stopped');
     this.emit('monitoring_stopped');
   }
 

@@ -11,6 +11,9 @@ import { connectionHealthMonitor } from './lib/connectionHealthMonitor';
 import { metricsCollector } from './lib/metricsCollector';
 import { logger } from './lib/security/productionLogger';
 
+// Fix EventEmitter memory leak warning
+process.setMaxListeners(20);
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);

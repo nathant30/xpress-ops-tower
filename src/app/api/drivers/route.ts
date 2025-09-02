@@ -1,4 +1,4 @@
-// /api/drivers - Driver Management API
+// /api/drivers - Driver Management API (Versioned)
 import { NextRequest } from 'next/server';
 import { 
   createApiResponse, 
@@ -11,30 +11,23 @@ import {
   asyncHandler,
   handleOptionsRequest
 } from '@/lib/api-utils';
-import { withAuth, withAuthAndRateLimit } from '@/lib/auth';
+import { withEnhancedAuth, requirePermission } from '@/lib/auth/enhanced-auth';
 import { MockDataService } from '@/lib/mockData';
 import { CreateDriverRequest } from '@/types';
+import { versionedApiRoute, createVersionedResponse } from '@/middleware/apiVersioning';
 
-// GET /api/drivers - List all drivers with filtering and pagination  
-export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
-  // Check if user has drivers:read permission
-  if (!user.permissions.includes('drivers:read')) {
-    return createApiError(
-      'Insufficient permissions to view drivers',
-      'PERMISSION_DENIED',
-      403,
-      { requiredPermission: 'drivers:read' },
-      '/api/drivers',
-      'GET'
-    );
-  }
+const getDriversV1 = withEnhancedAuth({
+  requiredPermissions: ['assign_driver', 'view_driver_files_masked'],
+  dataClass: 'internal'
+})(async (request: NextRequest, user) => {
   const queryParams = parseQueryParams(request);
   const paginationParams = parsePaginationParams(request);
   
-  // Apply regional filtering for non-admin users
+  // Apply regional filtering for users with regional restrictions
   let regionFilter = queryParams.region;
-  if (user.role !== 'admin' && user.regionId) {
-    regionFilter = user.regionId;
+  const userRegions = user.allowedRegions || [];
+  if (userRegions.length > 0 && !userRegions.includes(regionFilter)) {
+    regionFilter = userRegions[0]; // Use first allowed region
   }
   
   // Get drivers with filters
@@ -65,25 +58,18 @@ export const GET = withAuthAndRateLimit(async (request: NextRequest, user) => {
     paginationParams.limit
   );
   
-  return createApiResponse(
+  return createVersionedResponse(
     paginatedResult.data,
-    'Drivers retrieved successfully'
+    'v1'
   );
 });
 
-// POST /api/drivers - Create a new driver
-export const POST = withAuthAndRateLimit(async (request: NextRequest, user) => {
-  // Check if user has drivers:write permission
-  if (!user.permissions.includes('drivers:write')) {
-    return createApiError(
-      'Insufficient permissions to create drivers',
-      'PERMISSION_DENIED',
-      403,
-      { requiredPermission: 'drivers:write' },
-      '/api/drivers',
-      'POST'
-    );
-  }
+// GET /api/drivers - List all drivers with filtering and pagination  
+export const GET = versionedApiRoute({
+  v1: getDriversV1
+});
+
+const postDriversV1 = requirePermission('manage_users')(async (request: NextRequest, user) => {
 
   const body = await request.json() as CreateDriverRequest;
   
@@ -152,11 +138,15 @@ export const POST = withAuthAndRateLimit(async (request: NextRequest, user) => {
   
   const newDriver = MockDataService.createDriver(driverData);
   
-  return createApiResponse(
+  return createVersionedResponse(
     { driver: newDriver },
-    'Driver created successfully',
-    201
+    'v1'
   );
+});
+
+// POST /api/drivers - Create a new driver
+export const POST = versionedApiRoute({
+  v1: postDriversV1
 });
 
 // OPTIONS handler for CORS

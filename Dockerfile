@@ -1,100 +1,30 @@
-# Multi-stage Dockerfile for Xpress Ops Tower
-# Optimized for production deployment with security best practices
+# Production RBAC+ABAC API Server
+FROM node:20-alpine
 
-# Build stage
-FROM node:18-alpine AS builder
-
-# Set working directory
 WORKDIR /app
-
-# Install build dependencies
-RUN apk add --no-cache \
-    libc6-compat \
-    python3 \
-    make \
-    g++ \
-    git
 
 # Copy package files
 COPY package*.json ./
-COPY tsconfig.json ./
-COPY next.config.js ./
-COPY tailwind.config.ts ./
-COPY postcss.config.js ./
 
-# Install dependencies
-RUN npm ci --only=production --no-audit --no-fund && \
-    npm ci --only=development --no-audit --no-fund
+# Install dependencies  
+RUN npm ci --only=production
 
-# Copy source code
-COPY src ./src
-COPY public ./public
-COPY database ./database
-COPY scripts ./scripts
+# Install SQLite
+RUN apk add --no-cache sqlite curl
 
-# Set environment variables for build
-ARG NODE_ENV=production
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Copy application files
+COPY production-api-server.js ./
+COPY database/setup-rbac-sqlite.sql ./database/
 
-# Build application
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine AS runner
-
-# Security: Create non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs --ingroup nodejs
-
-# Set working directory
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apk add --no-cache \
-    dumb-init \
-    postgresql-client \
-    redis \
-    curl \
-    ca-certificates
-
-# Copy built application
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/database ./database
-COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
-
-# Copy package.json for runtime
-COPY --from=builder /app/package.json ./package.json
-
-# Set environment variables
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Create necessary directories
-RUN mkdir -p /app/logs /app/uploads /app/tmp && \
-    chown -R nextjs:nodejs /app
-
-# Security: Drop root privileges
-USER nextjs
+# Create database
+RUN sqlite3 production-authz.db < database/setup-rbac-sqlite.sql
 
 # Expose port
-EXPOSE 3000
+EXPOSE 4001
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:4001/healthz || exit 1
 
-# Use dumb-init to properly handle signals
-ENTRYPOINT ["dumb-init", "--"]
-
-# Start application
-CMD ["node", "server.js"]
-
-# Metadata
-LABEL maintainer="Xpress Ops Tower Team"
-LABEL version="1.0.0"
-LABEL description="Real-time operations command center with emergency response system"
+# Run application
+CMD ["node", "production-api-server.js"]

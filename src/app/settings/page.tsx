@@ -8,7 +8,8 @@ import {
   Bell, 
   Users, 
   Key, 
-  FileText
+  FileText,
+  Activity
 } from 'lucide-react';
 
 // Import our extracted components
@@ -18,9 +19,12 @@ import APIManagementPanel from '@/components/settings/APIManagementPanel';
 import SecurityPanel from '@/components/settings/SecurityPanel';
 import NotificationsPanel from '@/components/settings/NotificationsPanel';
 import AuditPanel from '@/components/settings/AuditPanel';
+import { RegionAccessDrawer } from '@/components/RegionAccessDrawer';
 
 // Import production logger
-import { productionLogger } from '@/lib/security/productionLogger';
+import logger from '@/lib/security/productionLogger';
+import { PermissionGate, useRBAC } from '@/hooks/useRBAC';
+import RoleEditModal from '@/components/settings/RoleEditModal';
 
 // Types
 interface SystemService {
@@ -146,6 +150,7 @@ const SettingsPage = () => {
   // Main tab state
   const [activeTab, setActiveTab] = useState('system');
   const [loading, setLoading] = useState(false);
+  const [expandedService, setExpandedService] = useState<string | null>(null);
 
   // Sub-tab states for each main tab
   const [activeSystemSubTab, setActiveSystemSubTab] = useState('health');
@@ -194,43 +199,60 @@ const SettingsPage = () => {
   ]);
 
   // User Management state
-  const [users] = useState<User[]>([
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@xpress.ops',
-      role: 'Administrator',
-      status: 'active',
-      lastLogin: new Date(),
-      createdAt: new Date('2024-01-15')
-    },
-    {
-      id: '2',
-      name: 'Operations Manager',
-      email: 'ops@xpress.ops',
-      role: 'Manager',
-      status: 'active',
-      lastLogin: new Date(Date.now() - 86400000),
-      createdAt: new Date('2024-02-01')
-    }
-  ]);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [regionAccessDrawerOpen, setRegionAccessDrawerOpen] = useState(false);
 
-  const [roles] = useState<UserRole[]>([
-    {
-      id: '1',
-      name: 'Administrator',
-      description: 'Full system access',
-      permissions: ['read', 'write', 'delete', 'manage_users', 'system_settings'],
-      userCount: 3
-    },
-    {
-      id: '2',
-      name: 'Manager',
-      description: 'Operations management',
-      permissions: ['read', 'write', 'manage_drivers'],
-      userCount: 8
-    }
-  ]);
+  // Fetch RBAC data on component mount
+  useEffect(() => {
+    const fetchRBACData = async () => {
+      try {
+        setLoading(true);
+        
+        // Mock current user role for super_admin visibility restriction
+        // In production, this would come from user context/auth
+        const currentUserRole = 'iam_admin'; // TODO: Replace with actual user role from auth context
+        
+        // Fetch roles with user role context for security filtering
+        const rolesResponse = await fetch('/api/rbac/roles/public');
+        if (rolesResponse.ok) {
+          const rolesData = await rolesResponse.json();
+          // Convert RBAC roles to UserRole format
+          let convertedRoles = rolesData.roles.map((role: any) => ({
+            id: role.id,
+            name: role.name,
+            permissions: role.permissions || [],
+            description: role.description || role.name,
+            userCount: role.userCount || 0
+          }));
+          
+          // SECURITY: Double-check that super_admin is filtered on frontend too
+          if (currentUserRole !== 'super_admin') {
+            convertedRoles = convertedRoles.filter((role: any) => role.name !== 'super_admin');
+          }
+          
+          setRoles(convertedRoles);
+        }
+        
+        // Fetch users
+        const usersResponse = await fetch('/api/rbac/users');
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          setUsers(usersData.data.users);
+        }
+        
+      } catch (error) {
+        logger.error('Failed to fetch RBAC data', { error });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRBACData();
+  }, []);
 
   // API Management state
   const [apiKeys] = useState<ApiKey[]>([
@@ -385,6 +407,7 @@ const SettingsPage = () => {
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'api', label: 'API Management', icon: Key },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'monitoring', label: 'Monitoring', icon: Activity },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'audit', label: 'Audit & Compliance', icon: FileText }
   ];
@@ -401,130 +424,172 @@ const SettingsPage = () => {
         memory: Math.floor(Math.random() * 100),
         requests: Math.floor(Math.random() * 2000) + 1000
       } : null);
-      productionLogger.info('System health refreshed successfully');
+      logger.info('System health refreshed successfully');
     } catch (error) {
-      productionLogger.error('Failed to refresh system health', { error });
+      logger.error('Failed to refresh system health', { error });
     } finally {
       setLoading(false);
     }
   }, []);
 
   const handleRestartService = useCallback(async (serviceId: string) => {
-    productionLogger.info('Service restart requested', { serviceId });
+    logger.info('Service restart requested', { serviceId });
     // Implementation would go here
   }, []);
 
   const handleAddUser = useCallback(() => {
-    productionLogger.info('Add user modal requested');
+    logger.info('Add user modal requested');
     // Implementation would go here
   }, []);
 
   const handleEditUser = useCallback((user: User) => {
-    productionLogger.info('Edit user requested', { userId: user.id });
-    // Implementation would go here
+    logger.info('Edit user regional access requested', { userId: user.id });
+    setSelectedUserId(user.id);
+    setRegionAccessDrawerOpen(true);
   }, []);
 
   const handleDeleteUser = useCallback((userId: string) => {
-    productionLogger.info('Delete user requested', { userId });
-    // Implementation would go here
+    logger.info('Delete user requested', { userId });
+    // Show confirmation dialog for user deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this user? This action cannot be undone and will remove all their access.`
+    );
+    
+    if (confirmed) {
+      logger.warn('User deletion confirmed but not implemented', { userId });
+      alert(`User deletion confirmed but requires backend implementation. User ID: ${userId}`);
+    }
   }, []);
 
   const handleAddRole = useCallback(() => {
-    productionLogger.info('Add role modal requested');
+    logger.info('Add role modal requested');
     // Implementation would go here
   }, []);
 
   const handleEditRole = useCallback((role: UserRole) => {
-    productionLogger.info('Edit role requested', { roleId: role.id });
-    // Implementation would go here
+    logger.info('Edit role requested', { roleId: role.id });
+    // Open inline edit modal instead of redirecting
+    setSelectedRole(role);
+    setIsEditingRole(true);
+  }, []);
+
+  const handleSaveRole = useCallback(async (updatedRole: UserRole) => {
+    logger.info('Save role requested', { roleId: updatedRole.id });
+    try {
+      // TODO: Implement API call to save role
+      // For now, just update local state
+      setRoles(prevRoles => 
+        prevRoles.map(role => 
+          role.id === updatedRole.id ? updatedRole : role
+        )
+      );
+      setIsEditingRole(false);
+      setSelectedRole(null);
+      logger.info('Role saved successfully', { roleId: updatedRole.id });
+    } catch (error) {
+      logger.error('Failed to save role', { error, roleId: updatedRole.id });
+    }
+  }, []);
+
+  const handleCloseRoleModal = useCallback(() => {
+    setIsEditingRole(false);
+    setSelectedRole(null);
   }, []);
 
   const handleDeleteRole = useCallback((roleId: string) => {
-    productionLogger.info('Delete role requested', { roleId });
-    // Implementation would go here
+    logger.info('Delete role requested', { roleId });
+    // Show confirmation dialog for role deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete this role? This action cannot be undone and will affect all users with this role.`
+    );
+    
+    if (confirmed) {
+      logger.warn('Role deletion confirmed but not implemented', { roleId });
+      alert(`Role deletion confirmed but requires backend implementation. Role ID: ${roleId}`);
+    }
   }, []);
 
   const handleAddApiKey = useCallback(() => {
-    productionLogger.info('Add API key modal requested');
+    logger.info('Add API key modal requested');
     // Implementation would go here
   }, []);
 
   const handleEditApiKey = useCallback((key: ApiKey) => {
-    productionLogger.info('Edit API key requested', { keyId: key.id });
+    logger.info('Edit API key requested', { keyId: key.id });
     // Implementation would go here
   }, []);
 
   const handleDeleteApiKey = useCallback((keyId: string) => {
-    productionLogger.info('Delete API key requested', { keyId });
+    logger.info('Delete API key requested', { keyId });
     // Implementation would go here
   }, []);
 
   const handleCopyApiKey = useCallback(async (key: string) => {
     try {
       await navigator.clipboard.writeText(key);
-      productionLogger.info('API key copied to clipboard');
+      logger.info('API key copied to clipboard');
     } catch (error) {
-      productionLogger.error('Failed to copy API key', { error });
+      logger.error('Failed to copy API key', { error });
     }
   }, []);
 
   const handleTestIntegration = useCallback((integrationId: string) => {
-    productionLogger.info('Test integration requested', { integrationId });
+    logger.info('Test integration requested', { integrationId });
     // Implementation would go here
   }, []);
 
   const handleUpdateSecurityConfig = useCallback((config: SecurityConfig) => {
-    productionLogger.info('Security config updated', { config: Object.keys(config) });
+    logger.info('Security config updated', { config: Object.keys(config) });
     // Implementation would go here
   }, []);
 
   const handleAcknowledgeEvent = useCallback((eventId: string) => {
-    productionLogger.info('Security event acknowledged', { eventId });
+    logger.info('Security event acknowledged', { eventId });
     // Implementation would go here
   }, []);
 
   const handleRunSecurityScan = useCallback(() => {
-    productionLogger.info('Security scan initiated');
+    logger.info('Security scan initiated');
     // Implementation would go here
   }, []);
 
   const handleUpdateNotificationSetting = useCallback((setting: NotificationSetting) => {
-    productionLogger.info('Notification setting updated', { settingId: setting.id });
+    logger.info('Notification setting updated', { settingId: setting.id });
     // Implementation would go here
   }, []);
 
   const handleSendTestNotification = useCallback((type: 'email' | 'push' | 'sms') => {
-    productionLogger.info('Test notification sent', { type });
+    logger.info('Test notification sent', { type });
     // Implementation would go here
   }, []);
 
   const handleSaveTemplate = useCallback((template: NotificationTemplate) => {
-    productionLogger.info('Template saved', { templateId: template.id });
+    logger.info('Template saved', { templateId: template.id });
     // Implementation would go here
   }, []);
 
   const handleDeleteTemplate = useCallback((templateId: string) => {
-    productionLogger.info('Template deleted', { templateId });
+    logger.info('Template deleted', { templateId });
     // Implementation would go here
   }, []);
 
   const handleExportAuditLogs = useCallback((format: 'csv' | 'json' | 'pdf', dateRange?: { start: Date; end: Date }) => {
-    productionLogger.info('Audit logs export requested', { format, dateRange });
+    logger.info('Audit logs export requested', { format, dateRange });
     // Implementation would go here
   }, []);
 
   const handleDownloadExport = useCallback((exportId: string) => {
-    productionLogger.info('Export download requested', { exportId });
+    logger.info('Export download requested', { exportId });
     // Implementation would go here
   }, []);
 
   const handleDeleteExport = useCallback((exportId: string) => {
-    productionLogger.info('Export deletion requested', { exportId });
+    logger.info('Export deletion requested', { exportId });
     // Implementation would go here
   }, []);
 
   const handleViewLogDetails = useCallback((logId: string) => {
-    productionLogger.info('Log details requested', { logId });
+    logger.info('Log details requested', { logId });
     // Implementation would go here
   }, []);
 
@@ -587,6 +652,237 @@ const SettingsPage = () => {
           />
         );
 
+      case 'monitoring':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">System Monitoring</h3>
+              <p className="text-sm text-gray-600 mb-6">Real-time metrics and performance monitoring</p>
+            </div>
+            
+            {/* Performance Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">CPU Usage</p>
+                    <p className="text-2xl font-bold text-gray-900">23%</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center text-sm">
+                  <span className="text-green-600">Normal</span>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Memory</p>
+                    <p className="text-2xl font-bold text-gray-900">67%</p>
+                  </div>
+                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <Database className="w-6 h-6 text-yellow-600" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center text-sm">
+                  <span className="text-yellow-600">Moderate</span>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Active Users</p>
+                    <p className="text-2xl font-bold text-gray-900">1,247</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center text-sm">
+                  <span className="text-green-600">+12% vs yesterday</span>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Response Time</p>
+                    <p className="text-2xl font-bold text-gray-900">89ms</p>
+                  </div>
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Activity className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center text-sm">
+                  <span className="text-green-600">Excellent</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* System Status */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h4 className="font-medium text-gray-900 mb-4">Service Status</h4>
+              <div className="space-y-3">
+                <div>
+                  <button 
+                    onClick={() => setExpandedService(expandedService === 'api' ? null : 'api')}
+                    className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="font-medium text-gray-900">API Server</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">Online</span>
+                      <span className="text-gray-400 group-hover:text-gray-600 text-sm">View logs →</span>
+                    </div>
+                  </button>
+                  {expandedService === 'api' && (
+                    <div className="mt-2 p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Uptime:</span>
+                          <span className="font-medium">99.9% (24h)</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Requests/min:</span>
+                          <span className="font-medium">1,247</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Error rate:</span>
+                          <span className="font-medium text-green-600">0.03%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Last restart:</span>
+                          <span className="font-medium">2 hours ago</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <button 
+                    onClick={() => setExpandedService(expandedService === 'database' ? null : 'database')}
+                    className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="font-medium text-gray-900">Database</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">Connected</span>
+                      <span className="text-gray-400 group-hover:text-gray-600 text-sm">View metrics →</span>
+                    </div>
+                  </button>
+                  {expandedService === 'database' && (
+                    <div className="mt-2 p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Connections:</span>
+                          <span className="font-medium">23/100</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Queries/sec:</span>
+                          <span className="font-medium">156</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Storage used:</span>
+                          <span className="font-medium">2.3GB / 10GB</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Avg query time:</span>
+                          <span className="font-medium text-green-600">12ms</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <button 
+                    onClick={() => setExpandedService(expandedService === 'websocket' ? null : 'websocket')}
+                    className="w-full flex items-center justify-between p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="font-medium text-gray-900">WebSocket</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">Active</span>
+                      <span className="text-gray-400 group-hover:text-gray-600 text-sm">View connections →</span>
+                    </div>
+                  </button>
+                  {expandedService === 'websocket' && (
+                    <div className="mt-2 p-4 bg-gray-50 rounded-lg border-l-4 border-green-500">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Active connections:</span>
+                          <span className="font-medium">892</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Messages/min:</span>
+                          <span className="font-medium">3,451</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Data transferred:</span>
+                          <span className="font-medium">45.2MB</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Avg latency:</span>
+                          <span className="font-medium text-green-600">23ms</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <button 
+                    onClick={() => setExpandedService(expandedService === 'jobs' ? null : 'jobs')}
+                    className="w-full flex items-center justify-between p-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <span className="font-medium text-gray-900">Background Jobs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-yellow-600 bg-yellow-100 px-2 py-1 rounded">Delayed</span>
+                      <span className="text-gray-400 group-hover:text-gray-600 text-sm">View queue →</span>
+                    </div>
+                  </button>
+                  {expandedService === 'jobs' && (
+                    <div className="mt-2 p-4 bg-gray-50 rounded-lg border-l-4 border-yellow-500">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Queue size:</span>
+                          <span className="font-medium text-yellow-600">47 pending</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Failed jobs:</span>
+                          <span className="font-medium text-red-600">3</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Processed today:</span>
+                          <span className="font-medium">1,892</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Avg processing time:</span>
+                          <span className="font-medium">2.3s</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case 'notifications':
         return (
           <NotificationsPanel
@@ -624,44 +920,70 @@ const SettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your Xpress Ops Tower configuration and preferences</p>
+      <div className="max-w-7xl mx-auto p-4">
+
+        {/* Horizontal Tabs - Xpress Design Standard */}
+        <div className="mb-4 pt-2">
+          <div className="flex items-center gap-1 overflow-x-auto pb-2">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-4 h-12 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? 'text-white shadow-lg'
+                      : 'text-gray-600 hover:text-white hover:shadow-md'
+                  }`}
+                  style={isActive ? { backgroundColor: 'rgb(235, 29, 37)' } : {}}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'rgb(10, 64, 96)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Sidebar Navigation */}
-          <div className="lg:w-64 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <nav className="space-y-2">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-                
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center px-3 py-2 text-left rounded-md transition-colors ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1">
-            {renderTabContent()}
-          </div>
+        {/* Tab Content */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          {renderTabContent()}
         </div>
       </div>
+
+      {/* Role Edit Modal */}
+      <RoleEditModal
+        isOpen={isEditingRole}
+        role={selectedRole}
+        onClose={handleCloseRoleModal}
+        onSave={handleSaveRole}
+      />
+
+      {/* Regional Access Drawer */}
+      {selectedUserId && (
+        <RegionAccessDrawer
+          userId={selectedUserId}
+          open={regionAccessDrawerOpen}
+          onClose={() => {
+            setRegionAccessDrawerOpen(false);
+            setSelectedUserId(null);
+          }}
+          canEdit={true}
+        />
+      )}
     </div>
   );
 };

@@ -107,8 +107,7 @@ class RealtimeScoringPipeline {
       this.processQueue();
     }, 100); // Process every 100ms
 
-    console.log('🔄 Real-time scoring pipeline workers started');
-  }
+    }
 
   private startMetricsCollection(): void {
     this.metricsInterval = setInterval(() => {
@@ -615,8 +614,7 @@ class RealtimeScoringPipeline {
       this.metricsInterval = undefined;
     }
     
-    console.log('🛑 Real-time scoring pipeline stopped');
-  }
+    }
 }
 
 export const realtimeScoringPipeline = RealtimeScoringPipeline.getInstance();

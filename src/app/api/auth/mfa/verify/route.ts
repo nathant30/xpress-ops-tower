@@ -1,4 +1,4 @@
-// /api/auth/mfa/verify - MFA Verification API
+// /api/auth/mfa/verify - Enhanced MFA Verification API
 import { NextRequest } from 'next/server';
 import { 
   createApiResponse, 
@@ -9,22 +9,35 @@ import {
   handleOptionsRequest
 } from '@/lib/api-utils';
 import { withAuth } from '@/lib/auth';
+import { withRBAC } from '@/middleware/rbacMiddleware';
 import { MockDataService } from '@/lib/mockData';
 import { auditLogger, AuditEventType, SecurityLevel } from '@/lib/security/auditLogger';
 import { logger } from '@/lib/security/productionLogger';
+import { mfaService, MFAVerificationResult } from '@/lib/auth/mfa-service';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'test-secret-for-local-development-only';
 
 interface MFAVerifyRequest {
+  challengeId?: string; // For new MFA challenge-based verification
   code: string;
   backupCode?: string;
+  // Legacy support
+  method?: 'totp' | 'sms' | 'email' | 'backup_code';
 }
 
 interface MFAVerifyResponse {
+  success: boolean;
   verified: boolean;
   mfaEnabled: boolean;
   message: string;
+  challengeId?: string;
+  verifiedAt?: string;
+  remainingAttempts?: number;
+  mfaToken?: string; // Enhanced JWT token with MFA verification flag
 }
 
-// POST /api/auth/mfa/verify - Verify MFA code to complete setup or authenticate
+// POST /api/auth/mfa/verify - Enhanced MFA verification with challenge support
 export const POST = withAuth(async (request: NextRequest, user) => {
   const body = await request.json() as MFAVerifyRequest;
   const clientIP = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -52,40 +65,73 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       );
     }
 
-    let verificationSuccess = false;
+    let verificationResult: MFAVerificationResult;
     let isBackupCode = false;
+    let mfaToken: string | undefined;
 
-    // Check backup code first if provided
-    if (body.backupCode) {
-      verificationSuccess = verifyBackupCode(userData, body.backupCode);
-      isBackupCode = true;
-    } 
-    // Otherwise verify TOTP code
-    else if (body.code) {
-      verificationSuccess = verifyTOTPCode(userData, body.code);
+    // Enhanced challenge-based verification
+    if (body.challengeId) {
+      // Use new MFA service for challenge-based verification
+      verificationResult = await mfaService.verifyChallenge(
+        body.challengeId,
+        body.code || body.backupCode || '',
+        {
+          ipAddress: clientIP,
+          userAgent
+        }
+      );
+
+      if (verificationResult.success && verificationResult.verifiedAt) {
+        // Create MFA-verified token
+        mfaToken = await createMFAVerifiedToken(user, body.challengeId, verificationResult.verifiedAt);
+      }
+    } else {
+      // Legacy verification support
+      let verificationSuccess = false;
+
+      // Check backup code first if provided
+      if (body.backupCode) {
+        verificationSuccess = verifyBackupCode(userData, body.backupCode);
+        isBackupCode = true;
+      } 
+      // Otherwise verify TOTP code
+      else if (body.code) {
+        verificationSuccess = verifyTOTPCode(userData, body.code);
+      }
+
+      // Create legacy verification result
+      verificationResult = {
+        success: verificationSuccess,
+        verifiedAt: verificationSuccess ? new Date() : undefined,
+        errorCode: verificationSuccess ? undefined : 'INVALID_CODE',
+        errorMessage: verificationSuccess ? undefined : 'Invalid MFA code'
+      };
     }
 
-    if (!verificationSuccess) {
+    if (!verificationResult.success) {
       await auditLogger.logEvent(
         AuditEventType.MFA_VERIFICATION,
         SecurityLevel.HIGH,
         'FAILURE',
         { 
-          error: 'Invalid MFA code',
-          codeType: isBackupCode ? 'backup_code' : 'totp',
+          error: verificationResult.errorMessage || 'Invalid MFA code',
+          challengeId: body.challengeId,
+          codeType: isBackupCode ? 'backup_code' : (body.method || 'totp'),
           userAgent
         },
         { userId: user.userId, resource: 'auth', action: 'mfa_verify', ipAddress: clientIP }
       );
 
-      return createApiError(
-        'Invalid MFA code',
-        'INVALID_MFA_CODE',
-        400,
-        undefined,
-        '/api/auth/mfa/verify',
-        'POST'
-      );
+      const mfaResponse: MFAVerifyResponse = {
+        success: false,
+        verified: false,
+        mfaEnabled: userData.mfaEnabled || false,
+        message: verificationResult.errorMessage || 'Invalid MFA code',
+        challengeId: body.challengeId,
+        remainingAttempts: verificationResult.remainingAttempts
+      };
+
+      return createApiResponse(mfaResponse, mfaResponse.message, 400);
     }
 
     // If MFA setup was pending, complete it
@@ -104,16 +150,21 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       'SUCCESS',
       { 
         action: userData.mfaSetupPending ? 'mfa_setup_completed' : 'mfa_verified',
-        codeType: isBackupCode ? 'backup_code' : 'totp',
+        challengeId: body.challengeId,
+        codeType: isBackupCode ? 'backup_code' : (body.method || 'totp'),
         userAgent
       },
       { userId: user.userId, resource: 'auth', action: 'mfa_verify', ipAddress: clientIP }
     );
 
     const mfaResponse: MFAVerifyResponse = {
+      success: true,
       verified: true,
       mfaEnabled,
-      message: userData.mfaSetupPending ? 'MFA setup completed successfully' : 'MFA verified successfully'
+      message: userData.mfaSetupPending ? 'MFA setup completed successfully' : 'MFA verified successfully',
+      challengeId: body.challengeId,
+      verifiedAt: verificationResult.verifiedAt?.toISOString(),
+      mfaToken
     };
 
     return createApiResponse(
@@ -129,20 +180,20 @@ export const POST = withAuth(async (request: NextRequest, user) => {
       AuditEventType.MFA_VERIFICATION,
       SecurityLevel.HIGH,
       'FAILURE',
-      { error: errorMessage, userAgent },
+      { error: errorMessage, challengeId: body.challengeId, userAgent },
       { userId: user.userId, resource: 'auth', action: 'mfa_verify', ipAddress: clientIP }
     );
 
     logger.error('MFA verification error', { error });
     
-    return createApiError(
-      'MFA verification failed',
-      'MFA_VERIFICATION_ERROR',
-      500,
-      undefined,
-      '/api/auth/mfa/verify',
-      'POST'
-    );
+    const mfaResponse: MFAVerifyResponse = {
+      success: false,
+      verified: false,
+      mfaEnabled: false,
+      message: 'MFA verification failed'
+    };
+    
+    return createApiResponse(mfaResponse, mfaResponse.message, 500);
   }
 });
 
@@ -155,6 +206,37 @@ interface UserDataWithMFA {
     code: string;
     used: boolean;
   }>;
+}
+
+interface MFATokenPayload {
+  user_id: string;
+  email: string;
+  mfa_verified: boolean;
+  mfa_challenge_id: string;
+  mfa_verified_at: number;
+  mfa_method: string;
+  exp: number;
+  iat: number;
+}
+
+async function createMFAVerifiedToken(
+  user: any,
+  challengeId: string,
+  verifiedAt: Date
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const mfaTokenPayload: MFATokenPayload = {
+    user_id: user.userId,
+    email: user.email || 'user@example.com',
+    mfa_verified: true,
+    mfa_challenge_id: challengeId,
+    mfa_verified_at: Math.floor(verifiedAt.getTime() / 1000),
+    mfa_method: 'totp', // In production, get from challenge data
+    exp: now + (30 * 60), // 30 minutes MFA session
+    iat: now
+  };
+
+  return jwt.sign(mfaTokenPayload, JWT_SECRET);
 }
 
 function verifyTOTPCode(userData: UserDataWithMFA, code: string): boolean {
