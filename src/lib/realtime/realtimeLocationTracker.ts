@@ -7,7 +7,7 @@
 import { locationBatchingService, LocationUpdate } from '@/lib/locationBatching';
 import { redis } from '@/lib/redis';
 import { getWebSocketManager } from '@/lib/websocket';
-import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
+// Google Maps integration removed
 import { logger } from '@/lib/security/productionLogger';
 
 export interface DriverLocationData {

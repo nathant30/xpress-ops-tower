@@ -4,7 +4,7 @@
  * Supports multiple vehicle types and real-time conditions
  */
 
-import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
+// Google Maps integration removed
 import { redis } from '@/lib/redis';
 import { realtimeLocationTracker } from '@/lib/realtime/realtimeLocationTracker';
 import { logger } from '@/lib/security/productionLogger';

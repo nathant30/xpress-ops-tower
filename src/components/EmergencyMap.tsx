@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Car, Building2, MapPin, Signal, Zap } from 'lucide-react';
-import { loadGoogleMapsAPI } from '@/utils/googleMapsLoader';
+// Google Maps integration removed
 import { logger } from '@/lib/security/productionLogger';
 
 interface EmergencyMapProps {

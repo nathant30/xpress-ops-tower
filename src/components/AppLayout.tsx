@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import RidesharingSidebar from '@/components/features/RidesharingSidebar';
-import { RefreshCw, Menu, X, Loader2, User, Bell, ChevronDown, LogOut, Settings, UserCircle } from 'lucide-react';
+import { RefreshCw, Menu, X, Loader2, User, Bell, ChevronDown, LogOut, Settings, UserCircle, Shield } from 'lucide-react';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
 import { useEnhancedAuth } from '@/hooks/useEnhancedAuth';
 import { logger } from '@/lib/security/productionLogger';
@@ -182,7 +182,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'safety':
         return 'Safety & Security';
       case 'fraud-protect':
-        return 'Fraud Protection';
+        return 'Fraud Management';
       case 'reports':
         return 'Reports & Analytics';
       case 'support':
@@ -219,7 +219,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       case 'safety':
         return 'Safety protocols and incident reporting system';
       case 'fraud-protect':
-        return 'Advanced fraud detection and prevention system';
+        return 'Comprehensive fraud detection, review, and configuration';
       case 'reports':
         return 'Business intelligence and operational analytics';
       case 'support':
@@ -252,7 +252,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex">
+    <div className="h-screen bg-neutral-50 flex overflow-hidden">
       {/* Desktop Sidebar Navigation */}
       <div 
         className="hidden md:block"
@@ -293,7 +293,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col h-full">
         {/* Top Header - Compact Design */}
         {!['bookings', 'live-map', 'safety'].includes(pathname.substring(1)) && (
           <header className="bg-white shadow-sm border-b border-gray-100 px-3 md:px-4 py-2">
@@ -308,7 +308,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </button>
                 
                 <div>
-                  <h1 className="text-lg md:text-xl font-bold text-gray-900">{getPageTitle()}</h1>
+                  <h1 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-3">
+                    {pathname.substring(1) === 'fraud-protect' && <Shield className="w-6 h-6 md:w-7 md:h-7 text-red-600" />}
+                    {getPageTitle()}
+                  </h1>
                   <p className="text-gray-600 text-xs md:text-sm">{getPageDescription()}</p>
                 </div>
               </div>
@@ -426,8 +429,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
 
-        {/* Footer */}
-        <footer className="bg-white border-t border-gray-100 py-3 md:py-4">
+        {/* Footer - Fixed at bottom */}
+        <footer className="bg-white border-t border-gray-100 py-3 md:py-4 flex-shrink-0">
           <div className="px-4 md:px-8 text-center text-xs md:text-sm text-gray-600">
             <div className="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-6">
               <div className="flex items-center space-x-2">

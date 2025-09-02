@@ -392,14 +392,6 @@ const FraudProtectPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Shield className="w-8 h-8 text-red-600" />
-            Fraud Management
-          </h1>
-          <p className="text-gray-600 mt-1">Comprehensive fraud detection, review, and configuration</p>
-        </div>
 
         {/* Horizontal Tabs - Modern Pill Style */}
         <div className="mb-6">

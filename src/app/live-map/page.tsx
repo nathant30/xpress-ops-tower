@@ -33,7 +33,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useServiceType } from '@/contexts/ServiceTypeContext';
-import LiveMap from '@/components/LiveMap';
+import LiveMap from '../../components/LiveMap';
 
 // AI Integration
 import { modelServingInfrastructure } from '@/lib/ai/modelServing/servingInfrastructure';
@@ -114,7 +114,7 @@ const OpsTowardDashboard = () => {
   const [rightDrawerView, setRightDrawerView] = useState<DrawerView>('closed');
   const [bottomSheetExpanded, setBottomSheetExpanded] = useState(false);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'ops' | 'ai' | 'drivers'>('ai');
+  const [activeSidebarTab, setActiveSidebarTab] = useState<'ops' | 'drivers' | 'ai'>('ops');
   const [showZoneOverlay, setShowZoneOverlay] = useState(true);
   const [selectedZone, setSelectedZone] = useState<HeatmapZone | null>(null);
   const [driverSearchQuery, setDriverSearchQuery] = useState('');
@@ -220,7 +220,11 @@ const OpsTowardDashboard = () => {
     }
   ]);
 
-  // Emergency Incidents
+  // Dynamic Emergency Banner State
+  const [showEmergencyBanner, setShowEmergencyBanner] = useState(false);
+  const [emergencyAnimation, setEmergencyAnimation] = useState<'enter' | 'exit' | 'none'>('none');
+
+  // Emergency Incidents - Prototype data for banner rotation
   const [emergencyIncidents, setEmergencyIncidents] = useState<EmergencyIncident[]>([
     {
       id: 'sos-001',
@@ -244,8 +248,90 @@ const OpsTowardDashboard = () => {
       ],
       responseTeam: 'Emergency-Alpha-1',
       eta: 3
+    },
+    {
+      id: 'sos-002',
+      type: 'accident',
+      priority: 'high',
+      driverId: 'DRV-007',
+      driverName: 'Maria Rodriguez',
+      driverPhone: '+63917-987-6543',
+      location: { 
+        lat: 14.5176, 
+        lng: 121.0509, 
+        address: 'Ayala Ave, Makati CBD' 
+      },
+      timestamp: new Date(Date.now() - 300000), // 5 minutes ago
+      status: 'active',
+      description: 'Vehicle collision - minor injuries reported',
+      notes: [
+        { timestamp: new Date(Date.now() - 300000), message: 'Accident reported by driver', author: 'System' },
+        { timestamp: new Date(Date.now() - 240000), message: 'Police notified', author: 'Dispatcher' },
+      ],
+      responseTeam: 'Traffic-Unit-2',
+      eta: 8
+    },
+    {
+      id: 'sos-003',
+      type: 'safety',
+      priority: 'critical',
+      driverId: 'DRV-015',
+      driverName: 'Carlos Mendoza',
+      driverPhone: '+63917-555-0123',
+      location: { 
+        lat: 14.5995, 
+        lng: 120.9842, 
+        address: 'Rizal Park, Manila' 
+      },
+      timestamp: new Date(Date.now() - 180000), // 3 minutes ago
+      status: 'active',
+      description: 'Safety threat - passenger acting aggressively',
+      notes: [
+        { timestamp: new Date(Date.now() - 180000), message: 'Safety alert triggered', author: 'System' },
+        { timestamp: new Date(Date.now() - 150000), message: 'Security team dispatched', author: 'Dispatcher' },
+      ],
+      responseTeam: 'Security-Team-1',
+      eta: 5
     }
   ]);
+
+  // Prototype Emergency Banner Loop
+  useEffect(() => {
+    const emergencyBannerLoop = () => {
+      // Show banner with animation
+      setEmergencyAnimation('enter');
+      setShowEmergencyBanner(true);
+      
+      setTimeout(() => {
+        setEmergencyAnimation('none');
+      }, 1000); // Animation duration
+      
+      // Hide banner after 8 seconds
+      setTimeout(() => {
+        setEmergencyAnimation('exit');
+        
+        setTimeout(() => {
+          setShowEmergencyBanner(false);
+          setEmergencyAnimation('none');
+          
+          // Rotate to next incident for variety
+          setEmergencyIncidents(prev => {
+            const current = prev[0];
+            const rest = prev.slice(1);
+            return [...rest, current];
+          });
+        }, 1000); // Exit animation duration
+      }, 8000); // Show for 8 seconds
+    };
+
+    // Start the loop immediately
+    emergencyBannerLoop();
+    
+    // Continue every 30 seconds
+    const interval = setInterval(emergencyBannerLoop, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   // AI Anomaly Data
   const [aiAnomalies, setAiAnomalies] = useState({
@@ -636,9 +722,15 @@ const OpsTowardDashboard = () => {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 relative overflow-hidden">
-      {/* Emergency Banner - Critical incidents */}
-      {emergencyIncidents.filter(i => i.status === 'active' && i.priority === 'critical').length > 0 && (
-        <div className="bg-gradient-to-r from-[#EB1D25] to-red-600 text-white z-50 relative overflow-hidden">
+      {/* Dynamic Emergency Banner - Prototype loop */}
+      {showEmergencyBanner && (
+        <div className={`
+          fixed top-0 left-0 right-0 z-50 
+          bg-gradient-to-r from-[#EB1D25] to-red-600 text-white overflow-hidden
+          transform transition-transform duration-1000 ease-out shadow-2xl
+          ${emergencyAnimation === 'enter' ? 'translate-y-0' : 
+            emergencyAnimation === 'exit' ? '-translate-y-full' : 'translate-y-0'}
+        `}>
           <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 to-transparent"></div>
           <div className="relative px-6 py-4">
             <div className="flex items-center justify-between">
@@ -650,9 +742,13 @@ const OpsTowardDashboard = () => {
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-lg tracking-wide">CRITICAL EMERGENCY</span>
-                      <div className="bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full font-bold border border-white/30">
-                        {emergencyIncidents.filter(i => i.status === 'active' && i.priority === 'critical').length}
+                      <span className="font-bold text-lg tracking-wide">
+                        {emergencyIncidents[0]?.priority === 'critical' ? 'CRITICAL EMERGENCY' : 
+                         emergencyIncidents[0]?.priority === 'high' ? 'HIGH PRIORITY INCIDENT' : 
+                         'SAFETY ALERT'}
+                      </span>
+                      <div className="bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full font-bold border border-white/30 animate-pulse">
+                        ACTIVE
                       </div>
                     </div>
                     <div className="text-red-100 text-sm font-medium mt-0.5">
@@ -673,7 +769,13 @@ const OpsTowardDashboard = () => {
                   RESPOND
                 </button>
                 <button 
-                  onClick={() => setSafetyStage('banner')}
+                  onClick={() => {
+                    setEmergencyAnimation('exit');
+                    setTimeout(() => {
+                      setShowEmergencyBanner(false);
+                      setEmergencyAnimation('none');
+                    }, 1000);
+                  }}
                   className="text-red-100 hover:text-white p-2 hover:bg-white/10 rounded-lg transition-all"
                 >
                   <X className="w-4 h-4" />
@@ -685,7 +787,10 @@ const OpsTowardDashboard = () => {
       )}
 
       {/* Top KPI Bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3">
+      <div className={`
+        bg-white border-b border-slate-200 px-4 py-3 transition-all duration-300
+        ${showEmergencyBanner ? 'mt-20' : 'mt-0'}
+      `}>
         <div className="grid grid-cols-6 gap-3">
           {kpiTiles.map((tile) => (
             <div key={tile.id} className="relative">
@@ -867,17 +972,6 @@ const OpsTowardDashboard = () => {
                     <span>Ops</span>
                   </button>
                   <button
-                    onClick={() => setActiveSidebarTab('ai')}
-                    className={`flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                      activeSidebarTab === 'ai' 
-                        ? 'bg-[#0A4060] text-white' 
-                        : 'text-slate-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <Zap className="w-3 h-3" />
-                    <span>AI</span>
-                  </button>
-                  <button
                     onClick={() => setActiveSidebarTab('drivers')}
                     className={`flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       activeSidebarTab === 'drivers' 
@@ -887,6 +981,17 @@ const OpsTowardDashboard = () => {
                   >
                     <Users className="w-3 h-3" />
                     <span>Drivers</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveSidebarTab('ai')}
+                    className={`flex-1 flex items-center justify-center space-x-1 px-2 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      activeSidebarTab === 'ai' 
+                        ? 'bg-[#0A4060] text-white' 
+                        : 'text-slate-300 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    <Zap className="w-3 h-3" />
+                    <span>AI</span>
                   </button>
                 </div>
               </div>
